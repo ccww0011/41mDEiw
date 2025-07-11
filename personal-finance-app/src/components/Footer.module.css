@@ -1,0 +1,32 @@
+.botnav {
+    display: flex;
+    flex-wrap: nowrap;       /* prevent wrapping */
+    overflow: hidden;        /* hide overflow, no scroll */
+    background-color: #deebf7;
+    max-height: 10vh;
+    font-size: small;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.botnav button {
+    flex-shrink: 0;          /* prevent shrinking */
+    white-space: nowrap;     /* prevent button text wrapping */
+    color: #08306b;
+    padding: 5px 10px;
+    margin: 2px;
+    border: 0;
+    border-radius: 2px;
+    text-align: center;
+    text-decoration: none;
+    background-color: transparent;
+    display: block;
+}
+
+.botnav button:hover {
+    background-color: #08519c;
+    color: #f7fbff;
+    cursor: pointer;
+}
+
+
