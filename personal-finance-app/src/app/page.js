@@ -1,11 +1,10 @@
 import Hero from "../components/Hero";
-
 export default function Home() {
   const homeProps = {
     path: "/Home.jpg",
     height: 40,
     altText: "Welcome!",
-    title: "Technology Expertise for All Business",
+    title: "Manage your portfolio of securities!",
     text: "Leveraging data and technology to drive growth and optimize processes. Enhancing efficiency and decision-making across business operations.",
     button: "Explore our expertise",
     navigate: "/expertise",
@@ -22,9 +21,9 @@ export default function Home() {
   };
 
   return (
-    <>
+    <div className="wrapper">
       <Hero {...homeProps} />
       <Hero {...contactProps} />
-    </>
+    </div>
   );
 }

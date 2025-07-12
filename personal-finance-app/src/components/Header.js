@@ -4,30 +4,11 @@ import React from "react";
 import styles from "./Header.module.css";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useAuth } from "@/context/AuthContext";
 
-export default function Header({ isAuthenticated }) {
+export default function Header() {
   const router = useRouter();
-
-  // Temporary: Comment out login/logout
-  /*
-  import { login, logout } from "../api/AuthApi";
-
-  async function handleLogin() {
-    try {
-      await login(router);
-    } catch (error) {
-      router.push("/");
-    }
-  }
-
-  async function handleLogout() {
-    try {
-      await logout(router);
-    } catch (error) {
-      router.push("/");
-    }
-  }
-  */
+  const { user, login, logout } = useAuth();
 
   const handleNavigation = (path) => {
     router.push(path);
@@ -35,9 +16,8 @@ export default function Header({ isAuthenticated }) {
   };
 
   return (
-    <>
+    <div className="wrapper">
       <div className={styles.headerBanner}>
-        {/* If using public folder: */}
         <Image
           alt="Aqua Farm Limited"
           src="/HomeLogo.jpg"
@@ -47,21 +27,22 @@ export default function Header({ isAuthenticated }) {
         />
       </div>
 
-      <div className={styles.topnav}>
+      <div className={styles.topnavContainer}>
         <button onClick={() => handleNavigation("/")}>Home</button>
         <button onClick={() => handleNavigation("/expertise")}>Expertise</button>
         <button onClick={() => handleNavigation("/contactUs")}>Contact Us</button>
-        {isAuthenticated ? (
-          <button className={styles.rightmost} onClick={() => {/* handleLogout() */}}>
+
+        {user ? (
+          <button className={styles.rightmost} onClick={logout}>
             Logout
           </button>
         ) : (
-          <button className={styles.rightmost} onClick={() => {/* handleLogin() */}}>
+          <button className={styles.rightmost} onClick={login}>
             Login
           </button>
         )}
       </div>
-    </>
+    </div>
   );
 }
 

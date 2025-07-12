@@ -1,5 +1,7 @@
+import '../styles/globals.css';
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import {AuthProvider} from "@/context/AuthContext";
 
 export const metadata = {
   title: "Personal Finance",
@@ -12,19 +14,17 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-    <body>
-    <div className="wrapper">
-      <header className="header">
-        <Header isAuthenticated={false} />
-      </header>
+      <body>
+        <div className="wrapper">
+          <AuthProvider>
+            <Header/>
 
-      <main>{children}</main>
+            <main>{children}</main>
 
-      <footer className="footer">
-        <Footer />
-      </footer>
-    </div>
-    </body>
+            <Footer/>
+          </AuthProvider>
+        </div>
+      </body>
     </html>
   );
 }

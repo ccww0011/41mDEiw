@@ -1,32 +1,46 @@
-.botnav {
-    display: flex;
-    flex-wrap: nowrap;       /* prevent wrapping */
-    overflow: hidden;        /* hide overflow, no scroll */
-    background-color: #deebf7;
-    max-height: 10vh;
-    font-size: small;
+/* Typical order:
+* 1. Box Model (margin, border, padding, width, height, overflow)
+* 2. Layout (display, position, flex/grid properties, float, clear)
+* 3. Visual (background, box-shadow, border-color, opacity)
+* 4. Typography (font-family, font-size, font-weight, color, text-align, text-decoration)
+* 5. Interaction (cursor, pointer-events, user-select, transition)
+*/
+
+.botnavContainer {
     width: 100%;
-    box-sizing: border-box;
+    max-height: 10vh;
+    overflow: hidden;
+
+    display: flex;
+    flex-wrap: nowrap;
+
+    background-color: #deebf7;
+
+    font-size: small;
 }
 
-.botnav button {
-    flex-shrink: 0;          /* prevent shrinking */
-    white-space: nowrap;     /* prevent button text wrapping */
-    color: #08306b;
-    padding: 5px 10px;
+.botnavContainer button {
     margin: 2px;
+    padding: 5px 10px;
     border: 0;
     border-radius: 2px;
+
+    display: block;
+    flex-shrink: 0;
+    white-space: nowrap;
+
+    background-color: transparent;
+
+    color: #08306b;
     text-align: center;
     text-decoration: none;
-    background-color: transparent;
-    display: block;
-}
 
-.botnav button:hover {
-    background-color: #08519c;
-    color: #f7fbff;
     cursor: pointer;
 }
 
+.botnavContainer button:hover {
+    background-color: #08519c;
+    color: #f7fbff;
 
+    cursor: pointer;
+}

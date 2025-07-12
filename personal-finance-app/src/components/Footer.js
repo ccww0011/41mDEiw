@@ -13,10 +13,12 @@ export default function Footer() {
   };
 
   return (
-    <div className={styles.botnav}>
-      <button onClick={() => handleNavigation("/")}>Home</button>
-      <button onClick={() => handleNavigation("/expertise")}>Expertise</button>
-      <button onClick={() => handleNavigation("/contactUs")}>Contact Us</button>
+    <div className="wrapper">
+      <div className={styles.botnavContainer}>
+        <button onClick={() => handleNavigation("/")}>Home</button>
+        <button onClick={() => handleNavigation("/expertise")}>Expertise</button>
+        <button onClick={() => handleNavigation("/contactUs")}>Contact Us</button>
+      </div>
     </div>
   );
 }

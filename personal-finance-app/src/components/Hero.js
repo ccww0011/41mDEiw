@@ -1,8 +1,8 @@
 "use client";
 
+import React from "react";
 import styles from "./Hero.module.css";
 import { useRouter } from "next/navigation";
-import React from "react";
 import Image from "next/image";
 
 export default function Hero(props) {
@@ -18,14 +18,14 @@ export default function Hero(props) {
       <Image
         src={props.path}
         alt={props.altText || "Image"}
-        layout="fill"
-        objectFit="cover"
+        fill
+        style={{ objectFit: "cover" }}
         priority
       />
 
       <div className={styles.innerContainer}>
         <h1>{props.title}</h1>
-        <div className={styles.desktopText}><b>{props.text}</b></div>
+        <p>{props.text}</p>
         {props.path && (
           <button
             className={styles.button}

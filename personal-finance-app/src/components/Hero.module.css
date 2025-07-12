@@ -1,3 +1,11 @@
+/* Typical order:
+* 1. Box Model (margin, border, padding, width, height, overflow)
+* 2. Layout (display, position, flex/grid properties, float, clear)
+* 3. Visual (background, box-shadow, border-color, opacity)
+* 4. Typography (font-family, font-size, font-weight, color, text-align, text-decoration)
+* 5. Interaction (cursor, pointer-events, user-select, transition)
+*/
+
 .imageContainer {
     position: relative;
     overflow: hidden;
@@ -16,28 +24,39 @@
     left: 5%;
     height: 90%;
     width: 90%;
+
+    max-width: 1280px;
+
     color: #f7fbff;
     font-size: 18px;
-    text-align: left;
     font-weight: bold;
-    max-width: 1280px;
+    text-align: left;
     line-height: 1;
+
     word-wrap: break-word;
     white-space: normal;
     overflow-wrap: break-word;
+
     text-shadow: 2px 2px 10px #08306b;
+}
+
+.innerContainer h1,
+.innerContainer p {
+    font-family: Helvetica, Arial, sans-serif;
 }
 
 .button {
     position: absolute;
     bottom: 5%;
-    background-color: #08519c;
+
     margin: 0;
+    padding: 10px 20px;
     border: 0;
     border-radius: 2px;
-    padding: 10px 20px;
-    text-decoration: none;
+
+    background-color: #08519c;
     color: #f7fbff;
+    text-decoration: none;
 }
 
 .button:hover {
@@ -45,3 +64,5 @@
     color: #08519c;
     cursor: pointer;
 }
+
+
