@@ -3,7 +3,6 @@
 import React, { createContext, useState, useEffect, useContext } from "react";
 import { fetchUser, login as loginApi, logout as logoutApi } from "@/app/api/auth/AuthApi";
 
-// Context shape
 const AuthContext = createContext({
   user: null,
   loading: true,
@@ -22,7 +21,6 @@ export function AuthProvider({ children }) {
         const userData = await fetchUser();
         setUser(userData);
       } catch (error) {
-        console.error("Auth check failed:", error);
         setUser(null);
       } finally {
         setLoading(false);
@@ -32,12 +30,15 @@ export function AuthProvider({ children }) {
     checkAuth();
   }, []);
 
+  console.log(user)
+
   const login = () => {
     loginApi();
   };
 
   const logout = () => {
     logoutApi();
+    setUser(null)
   };
 
   return (

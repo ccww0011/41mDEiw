@@ -31,11 +31,13 @@ export default function Header() {
         <button onClick={() => handleNavigation("/")}>Home</button>
         <button onClick={() => handleNavigation("/expertise")}>Expertise</button>
         <button onClick={() => handleNavigation("/contactUs")}>Contact Us</button>
-
         {user ? (
-          <button className={styles.rightmost} onClick={logout}>
-            Logout
-          </button>
+          <div className={styles.rightmost}>
+            <p> {user.email}</p>
+            <button onClick={logout}>
+              Logout
+            </button>
+          </div>
         ) : (
           <button className={styles.rightmost} onClick={login}>
             Login

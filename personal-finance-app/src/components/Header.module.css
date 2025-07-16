@@ -28,6 +28,23 @@
     font-size: small;
 }
 
+.topnavContainer p {
+    margin: 2px;
+    padding: 5px 10px;
+    border: 0;
+    border-radius: 2px;
+
+    display: block;
+    flex-shrink: 0;
+    white-space: nowrap;
+
+    background-color: transparent;
+
+    color: #08306b;
+    text-align: right;
+    text-decoration: none;
+}
+
 .topnavContainer button {
     margin: 2px;
     padding: 5px 10px;
@@ -54,4 +71,9 @@
 
 .topnavContainer .rightmost {
     margin-left: auto;
+
+    display: flex;
+
+    align-items: center;
+    gap: 0.5rem;
 }
