@@ -21,9 +21,9 @@ export default function Home() {
   };
 
   return (
-    <div className="wrapper">
+    <>
       <Hero {...homeProps} />
       <Hero {...contactProps} />
-    </div>
+    </>
   );
 }

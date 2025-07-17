@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useState, useEffect, useContext } from "react";
-import { fetchUser, login as loginApi, logout as logoutApi } from "@/app/api/auth/AuthApi";
+import { fetchUser, login as loginApi, logout as logoutApi } from "@/hooks/useAuth";
 
 const AuthContext = createContext({
   user: null,
@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     logoutApi();
-    setUser(null)
+    setUser(null);
   };
 
   return (

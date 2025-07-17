@@ -16,7 +16,7 @@ export default function Header() {
   };
 
   return (
-    <div className="wrapper">
+    <>
       <div className={styles.headerBanner}>
         <Image
           alt="Aqua Farm Limited"
@@ -44,7 +44,7 @@ export default function Header() {
           </button>
         )}
       </div>
-    </div>
+    </>
   );
 }
 
