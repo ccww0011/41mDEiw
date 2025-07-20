@@ -29,19 +29,18 @@ export default function Header() {
 
       <div className={styles.topnavContainer}>
         <button onClick={() => handleNavigation("/")}>Home</button>
-        <button onClick={() => handleNavigation("/expertise")}>Expertise</button>
-        <button onClick={() => handleNavigation("/contactUs")}>Contact Us</button>
+        <button onClick={() => handleNavigation("/demo")}>Demo</button>
+        <button onClick={() => handleNavigation("/contact-us")}>Contact Us</button>
         {user ? (
           <div className={styles.rightmost}>
-            <p> {user.email}</p>
-            <button onClick={logout}>
-              Logout
-            </button>
+            <div className={styles.text}> {user.email}</div>
+            <button className={styles.buttonDark} onClick={() => handleNavigation("/login")}>Portfolio</button>
+            <button className={styles.buttonDark} onClick={logout}>Logout</button>
           </div>
         ) : (
-          <button className={styles.rightmost} onClick={login}>
-            Login
-          </button>
+          <div className={styles.rightmost}>
+            <button className={styles.rightmost} onClick={login}>Login</button>
+          </div>
         )}
       </div>
     </>

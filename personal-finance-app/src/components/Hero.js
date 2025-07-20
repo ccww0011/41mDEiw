@@ -2,8 +2,8 @@
 
 import React from "react";
 import styles from "./Hero.module.css";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useRouter } from 'next/navigation';
 
 export default function Hero(props) {
   const router = useRouter();

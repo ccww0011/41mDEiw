@@ -16,8 +16,8 @@ export default function Footer() {
     <>
       <div className={styles.botnavContainer}>
         <button onClick={() => handleNavigation("/")}>Home</button>
-        <button onClick={() => handleNavigation("/expertise")}>Expertise</button>
-        <button onClick={() => handleNavigation("/contactUs")}>Contact Us</button>
+        <button onClick={() => handleNavigation("/demo")}>Demo</button>
+        <button onClick={() => handleNavigation("/contact-us")}>Contact Us</button>
       </div>
     </>
   );

@@ -30,8 +30,6 @@ export function AuthProvider({ children }) {
     checkAuth();
   }, []);
 
-  console.log(user)
-
   const login = () => {
     loginApi();
   };

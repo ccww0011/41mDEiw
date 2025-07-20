@@ -1,23 +1,26 @@
-import Hero from "../components/Hero";
+"use client";
+
+import Hero from "@/components/Hero";
+
 export default function Home() {
   const homeProps = {
-    path: "/Home.jpg",
+    path: "/Home1.jpg",
     height: 40,
     altText: "Welcome!",
-    title: "Manage your portfolio of securities!",
-    text: "Leveraging data and technology to drive growth and optimize processes. Enhancing efficiency and decision-making across business operations.",
-    button: "Explore our expertise",
-    navigate: "/expertise",
+    title: "Manage your Portfolio of Securities!",
+    text: "Easily manage and track your investment portfolio in one place.",
+    button: "Quick Demo",
+    navigate: "/demo",
   };
 
   const contactProps = {
-    path: "/Contact.jpg",
+    path: "/Home2.jpg",
     height: 40,
     altText: "Contact us!",
-    title: "Wanna know more? Get in touch",
-    text: "Fancy a chat? We'd love to hear from you, find out what you need and see what we can do.",
-    button: "Get in touch",
-    navigate: "/contactUs",
+    title: "Wanna know more? Get in touch.",
+    text: "We'd love to hear from you, find out what you need and see what we can do.",
+    button: "Contact Us",
+    navigate: "/contact-us",
   };
 
   return (

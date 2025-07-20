@@ -28,7 +28,7 @@
     font-size: small;
 }
 
-.topnavContainer p {
+.topnavContainer .text {
     margin: 2px;
     padding: 5px 10px;
     border: 0;
@@ -41,6 +41,7 @@
     background-color: transparent;
 
     color: #08306b;
+    justify-content: center;
     text-align: right;
     text-decoration: none;
 }
@@ -69,11 +70,35 @@
     cursor: pointer;
 }
 
-.topnavContainer .rightmost {
+.topnavContainer .buttonDark {
+    margin: 2px;
+    padding: 5px 10px;
+    border: 0;
+    border-radius: 2px;
+
+    display: block;
+    flex-shrink: 0;
+    white-space: nowrap;
+
+    background-color: #08306b;
+
+    color: #f7fbff;
+    text-align: center;
+    text-decoration: none;
+}
+
+.topnavContainer .buttonDark:hover {
+    background-color: #6baed6;
+    color: #f7fbff;
+
+    cursor: pointer;
+}
+
+.rightmost {
     margin-left: auto;
 
     display: flex;
+    justify-content: center;
 
     align-items: center;
-    gap: 0.5rem;
 }

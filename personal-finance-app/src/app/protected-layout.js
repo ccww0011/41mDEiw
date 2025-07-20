@@ -5,14 +5,30 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function ProtectedLayout({ children }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) router.push("/login");
-  }, [user, router]);
+    if (!loading && !user) {
+      router.push("/");
+    }
+  }, [user, loading, router]);
 
-  if (!user) return <p>Redirecting to login...</p>;
+  if (loading) {
+    return (
+      <div className="container" style={{ justifyContent: "center", alignItems: "center" }}>
+        <h2>Loading...</h2>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="container" style={{ justifyContent: "center", alignItems: "center" }}>
+        <h2>Redirecting to home...</h2>
+      </div>
+    );
+  }
 
   return <>{children}</>;
 }

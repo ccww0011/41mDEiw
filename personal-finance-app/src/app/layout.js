@@ -15,15 +15,11 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <div className="wrapper">
-          <AuthProvider>
-            <Header/>
-
-            <main>{children}</main>
-
-            <Footer/>
-          </AuthProvider>
-        </div>
+        <AuthProvider>
+          <Header/>
+          <main>{children}</main>
+          <Footer/>
+        </AuthProvider>
       </body>
     </html>
   );
