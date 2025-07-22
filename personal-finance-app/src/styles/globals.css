@@ -96,6 +96,7 @@ p {
   display: grid;
   grid-template-columns: repeat(10, 10%);
   box-sizing: border-box;
+  align-self: initial;
 }
 
 .grid-item {
@@ -197,6 +198,27 @@ input[type="number"] {
 /* 4. Text Input Ends */
 
 /* 5. Button */
+.container button {
+  flex: 0 0 auto;
+  background-color: #c6dbef;
+  margin: 0;
+  border: 0;
+  border-radius: 2px;
+  padding: 5px 0;
+  text-align: center;
+  text-decoration: none;        /* Remove underline */
+  color: #08306b;
+  display: block;               /* Ensure links are block-level elements */
+  height: 25px;
+  width: 100%;
+}
+
+.container button:hover {
+  background-color: #08519c;
+  color: #f7fbff;
+  cursor: pointer;
+}
+
 .button-long {
   flex: 0 0 auto;
   background-color: #c6dbef;
