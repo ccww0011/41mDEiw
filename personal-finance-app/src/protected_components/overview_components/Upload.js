@@ -5,7 +5,7 @@ import { useDropzone } from 'react-dropzone';
 import { postCsvRows } from '@/hooks/useDatabase';
 
 const REQUIRED_HEADERS = [
-  'ClientAccount',
+  'ClientAccountID',
   'TradeDate',
   'AssetClass',
   'ListingExchange',
@@ -19,9 +19,9 @@ const REQUIRED_HEADERS = [
 // Minimal native CSV parser that handles quotes and commas
 function parseCSV(text) {
   const lines = text.split(/\r?\n/).filter(Boolean);
-  const result = [];
   const headers = parseLine(lines[0]);
 
+  const result = [];
   for (let i = 1; i < lines.length; i++) {
     const row = parseLine(lines[i]);
     if (row.length === headers.length) {

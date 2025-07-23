@@ -240,3 +240,14 @@ input[type="number"] {
   cursor: pointer;
 }
 /* 5. Button Ends */
+
+.grecaptcha-badge {
+
+
+  opacity: 0.3;
+  transition: opacity 0.3s;
+}
+
+.grecaptcha-badge:hover {
+  opacity: 1;
+}

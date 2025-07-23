@@ -1,11 +1,14 @@
 "use client";
 
-import {useEffect, useState} from "react";
-import {postContactUs} from "@/hooks/useContact";
+import { useEffect, useState } from "react";
+import { postContactUs } from "@/hooks/useContact";
 import { useAuth } from "@/context/AuthContext";
+import { useRecaptcha } from "@/hooks/useRecaptcha";
 
 export default function ContactUs() {
   const { user } = useAuth();
+  const { ready, execute } = useRecaptcha('contact_us');
+
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
 
@@ -27,8 +30,19 @@ export default function ContactUs() {
       setMsg('All fields are required.');
       return;
     }
+    if (!ready) {
+      setMsg('reCAPTCHA not ready. Please try again.');
+      return;
+    }
+
     setMsg('Submitting...');
-    const { serverMsg, success } = await postContactUs({name, contact, message});
+
+    const recaptchaToken = await execute();
+    if (!recaptchaToken) {
+      setMsg('Authentication server busy. Please try again.');
+      return;
+    }
+    const { serverMsg, success } = await postContactUs({name, contact, message, recaptchaToken});
     setMsg(serverMsg);
     setSuccess(success);
   }

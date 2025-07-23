@@ -1,13 +1,15 @@
 "use client";
 
-async function ContactUsApi(body = null) {
+export async function postContactUs(body = null) {
   try {
-    const response = await fetch(process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/contactUs", {
+    const response = await fetch(process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/contact-us", {
       method: "POST",
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify({
+        ...body,
+      })
     });
     if (response.ok) {
       const contentType = response.headers.get('Content-Type');
@@ -22,8 +24,4 @@ async function ContactUsApi(body = null) {
   } catch (error) {
     return {serverMsg: "Failed to submit the form. Please email us or try again.", success: false};
   }
-}
-
-export async function postContactUs(body) {
-  return await ContactUsApi(body);
 }

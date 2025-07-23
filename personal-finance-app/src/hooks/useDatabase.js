@@ -1,4 +1,4 @@
-async function UploadCsvApi(data) {
+export async function postCsvRows(data) {
   try {
     const response = await fetch(process.env.NEXT_PUBLIC_AUTHENTICATED_URL + '/portfolio/upload', {
       method: 'POST',
@@ -18,8 +18,4 @@ async function UploadCsvApi(data) {
   } catch (err) {
     return { status: 'Error', message: 'Upload failed.' };
   }
-}
-
-export async function postCsvRows(data) {
-  return await UploadCsvApi(data);
 }

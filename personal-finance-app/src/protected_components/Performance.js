@@ -5,7 +5,7 @@ import MWR from "@/protected_components/performance_components/MWR";
 
 export default function Performance() {
   // Summary, TWR, MWR
-  const [showTab, setShowTab] = useState("");
+  const [showTab, setShowTab] = useState("Summary");
 
   return (
     <>
@@ -31,7 +31,7 @@ export default function Performance() {
               color: showTab === "TWR" ? "#f7fbff" : undefined
             }}
           >
-            Return (TWR)
+            Return-TWR
           </button>
         </div>
         <div className="grid-item grid1">
@@ -43,7 +43,7 @@ export default function Performance() {
               color: showTab === "MWR" ? "#f7fbff" : undefined
             }}
           >
-            Return (MWR)
+            Return-MWR
           </button>
         </div>
         <div className="grid-item grid7"></div>
