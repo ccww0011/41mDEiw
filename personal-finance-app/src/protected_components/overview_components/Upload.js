@@ -5,6 +5,7 @@ import { useDropzone } from 'react-dropzone';
 import { postCsvRows } from '@/hooks/useDatabase';
 
 const REQUIRED_HEADERS = [
+  'TradeID',
   'ClientAccountID',
   'TradeDate',
   'AssetClass',
@@ -27,7 +28,9 @@ function parseCSV(text) {
     if (row.length === headers.length) {
       const obj = {};
       headers.forEach((h, j) => {
-        obj[h] = row[j];
+        if (REQUIRED_HEADERS.includes(h)) {
+          obj[h] = row[j];
+        }
       });
       result.push(obj);
     }

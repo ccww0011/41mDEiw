@@ -242,8 +242,6 @@ input[type="number"] {
 /* 5. Button Ends */
 
 .grecaptcha-badge {
-
-
   opacity: 0.3;
   transition: opacity 0.3s;
 }

@@ -1,9 +1,12 @@
 export async function postCsvRows(data) {
   try {
-    const response = await fetch(process.env.NEXT_PUBLIC_AUTHENTICATED_URL + '/portfolio/upload', {
-      method: 'POST',
+    console.log(data);
+
+    const response = await fetch(process.env.NEXT_PUBLIC_AUTHENTICATED_URL + '/portfolio/put', {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+      credentials: "include",
     });
 
     if (response.status === 500) {
