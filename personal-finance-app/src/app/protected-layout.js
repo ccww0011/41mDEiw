@@ -3,6 +3,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import {TransactionProvider} from "@/context/TransactionContext";
 
 export default function ProtectedLayout({ children }) {
   const { user, loading } = useAuth();
@@ -30,5 +31,9 @@ export default function ProtectedLayout({ children }) {
     );
   }
 
-  return <>{children}</>;
+  return (
+    <TransactionProvider>
+      {children}
+    </TransactionProvider>
+  );
 }

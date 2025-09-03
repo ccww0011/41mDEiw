@@ -1,10 +1,10 @@
 import {useState} from "react";
 import Input from "@/protected_components/overview_components/Input";
-import Upload from "@/protected_components/overview_components/Upload";
+import Transactions from "@/protected_components/overview_components/Transactions";
 import Holdings from "@/protected_components/overview_components/Holdings";
 
 export default function Overview() {
-  // Holdings, Upload, Input
+  // Holdings, Transactions, Input
   const [showTab, setShowTab] = useState("Holdings");
 
   return (
@@ -25,13 +25,13 @@ export default function Overview() {
         <div className="grid-item grid1">
           <button
             type="button"
-            onClick={() => setShowTab("Upload")}
+            onClick={() => setShowTab("Transactions")}
             style={{
-              backgroundColor: showTab === "Upload" ? "#08519c" : undefined,
-              color: showTab === "Upload" ? "#f7fbff" : undefined
+              backgroundColor: showTab === "Transactions" ? "#08519c" : undefined,
+              color: showTab === "Transactions" ? "#f7fbff" : undefined
             }}
           >
-            Upload
+            Transactions
           </button>
         </div>
         <div className="grid-item grid1">
@@ -51,7 +51,7 @@ export default function Overview() {
         <div className="grid-item grid10" style={{padding: "5px 0"}}></div>
       </div>
       {showTab === "Holdings" ? <Holdings/>
-        : showTab === "Upload" ? <Upload/>
+        : showTab === "Transactions" ? <Transactions/>
           : showTab === "Input" ? <Input/> : null}
     </>
   );

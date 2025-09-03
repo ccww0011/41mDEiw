@@ -120,7 +120,6 @@ p {
 /* 2. Grid Ends */
 
 /* 3. Column */
-/* Column */
 .column {
   display: flex;
   flex-wrap: wrap;
@@ -151,9 +150,54 @@ p {
   text-align: justify;
   background-color: #deebf7
 }
-/* 3. Column */
+/* 3. Column Ends */
 
-/* 4. Text Input */
+/* 4. Table */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+  table-layout: auto;
+  font-family: sans-serif;
+  font-size: 14px;
+}
+
+th, td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+th {
+  background-color: #08519c;
+  color: white;
+  font-weight: bold;
+}
+
+tr:nth-child(even) {
+  background-color: #f7fbff;
+}
+
+tr:hover {
+  background-color: #deebf7;
+}
+
+td.description {
+  white-space: normal;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+td.checkbox {
+  text-align: center;
+  padding: 0;
+  height: 15px;
+  width: 15px;
+}
+/* 4. Table Ends */
+
+/* 5. Text Input */
 textarea {
   font-family: Helvetica, sans-serif;
   margin: 0;

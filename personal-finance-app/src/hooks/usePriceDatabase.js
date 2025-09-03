@@ -1,9 +1,9 @@
-export async function postCsvRows(data) {
+export async function getPrice(data) {
   try {
     console.log(data);
 
-    const response = await fetch(process.env.NEXT_PUBLIC_AUTHENTICATED_URL + '/portfolio/put', {
-      method: 'PUT',
+    const response = await fetch(process.env.NEXT_PUBLIC_AUTHENTICATED_URL + '/price/get', {
+      method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
       credentials: "include",
