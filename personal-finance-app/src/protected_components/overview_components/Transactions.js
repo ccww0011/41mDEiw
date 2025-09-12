@@ -73,6 +73,7 @@ export default function Transactions() {
   const [message, setMessage] = useState('');
 
   // Multi-sort state: array of {key, direction}
+  const [filters, setFilters] = useState({});
   const [sortRules, setSortRules] = useState([]);
 
   const onDrop = useCallback((acceptedFiles) => {
@@ -121,10 +122,19 @@ export default function Transactions() {
   // Sorting
   const sortedTransactions = useMemo(() => {
     if (!Array.isArray(transactions)) return [];
-    const sorted = [...transactions];
+
+    // Filter first
+    let filtered = [...transactions];
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value && value !== 'All') {
+        filtered = filtered.filter(item => item[key] === value);
+      }
+    });
+
+    // Then sort
     for (let i = sortRules.length - 1; i >= 0; i--) {
       const { key, direction } = sortRules[i];
-      sorted.sort((a, b) => {
+      filtered.sort((a, b) => {
         const valA = a[key];
         const valB = b[key];
         const numA = parseFloat(valA);
@@ -140,8 +150,10 @@ export default function Transactions() {
         return 0;
       });
     }
-    return sorted;
-  }, [transactions, sortRules]);
+
+    return filtered;
+  }, [transactions, sortRules, filters]);
+
 
   // Handler for clicking Asc, Desc, Remove buttons
   const onSortClick = (key, directionOrRemove) => {
@@ -170,7 +182,7 @@ export default function Transactions() {
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: '#08519c',
-            color: rule?.direction === 'desc' ? '#fd8d3c' : '#f7fbff'
+            color: rule?.direction === 'desc' ? '#fb6a4a' : '#f7fbff'
           }}
         >
           ▼
@@ -185,7 +197,7 @@ export default function Transactions() {
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: '#08519c',
-            color: rule?.direction === 'asc' ? '#fd8d3c' : '#f7fbff'
+            color: rule?.direction === 'asc' ? '#fb6a4a' : '#f7fbff'
           }}
         >
           ▲
@@ -200,7 +212,7 @@ export default function Transactions() {
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: '#08519c',
-            color: rule?.direction === 'remove' ? '#fd8d3c' : '#f7fbff'
+            color: rule?.direction === 'remove' ? '#fb6a4a' : '#f7fbff'
           }}
         >
           ✕
@@ -269,30 +281,64 @@ export default function Transactions() {
             .map((rule, i) => `(${i + 1}) ${rule.key.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}`)
             .join('; ')}
         </p>
+
+        <div className="grid">
+          <div className="grid-item grid1">
+            <button
+              onClick={() => setSortRules([])}
+              style={{backgroundColor: '#fb6a4a', color: 'white'}}
+            >
+              Clear Sort
+            </button>
+          </div>
+          <div className="grid-item grid1">
+            <button
+              onClick={() => setFilters({})}
+              style={{backgroundColor: '#969696', color: 'white'}}
+            >
+              Clear Filter
+            </button>
+          </div>
+          <div className="grid-item grid8"></div>
+        </div>
+
         <table border="1" cellPadding="8" style={{borderCollapse: 'collapse', width: '100%'}}>
           <thead>
           <tr>
-            <th
-              style={{verticalAlign: 'top'}}>{renderSortControls('TradeDate')} {'TradeDate'.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}</th>
-            <th
-              style={{verticalAlign: 'top'}}>{renderSortControls('ClientAccountID')} {'ClientAccountID'.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}</th>
-            <th
-              style={{verticalAlign: 'top'}}>{renderSortControls('AssetClass')} {'AssetClass'.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}</th>
-            <th
-              style={{verticalAlign: 'top'}}>{renderSortControls('UnderlyingSymbol')} {'UnderlyingSymbol'.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}</th>
-            <th
-              style={{verticalAlign: 'top'}}>{renderSortControls('Description')} {'Description'.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}</th>
-            <th
-              style={{verticalAlign: 'top'}}>{renderSortControls('ListingExchange')} {'ListingExchange'.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}</th>
-            <th
-              style={{verticalAlign: 'top'}}>{renderSortControls('CurrencyPrimary')} {'CurrencyPrimary'.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}</th>
-            <th
-              style={{verticalAlign: 'top'}}>{renderSortControls('Quantity')} {'Quantity'.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}</th>
-            <th
-              style={{verticalAlign: 'top'}}>{renderSortControls('NetCash')} {'NetCash'.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}</th>
-            <th
-              style={{verticalAlign: 'top'}}>{renderSortControls('TradeID')} {'TradeID'.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}</th>
+            {REQUIRED_HEADERS.map((header) => (
+              <th key={header} style={{verticalAlign: 'top'}}>
+                {renderSortControls(header)} {header.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}
+              </th>
+            ))}
+          </tr>
 
+          <tr>
+            {REQUIRED_HEADERS.map((header) => {
+              const options = Array.from(
+                new Set(transactions.map(tx => tx[header]).filter(Boolean))
+              ).sort();
+
+              return (
+                <th key={header}>
+                  <select
+                    value={filters[header] || 'All'}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFilters(prev => ({
+                        ...prev,
+                        [header]: value === 'All' ? undefined : value,
+                      }));
+                    }}
+                    style={{width: '100%'}}
+                  >
+                    <option value="All">All</option>
+                    {options.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </th>
+              );
+            })}
           </tr>
           </thead>
 
