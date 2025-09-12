@@ -1,26 +1,25 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useRouter } from 'next/navigation';
 import Image from "next/image";
-import {useTransactions} from "@/context/TransactionContext";
-import {putTransactions} from '@/hooks/useTransactionDatabase';
+import { useTransactions } from "@/context/TransactionContext";
+import { putTransactions } from '@/hooks/useTransactionDatabase';
 
 const REQUIRED_HEADERS = [
-  'TradeID',
-  'ClientAccountID',
   'TradeDate',
+  'ClientAccountID',
   'AssetClass',
-  'ListingExchange',
   'UnderlyingSymbol',
   'Description',
+  'ListingExchange',
   'CurrencyPrimary',
   'Quantity',
   'NetCash',
+  'TradeID',
 ];
 
-// Minimal native CSV parser that handles quotes and commas
 function parseCSV(text) {
   const lines = text.split(/\r?\n/).filter(Boolean);
   const headers = parseLine(lines[0]);
@@ -38,7 +37,6 @@ function parseCSV(text) {
       result.push(obj);
     }
   }
-
   return { headers, data: result };
 }
 
@@ -63,7 +61,6 @@ function parseLine(line) {
       current += char;
     }
   }
-
   result.push(current);
   return result.map(cell => cell.trim());
 }
@@ -74,6 +71,9 @@ export default function Transactions() {
   const [showUpload, setShowUpload] = useState(false);
   const [status, setStatus] = useState('Idle');
   const [message, setMessage] = useState('');
+
+  // Multi-sort state: array of {key, direction}
+  const [sortRules, setSortRules] = useState([]);
 
   const onDrop = useCallback((acceptedFiles) => {
     const file = acceptedFiles[0];
@@ -97,7 +97,7 @@ export default function Transactions() {
           setMessage('CSV is missing required headers.');
           return;
         }
-        const result = await putTransactions({rows: data}, setTransactions);
+        const result = await putTransactions({ rows: data }, setTransactions);
         if (result.status === 'Unauthorised') {
           router.push('/logout');
           return;
@@ -111,23 +111,114 @@ export default function Transactions() {
     };
 
     reader.readAsText(file);
-  }, []);
+  }, [router, setTransactions]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { 'text/csv': ['.csv'] },
   });
 
+  // Sorting
+  const sortedTransactions = useMemo(() => {
+    if (!Array.isArray(transactions)) return [];
+    const sorted = [...transactions];
+    for (let i = sortRules.length - 1; i >= 0; i--) {
+      const { key, direction } = sortRules[i];
+      sorted.sort((a, b) => {
+        const valA = a[key];
+        const valB = b[key];
+        const numA = parseFloat(valA);
+        const numB = parseFloat(valB);
+        const bothAreNumbers = !isNaN(numA) && !isNaN(numB);
+        if (bothAreNumbers) {
+          return direction === 'asc' ? numA - numB : numB - numA;
+        }
+        const strA = valA?.toString().toLowerCase() ?? '';
+        const strB = valB?.toString().toLowerCase() ?? '';
+        if (strA < strB) return direction === 'asc' ? -1 : 1;
+        if (strA > strB) return direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return sorted;
+  }, [transactions, sortRules]);
+
+  // Handler for clicking Asc, Desc, Remove buttons
+  const onSortClick = (key, directionOrRemove) => {
+    setSortRules(prev => {
+      const filtered = prev.filter(r => r.key !== key);
+      if (directionOrRemove === 'remove') {
+        return filtered.length > 0 ? filtered : [];
+      }
+      return [{ key, direction: directionOrRemove }, ...filtered];
+    });
+  };
+
+  // Render sort control buttons for each column
+  const renderSortControls = (key) => {
+    // Check current rule direction for this key if exists
+    const rule = sortRules.find(r => r.key === key);
+    return (
+      <div style={{display: "flex", alignItems: "center"}}>
+        <button
+          onClick={() => onSortClick(key, 'desc')}
+          title="Sort Descending"
+          style={{
+            width: 20,
+            height: 20,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#08519c',
+            color: rule?.direction === 'desc' ? '#fd8d3c' : '#f7fbff'
+          }}
+        >
+          ▼
+        </button>
+        <button
+          onClick={() => onSortClick(key, 'asc')}
+          title="Sort Ascending"
+          style={{
+            width: 20,
+            height: 20,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#08519c',
+            color: rule?.direction === 'asc' ? '#fd8d3c' : '#f7fbff'
+          }}
+        >
+          ▲
+        </button>
+        <button
+          onClick={() => onSortClick(key, 'remove')}
+          title="Remove Sort"
+          style={{
+            width: 20,
+            height: 20,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#08519c',
+            color: rule?.direction === 'remove' ? '#fd8d3c' : '#f7fbff'
+          }}
+        >
+          ✕
+        </button>
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="grid">
-        <div className="grid-item grid1">
+        <div className="grid-item grid3">
           <button onClick={() => setShowUpload(prev => !prev)}>
             {showUpload ? 'Hide Upload' : 'Upload CSV'}
           </button>
         </div>
+        <div className="grid-item grid7"></div>
       </div>
-
 
       {showUpload && (
         <div style={{marginTop: '1rem'}}>
@@ -168,35 +259,62 @@ export default function Transactions() {
           {status === 'Busy' && <p>{message}</p>}
         </div>
       )}
+
       <div>
         <h2>Transactions</h2>
-        <table border="1" cellPadding="8">
+        <p>
+          Sorting priority: {sortRules.length === 0
+          ? 'None'
+          : sortRules
+            .map((rule, i) => `(${i + 1}) ${rule.key.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}`)
+            .join('; ')}
+        </p>
+        <table border="1" cellPadding="8" style={{borderCollapse: 'collapse', width: '100%'}}>
           <thead>
           <tr>
-            <th>Trade Date</th>
-            <th>Client Account</th>
-            <th>Asset Class</th>
-            <th>Symbol</th>
-            <th>Description</th>
-            <th>Currency</th>
-            <th>Quantity</th>
-            <th>Net Cash</th>
-            <th>Trade ID</th>
+            <th
+              style={{verticalAlign: 'top'}}>{renderSortControls('TradeDate')} {'TradeDate'.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}</th>
+            <th
+              style={{verticalAlign: 'top'}}>{renderSortControls('ClientAccountID')} {'ClientAccountID'.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}</th>
+            <th
+              style={{verticalAlign: 'top'}}>{renderSortControls('AssetClass')} {'AssetClass'.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}</th>
+            <th
+              style={{verticalAlign: 'top'}}>{renderSortControls('UnderlyingSymbol')} {'UnderlyingSymbol'.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}</th>
+            <th
+              style={{verticalAlign: 'top'}}>{renderSortControls('Description')} {'Description'.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}</th>
+            <th
+              style={{verticalAlign: 'top'}}>{renderSortControls('ListingExchange')} {'ListingExchange'.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}</th>
+            <th
+              style={{verticalAlign: 'top'}}>{renderSortControls('CurrencyPrimary')} {'CurrencyPrimary'.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}</th>
+            <th
+              style={{verticalAlign: 'top'}}>{renderSortControls('Quantity')} {'Quantity'.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}</th>
+            <th
+              style={{verticalAlign: 'top'}}>{renderSortControls('NetCash')} {'NetCash'.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}</th>
+            <th
+              style={{verticalAlign: 'top'}}>{renderSortControls('TradeID')} {'TradeID'.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}</th>
+
           </tr>
           </thead>
+
           <tbody>
-          {transactions.map((tx, idx) => (
+          {sortedTransactions.map((tx, idx) => (
             <tr key={idx}>
               <td>{tx.TradeDate}</td>
-
               <td>{tx.ClientAccountID}</td>
               <td>{tx.AssetClass}</td>
               <td>{tx.UnderlyingSymbol || '-'}</td>
               <td>{tx.Description}</td>
+              <td>{tx.ListingExchange}</td>
               <td>{tx.CurrencyPrimary}</td>
-              <td>{tx.Quantity}</td>
-              <td>{tx.NetCash}</td>
-              <td>{tx.SK}</td>
+              <td style={{textAlign: 'right'}}>{Number(tx.Quantity).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })}</td>
+              <td style={{textAlign: 'right'}}>{Number(tx.NetCash).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })}</td>
+              <td>{tx.TradeID}</td>
             </tr>
           ))}
           </tbody>

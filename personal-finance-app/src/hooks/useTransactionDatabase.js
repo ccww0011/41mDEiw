@@ -1,11 +1,19 @@
+'use client';
+
 async function transactionApi(method, data = null, setTransactions) {
   try {
-    const response = await fetch(process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/transaction", {
+    let content = {
       method: method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      headers: { 'content-type': 'application/json' },
       credentials: "include",
-    });
+    }
+    if (method !== "GET") {
+      content = {
+        ...content,
+        body: JSON.stringify(data),
+      }
+    }
+    const response = await fetch(process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/transaction", content);
     const items = await response.json();
     if (response.ok) {
       const contentType = response.headers.get('Content-Type');

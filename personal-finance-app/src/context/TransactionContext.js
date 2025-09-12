@@ -16,9 +16,10 @@ export function TransactionProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log("useEffect in TransactionProvider executed");
     async function fetchData() {
-      const data = await getTransactions();
-      setTransactions(data?.data || []);
+      await getTransactions(setTransactions);
+      console.log("getTransactions completed");
       setLoading(false);
     }
     fetchData();
