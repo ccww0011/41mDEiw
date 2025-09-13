@@ -4,8 +4,8 @@ async function priceApi(method, data = null, setPrices) {
   try {
     const data = {
       tickers: ["NVDA", "MSFT"],
-      startDate: "2020-01-01",
-      endDate: "2020-01-05"
+      startDate: "20200101",
+      endDate: "20200105"
     };
     let url = process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/price";
     let content = {
@@ -40,7 +40,7 @@ async function priceApi(method, data = null, setPrices) {
 }
 
 export async function getPrices(setPrices) {
-  return await priceApi('GET', [], setPrices);
+  return await priceApi('GET', null, setPrices);
 }
 
 export async function putPrices(data, setPrices) {

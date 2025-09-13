@@ -2,6 +2,7 @@
 
 import React, {useMemo, useState} from "react";
 import {usePrices} from "@/context/PriceContext";
+import {useTransactions} from "@/context/TransactionContext";
 
 const REQUIRED_HEADERS = [
   'Ticker',
@@ -12,6 +13,7 @@ const REQUIRED_HEADERS = [
 export default function Price() {
 
   // Multi-sort state: array of {key, direction}
+  const { tickers } = useTransactions();
   const { prices, loadingPrices } = usePrices();
 
   const [filters, setFilters] = useState({});
@@ -164,7 +166,7 @@ export default function Price() {
           <tr>
             {REQUIRED_HEADERS.map((header) => {
               const options = Array.from(
-                new Set(prices.map(tx => tx[header]).filter(Boolean))
+                new Set((Array.isArray(prices) ? prices : []).map(tx => tx[header]).filter(Boolean))
               ).sort();
 
               return (
@@ -191,7 +193,7 @@ export default function Price() {
           </tr>
           </thead>
 
-          {loadingPrices ? <p>Loading...</p> :
+          {loadingPrices && sortedPrices == null ? undefined :
             <tbody>
             {sortedPrices.map((price, idx) => (
               <tr key={idx}>

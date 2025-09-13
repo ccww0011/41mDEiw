@@ -13,18 +13,24 @@ export function useTransactions() {
 
 export function TransactionProvider({ children }) {
   const [transactions, setTransactions] = useState([]);
+  const [tickers, setTickers] = useState([]);
   const [loadingTransactions, setLoadingTransactions] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       await getTransactions(setTransactions);
+      let tickerSet = new Set();
+      for (let transaction of transactions) {
+        tickerSet.add(transaction.Ticker);
+      }
+      setTickers(Array.from(tickerSet));
       setLoadingTransactions(false);
     }
     fetchData();
   }, []);
 
   return (
-    <TransactionContext.Provider value={{ transactions, setTransactions, loadingTransactions }}>
+    <TransactionContext.Provider value={{ transactions, setTransactions, tickers, loadingTransactions }}>
       {children}
     </TransactionContext.Provider>
   );

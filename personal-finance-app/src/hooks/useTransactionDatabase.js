@@ -1,6 +1,6 @@
 'use client';
 
-async function transactionApi(method, data = null, setTransactions) {
+async function transactionApi(method, body = null, setTransactions) {
   try {
     let content = {
       method: method,
@@ -8,7 +8,7 @@ async function transactionApi(method, data = null, setTransactions) {
       credentials: "include",
     }
     if (method !== "GET") {
-      content.body = JSON.stringify(data);
+      content.body = JSON.stringify(body);
     }
     const response = await fetch(process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/transaction", content);
     const items = await response.json();
@@ -34,6 +34,6 @@ export async function getTransactions(setTransactions) {
   return await transactionApi('GET', null, setTransactions);
 }
 
-export async function putTransactions(data, setTransactions) {
-  return await transactionApi('PUT', data, setTransactions);
+export async function putTransactions(body, setTransactions) {
+  return await transactionApi('PUT', body, setTransactions);
 }

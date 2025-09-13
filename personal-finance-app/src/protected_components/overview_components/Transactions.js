@@ -315,7 +315,7 @@ export default function Transactions() {
           <tr>
             {REQUIRED_HEADERS.map((header) => {
               const options = Array.from(
-                new Set(transactions.map(tx => tx[header]).filter(Boolean))
+                new Set((Array.isArray(transactions) ? transactions : []).map(tx => tx[header]).filter(Boolean))
               ).sort();
 
               return (
@@ -342,7 +342,7 @@ export default function Transactions() {
           </tr>
           </thead>
 
-          {loadingTransactions ? <p>Loading...</p> :
+          {loadingTransactions && sortedTransactions == null ? undefined :
             <tbody>
             {sortedTransactions.map((tx, idx) => (
               <tr key={idx}>
