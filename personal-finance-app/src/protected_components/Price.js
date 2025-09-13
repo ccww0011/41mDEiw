@@ -12,7 +12,7 @@ const REQUIRED_HEADERS = [
 export default function Price() {
 
   // Multi-sort state: array of {key, direction}
-  const { prices } = usePrices();
+  const { prices, loadingPrices } = usePrices();
 
   const [filters, setFilters] = useState({});
   const [sortRules, setSortRules] = useState([]);
@@ -191,18 +191,20 @@ export default function Price() {
           </tr>
           </thead>
 
-          <tbody>
-          {sortedPrices.map((price, idx) => (
-            <tr key={idx}>
-              <td>{price.Ticker}</td>
-              <td>{price.Date}</td>
-              <td style={{textAlign: 'right'}}>{Number(price.Close).toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-              })}</td>
-            </tr>
-          ))}
-          </tbody>
+          {loadingPrices ? <p>Loading...</p> :
+            <tbody>
+            {sortedPrices.map((price, idx) => (
+              <tr key={idx}>
+                <td>{price.Ticker}</td>
+                <td>{price.Date}</td>
+                <td style={{textAlign: 'right'}}>{Number(price.Close).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}</td>
+              </tr>
+            ))}
+            </tbody>
+          }
         </table>
       </div>
     </>

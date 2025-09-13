@@ -13,18 +13,18 @@ export function usePrices() {
 
 export function PriceProvider({ children }) {
   const [prices, setPrices] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingPrices, setLoadingPrices] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       await getPrices(setPrices);
-      setLoading(false);
+      setLoadingPrices(false);
     }
     fetchData();
   }, []);
 
   return (
-    <PriceContext.Provider value={{ prices, setPrices, loading }}>
+    <PriceContext.Provider value={{ prices, setPrices, loadingPrices }}>
       {children}
     </PriceContext.Provider>
   );
