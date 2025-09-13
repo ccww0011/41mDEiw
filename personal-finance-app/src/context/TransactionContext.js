@@ -13,20 +13,18 @@ export function useTransactions() {
 
 export function TransactionProvider({ children }) {
   const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingTransactions, setLoadingTransactions] = useState(true);
 
   useEffect(() => {
-    console.log("useEffect in TransactionProvider executed");
     async function fetchData() {
       await getTransactions(setTransactions);
-      console.log("getTransactions completed");
-      setLoading(false);
+      setLoadingTransactions(false);
     }
     fetchData();
   }, []);
 
   return (
-    <TransactionContext.Provider value={{ transactions, setTransactions, loading }}>
+    <TransactionContext.Provider value={{ transactions, setTransactions, loadingTransactions }}>
       {children}
     </TransactionContext.Provider>
   );

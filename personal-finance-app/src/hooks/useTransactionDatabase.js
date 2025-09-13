@@ -8,10 +8,7 @@ async function transactionApi(method, data = null, setTransactions) {
       credentials: "include",
     }
     if (method !== "GET") {
-      content = {
-        ...content,
-        body: JSON.stringify(data),
-      }
+      content.body = JSON.stringify(data);
     }
     const response = await fetch(process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/transaction", content);
     const items = await response.json();

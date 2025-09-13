@@ -67,7 +67,7 @@ function parseLine(line) {
 
 export default function Transactions() {
   const router = useRouter();
-  const { setTransactions, transactions } = useTransactions();
+  const { transactions, setTransactions, loadingTransactions } = useTransactions();
   const [showUpload, setShowUpload] = useState(false);
   const [status, setStatus] = useState('Idle');
   const [message, setMessage] = useState('');
@@ -283,6 +283,7 @@ export default function Transactions() {
         </p>
 
         <div className="grid">
+          <div className="grid-item grid8"></div>
           <div className="grid-item grid1">
             <button
               onClick={() => setSortRules([])}
@@ -299,7 +300,6 @@ export default function Transactions() {
               Clear Filter
             </button>
           </div>
-          <div className="grid-item grid8"></div>
         </div>
 
         <table border="1" cellPadding="8" style={{borderCollapse: 'collapse', width: '100%'}}>
@@ -342,28 +342,29 @@ export default function Transactions() {
           </tr>
           </thead>
 
-          <tbody>
-          {sortedTransactions.map((tx, idx) => (
-            <tr key={idx}>
-              <td>{tx.TradeDate}</td>
-              <td>{tx.ClientAccountID}</td>
-              <td>{tx.AssetClass}</td>
-              <td>{tx.UnderlyingSymbol || '-'}</td>
-              <td>{tx.Description}</td>
-              <td>{tx.ListingExchange}</td>
-              <td>{tx.CurrencyPrimary}</td>
-              <td style={{textAlign: 'right'}}>{Number(tx.Quantity).toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-              })}</td>
-              <td style={{textAlign: 'right'}}>{Number(tx.NetCash).toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-              })}</td>
-              <td>{tx.TradeID}</td>
-            </tr>
-          ))}
-          </tbody>
+          {loadingTransactions ? <p>Loading...</p> :
+            <tbody>
+            {sortedTransactions.map((tx, idx) => (
+              <tr key={idx}>
+                <td>{tx.TradeDate}</td>
+                <td>{tx.ClientAccountID}</td>
+                <td>{tx.AssetClass}</td>
+                <td>{tx.UnderlyingSymbol || '-'}</td>
+                <td>{tx.Description}</td>
+                <td>{tx.ListingExchange}</td>
+                <td>{tx.CurrencyPrimary}</td>
+                <td style={{textAlign: 'right'}}>{Number(tx.Quantity).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}</td>
+                <td style={{textAlign: 'right'}}>{Number(tx.NetCash).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}</td>
+                <td>{tx.TradeID}</td>
+              </tr>
+            ))}
+            </tbody>}
         </table>
       </div>
     </>
