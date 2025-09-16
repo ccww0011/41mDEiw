@@ -14,6 +14,7 @@ export function useTransactions() {
 export function TransactionProvider({ children }) {
   const [transactions, setTransactions] = useState([]);
   const [tickers, setTickers] = useState([]);
+  const [tickerMap, setTickerMap] = useState({});
   const [loadingTransactions, setLoadingTransactions] = useState(true);
 
   useEffect(() => {
@@ -26,16 +27,19 @@ export function TransactionProvider({ children }) {
 
   useEffect(() => {
     let tickerSet = new Set();
+    let tickerObj = new Map();
     for (let transaction of transactions) {
-      if (transaction.Ticker != null)
+      if (transaction.Ticker != null) {
         tickerSet.add(transaction.Ticker);
+        tickerObj[transaction.Ticker] = transaction.Description;
+      }
     }
     setTickers(Array.from(tickerSet).sort());
+    setTickerMap(tickerObj);
   }, [transactions]);
 
-
   return (
-    <TransactionContext.Provider value={{ transactions, setTransactions, tickers, loadingTransactions }}>
+    <TransactionContext.Provider value={{ transactions, setTransactions, tickers, tickerMap, loadingTransactions }}>
       {children}
     </TransactionContext.Provider>
   );
