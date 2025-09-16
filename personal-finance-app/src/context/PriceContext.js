@@ -1,7 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
-import { getPrices } from "@/hooks/usePriceDatabase";
+import { createContext, useContext, useState } from 'react';
 
 const PriceContext = createContext();
 
@@ -12,19 +11,16 @@ export function usePrices() {
 }
 
 export function PriceProvider({ children }) {
-  const [prices, setPrices] = useState([]);
-  const [loadingPrices, setLoadingPrices] = useState(true);
-
-  useEffect(() => {
-    async function fetchData() {
-      await getPrices(setPrices);
-      setLoadingPrices(false);
-    }
-    fetchData();
-  }, []);
+  // const prices = {
+  //   "AAPL": {
+  //     "20250101": 192.55,
+  //     "20250102": 194.22
+  //   }
+  // };
+  const [prices, setPrices] = useState({});
 
   return (
-    <PriceContext.Provider value={{ prices, setPrices, loadingPrices }}>
+    <PriceContext.Provider value={{ prices, setPrices }}>
       {children}
     </PriceContext.Provider>
   );

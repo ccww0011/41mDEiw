@@ -24,6 +24,7 @@ export default function Header() {
           width={400}
           height={100}
           style={{ height: "100%", width: "auto" }}
+          priority
         />
       </div>
 

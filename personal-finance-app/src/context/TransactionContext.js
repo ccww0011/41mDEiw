@@ -19,15 +19,20 @@ export function TransactionProvider({ children }) {
   useEffect(() => {
     async function fetchData() {
       await getTransactions(setTransactions);
-      let tickerSet = new Set();
-      for (let transaction of transactions) {
-        tickerSet.add(transaction.Ticker);
-      }
-      setTickers(Array.from(tickerSet));
       setLoadingTransactions(false);
     }
     fetchData();
   }, []);
+
+  useEffect(() => {
+    let tickerSet = new Set();
+    for (let transaction of transactions) {
+      if (transaction.Ticker != null)
+        tickerSet.add(transaction.Ticker);
+    }
+    setTickers(Array.from(tickerSet).sort());
+  }, [transactions]);
+
 
   return (
     <TransactionContext.Provider value={{ transactions, setTransactions, tickers, loadingTransactions }}>
