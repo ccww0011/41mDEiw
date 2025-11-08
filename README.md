@@ -1,1 +1,1 @@
-# PersonalFinance
+# Personal
