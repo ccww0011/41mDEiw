@@ -1,0 +1,104 @@
+/* Typical order:
+* 1. Box Model (margin, border, padding, width, height, overflow)
+* 2. Layout (display, position, flex/grid properties, float, clear)
+* 3. Visual (background, box-shadow, border-color, opacity)
+* 4. Typography (font-family, font-size, font-weight, color, text-align, text-decoration)
+* 5. Interaction (cursor, pointer-events, user-select, transition)
+*/
+
+.headerBanner {
+    height: 13.5vh;
+    overflow: hidden;
+
+    background-color: #f7fbff;
+
+    font-size: small;
+}
+
+.topnavContainer {
+    max-height: 10vh;
+    width: 100%;
+    overflow: hidden;
+
+    display: flex;
+    flex-wrap: nowrap;
+
+    background-color: #deebf7;
+
+    font-size: small;
+}
+
+.topnavContainer .text {
+    margin: 2px;
+    padding: 5px 10px;
+    border: 0;
+    border-radius: 2px;
+
+    display: block;
+    flex-shrink: 0;
+    white-space: nowrap;
+
+    background-color: transparent;
+
+    color: #08306b;
+    justify-content: center;
+    text-align: right;
+    text-decoration: none;
+}
+
+.topnavContainer button {
+    margin: 2px;
+    padding: 5px 10px;
+    border: 0;
+    border-radius: 2px;
+
+    display: block;
+    flex-shrink: 0;
+    white-space: nowrap;
+
+    background-color: transparent;
+
+    color: #08306b;
+    text-align: center;
+    text-decoration: none;
+}
+
+.topnavContainer button:hover {
+    background-color: #08519c;
+    color: #f7fbff;
+
+    cursor: pointer;
+}
+
+.topnavContainer .buttonDark {
+    margin: 2px;
+    padding: 5px 10px;
+    border: 0;
+    border-radius: 2px;
+
+    display: block;
+    flex-shrink: 0;
+    white-space: nowrap;
+
+    background-color: #08306b;
+
+    color: #f7fbff;
+    text-align: center;
+    text-decoration: none;
+}
+
+.topnavContainer .buttonDark:hover {
+    background-color: #6baed6;
+    color: #f7fbff;
+
+    cursor: pointer;
+}
+
+.rightmost {
+    margin-left: auto;
+
+    display: flex;
+    justify-content: center;
+
+    align-items: center;
+}
