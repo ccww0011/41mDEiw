@@ -5,6 +5,7 @@ import { useTransactions } from "@/context/TransactionContext";
 
 import { getPrices } from "@/hooks/usePriceDatabase";
 import Table from "@/protected_components/price_components/Table";
+import Graph from "@/protected_components/price_components/Graph";
 
 export default function Price() {
   // Table or Graph
@@ -54,6 +55,10 @@ export default function Price() {
 
   const sortedPrices = useMemo(() => {
     if (!prices || !selectedTicker || !prices[selectedTicker]) return [];
+
+
+    console.log(prices)
+
 
     const [startDate, endDate] = getRangeDates(range);
 
@@ -130,8 +135,28 @@ export default function Price() {
       </div>
 
       <div className="grid">
+        <div className="grid-item grid3">
+          <label>Description:</label>
+        </div>
         <div className="grid-item grid1">
           <label>Ticker:</label>
+        </div>
+        <div className="grid-item grid1">
+          <label>Dates:</label>
+        </div>
+        <div className="grid-item grid1">
+          <label>Select:</label>
+        </div>
+        <div className="grid-item grid4"></div>
+      </div>
+
+      <div className="grid">
+        <div className="grid-item grid3">
+          <div>
+            {selectedTicker ? tickerMap[selectedTicker] || 'No description' : '—'}
+          </div>
+        </div>
+        <div className="grid-item grid1">
           <select
             value={selectedTicker}
             onChange={(e) => setSelectedTicker(e.target.value)}
@@ -143,16 +168,7 @@ export default function Price() {
             ))}
           </select>
         </div>
-
-        <div className="grid-item grid2">
-          <label>Description:</label>
-          <div>
-            {selectedTicker ? tickerMap[selectedTicker] || 'No description' : '—'}
-          </div>
-        </div>
-
         <div className="grid-item grid1">
-          <label>Date Range:</label>
           <select
             value={range}
             onChange={(e) => setRange(e.target.value)}
@@ -165,10 +181,9 @@ export default function Price() {
           </select>
         </div>
         <div className="grid-item grid1">
-          <label>Select:</label>
           <button onClick={loadPrices}>Load Prices</button>
         </div>
-        <div className="grid-item grid5"></div>
+        <div className="grid-item grid4"></div>
 
         <div className="grid-item grid9"></div>
         <div className="grid-item grid1">
@@ -176,7 +191,7 @@ export default function Price() {
             onClick={() => setSortRules([])}
             style={{backgroundColor: '#fb6a4a', color: 'white'}}
           >
-            Clear Sort
+            Clear
           </button>
         </div>
       </div>
@@ -188,10 +203,11 @@ export default function Price() {
           onSortClick={onSortClick}
         />
       ) : (
-        <div style={{textAlign: 'center', padding: 20}}>
-          {/* Replace this with an actual graph later */}
-          <p style={{fontSize: 18}}>📈 Graph view coming soon...</p>
-        </div>
+        <Graph
+          prices={prices}
+          selectedTicker={selectedTicker}
+          range={range}
+        />
       )}
     </>
   );
