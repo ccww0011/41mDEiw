@@ -1,5 +1,7 @@
 'use client';
 
+import {logout} from "@/hooks/useAuth";
+
 async function transactionApi(method, body = null, setTransactions) {
   try {
     let content = {
@@ -21,6 +23,7 @@ async function transactionApi(method, body = null, setTransactions) {
         return {message: items.message, status: 'Success'};
       }
     } else if (response.status === 403) {
+      logout();
       return {message: "Unauthorised.", status: 'Unauthorised'};
     } else {
       return {message: items.message, status: 'Error'};

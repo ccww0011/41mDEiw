@@ -72,6 +72,8 @@ export default function Transactions() {
   const [status, setStatus] = useState('Idle');
   const [message, setMessage] = useState('');
 
+  console.log(transactions)
+
   // Multi-sort state: array of {key, direction}
   const [filters, setFilters] = useState({});
   const [sortRules, setSortRules] = useState([]);

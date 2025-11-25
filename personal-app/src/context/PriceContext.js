@@ -11,18 +11,12 @@ export function usePrices() {
 }
 
 export function PriceProvider({ children }) {
-  // const prices = {
-  //   "AAPL": {
-  //     "20250101": 192.55,
-  //     "20250102": 194.22
-  //   }
-  // };
   const [prices, setPrices] = useState({});
+  const [loadingPrices, setLoadingPrices] = useState(false);
 
   return (
-    <PriceContext.Provider value={{ prices, setPrices }}>
+    <PriceContext.Provider value={{ prices, setPrices, loadingPrices }}>
       {children}
     </PriceContext.Provider>
   );
 }
-

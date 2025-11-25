@@ -3,7 +3,7 @@ import React from 'react';
 
 const REQUIRED_HEADERS = ['Ticker', 'Date', 'Close'];
 
-export default function Table({ sortedPrices, sortRules, onSortClick }) {
+export default function Table({ sortedPrices, sortRules, onSortClick, loadingPrices }) {
 
   const renderSortControls = (key) => {
     const rule = sortRules.find(r => r.key === key);
@@ -39,6 +39,9 @@ export default function Table({ sortedPrices, sortRules, onSortClick }) {
       </div>
     );
   };
+
+  if (!sortedPrices || Object.keys(sortedPrices).length === 0) return <div>No data. Select ticker and dates, then press Load Prices button.</div>;
+  if (loadingPrices) return <div>Loading prices...</div>
 
   return (
     <div>

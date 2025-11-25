@@ -9,10 +9,10 @@ import Graph from "@/protected_components/price_components/Graph";
 
 export default function Price() {
   // Table or Graph
-  const [showTab, setShowTab] = useState("Holdings");
+  const [showTab, setShowTab] = useState("Graph");
 
   const { tickers , tickerMap } = useTransactions();
-  const { prices, setPrices } = usePrices();
+  const { prices, setPrices, loadingPrices } = usePrices();
 
   const [selectedTicker, setSelectedTicker] = useState('');
   const [range, setRange] = useState('');
@@ -55,10 +55,6 @@ export default function Price() {
 
   const sortedPrices = useMemo(() => {
     if (!prices || !selectedTicker || !prices[selectedTicker]) return [];
-
-
-    console.log(prices)
-
 
     const [startDate, endDate] = getRangeDates(range);
 
@@ -201,12 +197,14 @@ export default function Price() {
           sortedPrices={sortedPrices}
           sortRules={sortRules}
           onSortClick={onSortClick}
+          loadingPrices={loadingPrices}
         />
       ) : (
         <Graph
           prices={prices}
           selectedTicker={selectedTicker}
           range={range}
+          loadingPrices={loadingPrices}
         />
       )}
     </>

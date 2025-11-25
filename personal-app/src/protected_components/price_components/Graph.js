@@ -42,8 +42,10 @@ function filterByRange(dates, range) {
   return dates;
 }
 
-export default function Graph({ prices, selectedTicker = '', range = '' }) {
-  if (!prices || Object.keys(prices).length === 0) return <div>No data</div>;
+export default function Graph({ prices, selectedTicker = '', range = '', loadingPrices }) {
+
+  if (!prices || !selectedTicker || !range || Object.keys(prices).length === 0) return <div>No data. Select ticker and dates, then press Load Prices button.</div>;
+  if (loadingPrices) return <div>Loading prices...</div>
 
   // Flatten selected ticker (or all if empty)
   const flattened = useMemo(() => {

@@ -1,6 +1,4 @@
-'use client';
-
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { getTransactions } from "@/hooks/useTransactionDatabase";
 
 const TransactionContext = createContext();
@@ -13,8 +11,6 @@ export function useTransactions() {
 
 export function TransactionProvider({ children }) {
   const [transactions, setTransactions] = useState([]);
-  const [tickers, setTickers] = useState([]);
-  const [tickerMap, setTickerMap] = useState({});
   const [loadingTransactions, setLoadingTransactions] = useState(true);
 
   useEffect(() => {
@@ -25,17 +21,19 @@ export function TransactionProvider({ children }) {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    let tickerSet = new Set();
-    let tickerObj = new Map();
+  const { tickers, tickerMap } = useMemo(() => {
+    const tickerSet = new Set();
+    const tickerObj = {};
     for (let transaction of transactions) {
       if (transaction.Ticker != null) {
         tickerSet.add(transaction.Ticker);
         tickerObj[transaction.Ticker] = transaction.Description;
       }
     }
-    setTickers(Array.from(tickerSet).sort());
-    setTickerMap(tickerObj);
+    return {
+      tickers: Array.from(tickerSet).sort(),
+      tickerMap: tickerObj
+    };
   }, [transactions]);
 
   return (
@@ -44,4 +42,3 @@ export function TransactionProvider({ children }) {
     </TransactionContext.Provider>
   );
 }
-

@@ -1,5 +1,7 @@
 'use client';
 
+import {logout} from "@/hooks/useAuth";
+
 async function priceApi(method, data, setPrices) {
   try {
     let url = process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/price";
@@ -52,6 +54,7 @@ async function priceApi(method, data, setPrices) {
         return {message: items.message, status: 'Success'};
       }
     } else if (response.status === 403) {
+      logout();
       return {message: "Unauthorised.", status: 'Unauthorised'};
     } else {
       return {message: items.message, status: 'Error'};
