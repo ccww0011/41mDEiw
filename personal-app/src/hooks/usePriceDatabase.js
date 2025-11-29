@@ -64,6 +64,37 @@ async function priceApi(method, data, setPrices) {
   }
 }
 
+export async function getInitialPrices(tickers, date, setPrices) {
+  // format date as YYYYMMDD
+  const formatDate = (date) => {
+    const y = date.getFullYear();
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const d = date.getDate().toString().padStart(2, '0');
+    return `${y}${m}${d}`;
+  };
+
+// get date 7 days before
+  const get7DaysBefore = (date) => {
+    const d = new Date(date);      // copy so original is safe
+    d.setDate(d.getDate() - 7);
+    return d;
+  };
+
+  const dateStr = formatDate(date);
+  const startDateStr = formatDate(get7DaysBefore(date));
+
+// build items for API
+  const items = tickers.map((ticker) => ({
+    ticker,
+    startDate: startDateStr,
+    endDate: dateStr
+  }));
+
+  const data = { items: JSON.stringify(items) };
+  return await priceApi('GET', data, setPrices);
+}
+
+
 export async function getPrices(ticker, startDate, endDate, prices, setPrices) {
   // const prices = {
   //   "AAPL": {

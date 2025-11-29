@@ -11,14 +11,16 @@ export function useTransactions() {
 
 export function TransactionProvider({ children }) {
   const [transactions, setTransactions] = useState([]);
-  const [loadingTransactions, setLoadingTransactions] = useState(true);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
       await getTransactions(setTransactions);
       setLoadingTransactions(false);
     }
+    setLoadingTransactions(true);
     fetchData();
+    setLoadingTransactions(false);
   }, []);
 
   const { tickers, tickerMap } = useMemo(() => {
@@ -35,6 +37,8 @@ export function TransactionProvider({ children }) {
       tickerMap: tickerObj
     };
   }, [transactions]);
+
+  console.log(transactions)
 
   return (
     <TransactionContext.Provider value={{ transactions, setTransactions, tickers, tickerMap, loadingTransactions }}>
