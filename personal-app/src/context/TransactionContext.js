@@ -38,7 +38,7 @@ export function TransactionProvider({ children }) {
     };
   }, [transactions]);
 
-  console.log(transactions)
+  // console.log(transactions)
 
   return (
     <TransactionContext.Provider value={{ transactions, setTransactions, tickers, tickerMap, loadingTransactions }}>
