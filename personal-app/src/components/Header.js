@@ -35,7 +35,7 @@ export default function Header() {
         {user ? (
           <div className={styles.rightmost}>
             <div className={styles.text}> {user.email}</div>
-            <button className={styles.buttonDark} onClick={() => handleNavigation("/login")}>Portfolio</button>
+            <button className={styles.buttonDark} onClick={() => handleNavigation("/account")}>Portfolio</button>
             <button className={styles.buttonDark} onClick={logout}>Logout</button>
           </div>
         ) : (

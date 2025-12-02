@@ -103,7 +103,7 @@ export default function Holdings({ holdingsArray = [] }) {
 
       {/* Missing P/L notice */}
       {aggregates.missingPLCurrencies.length > 0 && (
-        <p style={{ color: 'orange', fontWeight: 'bold' }}>
+        <p style={{ color: 'red' }}>
           P/L data missing for tickers in: {aggregates.missingPLCurrencies.join(", ")}
         </p>
       )}

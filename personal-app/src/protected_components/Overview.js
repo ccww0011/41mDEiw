@@ -32,7 +32,9 @@ export default function Overview() {
 
   // Aggregate transactions by Ticker + Exchange
   const holdingsMap = {};
-  console.log("sortedTransactions", sortedTransactions);
+
+  //console.log("sortedTransactions", sortedTransactions);
+
   sortedTransactions.forEach(tx => {
     if (tx.AssetClass !== "STK") return;
 
