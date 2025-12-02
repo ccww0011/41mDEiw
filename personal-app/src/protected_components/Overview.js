@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect, useState} from "react";
+import {useEffect, useMemo, useState} from "react";
 import Input from "@/protected_components/overview_components/Input";
 import Transactions from "@/protected_components/overview_components/Transactions";
 import Holdings from "@/protected_components/overview_components/Holdings";
@@ -36,18 +36,18 @@ export default function Overview() {
   //console.log("sortedTransactions", sortedTransactions);
 
   sortedTransactions.forEach(tx => {
-    if (tx.AssetClass !== "STK") return;
+    if (tx["AssetClass"] !== "STK") return;
 
-    const key = `${tx.Ticker}|${tx.ListingExchange}`;
-    const quantity = parseFloat(tx.Quantity);
-    const netCash = parseFloat(tx.NetCash);
-    const currency = tx.CurrencyPrimary;
+    const key = `${tx.Ticker}|${tx["ListingExchange"]}`;
+    const quantity = parseFloat(tx["Quantity"]);
+    const netCash = parseFloat(tx["NetCash"]);
+    const currency = tx["CurrencyPrimary"];
 
     if (!holdingsMap[key]) {
       holdingsMap[key] = {
         ticker: tx.Ticker,
-        description: tx.Description,
-        exchange: tx.ListingExchange,
+        description: tx["Description"],
+        exchange: tx["ListingExchange"],
         totalQuantity: 0,
         totalProceeds: 0,
         realisedPL: 0,
@@ -116,6 +116,53 @@ export default function Overview() {
     };
   });
 
+  const aggregates = useMemo(() => {
+    const map = {};
+    const missingPLCurrencies = new Set();
+    holdingsArray.forEach(h => {
+      const curr = h.currency || "N/A";
+      if (!map[curr]) {
+        map[curr] = {
+          costBasis: 0,
+          marketValue: 0,
+          unrealisedPL: 0,
+          realisedPL: 0,
+          pl: 0
+        };
+      }
+      // ----- COST BASIS -----
+      // totalProceeds is your cost basis (negative for long positions)
+      if (h.totalProceeds !== null && !isNaN(h.totalProceeds)) {
+        map[curr].costBasis += h.totalProceeds;
+      }
+      // ----- MARKET VALUE -----
+      if (h.value !== null) {
+        map[curr].marketValue += h.value;
+      } else {
+        missingPLCurrencies.add(curr);
+      }
+      // ----- UNREALISED P/L -----
+      if (h.unrealisedPL !== null) {
+        map[curr].unrealisedPL += h.unrealisedPL;
+      } else {
+        missingPLCurrencies.add(curr);
+      }
+      // ----- REALISED P/L -----
+      if (h.realisedPL !== null) {
+        map[curr].realisedPL += h.realisedPL;
+      } else {
+        missingPLCurrencies.add(curr);
+      }
+      // ----- TOTAL P/L -----
+      if (h.pl !== null) {
+        map[curr].pl += h.pl;
+      } else {
+        missingPLCurrencies.add(curr);
+      }
+    });
+    return { map, missingPLCurrencies: Array.from(missingPLCurrencies) };
+  }, [holdingsArray]);
+
 
   return (
     <>
@@ -160,7 +207,7 @@ export default function Overview() {
         <div className="grid-item grid10" style={{ padding: "5px 0" }}></div>
       </div>
 
-      {showTab === "Holdings" && <Holdings holdingsArray={holdingsArray} />}
+      {showTab === "Holdings" && <Holdings holdingsArray={holdingsArray} aggregates={aggregates} />}
       {showTab === "Transactions" && <Transactions />}
       {showTab === "Input" && <Input />}
     </>
