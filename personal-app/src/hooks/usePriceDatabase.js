@@ -4,7 +4,7 @@ import {logout} from "@/hooks/useAuth";
 
 async function priceApi(method, data, setPrices) {
   try {
-    let url = process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/price";
+    let url = process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/api/price";
     let content = {
       method: method,
       headers: { 'content-type': 'application/json' },

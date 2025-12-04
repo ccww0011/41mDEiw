@@ -4,7 +4,7 @@ import Footer from "../components/Footer";
 import {AuthProvider} from "@/context/AuthContext";
 
 export const metadata = {
-  title: "Personal Finance",
+  title: "Personal Web",
   description: "This website takes care of your personal portfolio.",
   icons: {
     icon: "/favicon.ico",

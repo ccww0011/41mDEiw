@@ -7,8 +7,8 @@ export default function Home() {
     path: "/Home1.jpg",
     height: 40,
     altText: "Welcome!",
-    title: "Manage your Portfolio of Securities!",
-    text: "Easily manage and track your investment portfolio in one place.",
+    title: "Technology Expertise for All Corporations.",
+    text: "Enhancing efficiency and decision-making across all business operations.",
     button: "Quick Demo",
     navigate: "/demo",
   };

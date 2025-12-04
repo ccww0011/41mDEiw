@@ -1,7 +1,7 @@
 "use client";
 
 export async function fetchUser() {
-  const res = await fetch(process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/oauth2/login", {
+  const res = await fetch(process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/oauth2/account", {
     credentials: "include",
   });
 

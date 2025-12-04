@@ -6,7 +6,7 @@ export default function Demo() {
 
   const projects = [
     {
-      imageSrc: "/Accounts.jpg",
+      imageSrc: "/Personal.jpg",
       title: 'This Website',
       description: 'A simple full-stack web application for all corporations',
       features: [

@@ -19,7 +19,7 @@ export default function Header() {
     <>
       <div className={styles.headerBanner}>
         <Image
-          alt="Aqua Farm Limited"
+          alt="Joker"
           src="/HomeLogo.jpg"
           width={400}
           height={100}

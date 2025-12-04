@@ -2,7 +2,7 @@
 
 export async function postContactUs(body = null) {
   try {
-    const response = await fetch(process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/contact-us", {
+    const response = await fetch(process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/api/contact", {
       method: "POST",
       headers: {
         'Content-Type': 'application/json',

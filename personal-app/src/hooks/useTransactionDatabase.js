@@ -12,7 +12,7 @@ async function transactionApi(method, body = null, setTransactions) {
     if (method !== "GET") {
       content.body = JSON.stringify(body);
     }
-    const response = await fetch(process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/transaction", content);
+    const response = await fetch(process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/api/transaction", content);
     const items = await response.json();
     if (response.ok) {
       const contentType = response.headers.get('Content-Type');
