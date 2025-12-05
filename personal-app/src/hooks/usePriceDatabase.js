@@ -73,25 +73,37 @@ export async function getInitialPrices(tickers, date, setPrices) {
     return `${y}${m}${d}`;
   };
 
-// get date 7 days before
-  const get7DaysBefore = (date) => {
-    const d = new Date(date);      // copy so original is safe
-    d.setDate(d.getDate() - 7);
-    return d;
+  // get first and last day of this year
+  const getStartOfYear = (year) => new Date(year, 0, 1);
+  const getEndOfYear = (year) => new Date(year, 11, 31);
+
+  const thisYear = date.getFullYear();
+  const startDateStr = formatDate(getStartOfYear(thisYear));
+  const endDateStr = formatDate(getEndOfYear(thisYear));
+
+  // function to split array into chunks of size n
+  const chunkArray = (arr, size) => {
+    const chunks = [];
+    for (let i = 0; i < arr.length; i += size) {
+      chunks.push(arr.slice(i, i + size));
+    }
+    return chunks;
   };
 
-  const dateStr = formatDate(date);
-  const startDateStr = formatDate(get7DaysBefore(date));
+  // all tickers in chunks of 25
+  const tickerChunks = chunkArray(tickers, 25);
 
-// build items for API
-  const items = tickers.map((ticker) => ({
-    ticker,
-    startDate: startDateStr,
-    endDate: dateStr
-  }));
+  // call API for each chunk
+  for (const chunk of tickerChunks) {
+    const items = chunk.map((ticker) => ({
+      ticker,
+      startDate: startDateStr,
+      endDate: endDateStr
+    }));
 
-  const data = { items: JSON.stringify(items) };
-  return await priceApi('GET', data, setPrices);
+    const data = { items: JSON.stringify(items) };
+    await priceApi('GET', data, setPrices);
+  }
 }
 
 
