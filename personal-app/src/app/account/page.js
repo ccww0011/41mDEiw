@@ -2,7 +2,7 @@
 
 import ProtectedLayout from "@/app/protected-layout";
 import {useState} from "react";
-import Price from "@/protected_components/Price";
+import Market from "@/protected_components/Market";
 import Overview from "@/protected_components/Overview";
 import Performance from "@/protected_components/Performance";
 
@@ -31,13 +31,13 @@ export default function LoginPage() {
           <div className="grid-item grid1">
             <button
               type="button"
-              onClick={() => setShowTab("Price")}
+              onClick={() => setShowTab("Market")}
               style={{
-                backgroundColor: showTab === "Price" ? "#08519c" : undefined,
-                color: showTab === "Price" ? "#f7fbff" : undefined
+                backgroundColor: showTab === "Market" ? "#08519c" : undefined,
+                color: showTab === "Market" ? "#f7fbff" : undefined
               }}
             >
-              Price
+              Market
             </button>
           </div>
           <div className="grid-item grid1">
@@ -56,7 +56,7 @@ export default function LoginPage() {
       </div>
 
       {showTab === "Overview" ? <Overview/>
-        : showTab === "Price" ? <Price/>
+        : showTab === "Market" ? <Market/>
           : showTab === "Performance" ? <Performance/> : null}
     </div>
     </ProtectedLayout>

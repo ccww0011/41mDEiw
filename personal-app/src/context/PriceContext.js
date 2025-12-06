@@ -27,7 +27,7 @@ export function PriceProvider({ children }) {
     setLoadingPrices(false);
   }, [tickers]);
 
-  // console.log(prices)
+  console.log(prices)
 
   return (
     <PriceContext.Provider value={{ prices, setPrices, loadingPrices }}>

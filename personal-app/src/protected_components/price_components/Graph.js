@@ -21,61 +21,39 @@ ChartJS.register(
   Legend
 );
 
-// Helper: filter by range
-function filterByRange(dates, range) {
-  if (!range) return dates; // no filtering
+export default function Graph({ prices, selectedTicker = '' }) {
 
-  const today = new Date();
-  const formatDate = (str) => new Date(`${str.slice(0,4)}-${str.slice(4,6)}-${str.slice(6,8)}`);
-
-  if (range === 'Last7Days') {
-    const past7 = new Date(today);
-    past7.setDate(today.getDate() - 7);
-    return dates.filter(d => formatDate(d.Date) >= past7);
-  }
-  if (range === 'MTD') {
-    return dates.filter(d => formatDate(d.Date).getMonth() === today.getMonth() && formatDate(d.Date).getFullYear() === today.getFullYear());
-  }
-  if (range === 'YTD') {
-    return dates.filter(d => formatDate(d.Date).getFullYear() === today.getFullYear());
-  }
-  return dates;
-}
-
-export default function Graph({ prices, selectedTicker = '', range = '', loadingPrices }) {
-
-  if (!prices || !selectedTicker || !range || Object.keys(prices).length === 0) return <div>No data. Select ticker and dates, then press Load Prices button.</div>;
-  if (loadingPrices) return <div>Loading prices...</div>
-
-  // Flatten selected ticker (or all if empty)
+  // Flatten the prices for the selected ticker(s)
   const flattened = useMemo(() => {
     const arr = [];
-    const tickers = selectedTicker ? [selectedTicker] : Object.keys(prices);
+    const targets = selectedTicker ? [selectedTicker] : Object.keys(prices);
 
-    tickers.forEach(ticker => {
-      const data = prices[ticker];
+    targets.forEach(ticker => {
+      const data = prices[ticker] || {};
       for (const dateStr in data) {
-        arr.push({ Ticker: ticker, Date: dateStr, Close: data[dateStr] });
+        arr.push({
+          Ticker: ticker,
+          Date: dateStr,
+          Close: data[dateStr]
+        });
       }
     });
 
-    // Sort by date string ascending
     return arr.sort((a, b) => a.Date.localeCompare(b.Date));
   }, [prices, selectedTicker]);
 
-  // Apply range filter
-  const filtered = useMemo(() => filterByRange(flattened, range), [flattened, range]);
+  if (flattened.length === 0)
+    return <div>No data for selected ticker.</div>;
 
-  if (filtered.length === 0) return <div>No data for selected ticker/range, please press Load Prices button</div>;
+  // Prepare datasets
+  const tickers = [...new Set(flattened.map(d => d.Ticker))];
+  const colorPalette = ['#08519c', '#fb6a4a', '#31a354', '#fdae6b', '#6a3d9a'];
 
-  // Prepare chart datasets (one line per ticker)
-  const tickersToPlot = Array.from(new Set(filtered.map(d => d.Ticker)));
-  const datasets = tickersToPlot.map((ticker, idx) => {
-    const colorPalette = ['#08519c', '#fb6a4a', '#31a354', '#fdae6b', '#6a3d9a'];
-    const tickerData = filtered.filter(d => d.Ticker === ticker);
+  const datasets = tickers.map((ticker, idx) => {
+    const d = flattened.filter(x => x.Ticker === ticker);
     return {
       label: ticker,
-      data: tickerData.map(d => d.Close),
+      data: d.map(x => x.Close),
       borderColor: colorPalette[idx % colorPalette.length],
       backgroundColor: colorPalette[idx % colorPalette.length],
       tension: 0.2,
@@ -83,19 +61,15 @@ export default function Graph({ prices, selectedTicker = '', range = '', loading
     };
   });
 
-  const labels = Array.from(new Set(filtered.map(d => d.Date))).sort();
+  const labels = [...new Set(flattened.map(d => d.Date))].sort();
 
   const data = { labels, datasets };
 
   const options = {
     responsive: true,
     scales: {
-      x: {
-        title: { display: true, text: 'Date' }
-      },
-      y: {
-        title: { display: true, text: 'Close' }
-      }
+      x: { title: { display: true, text: 'Date' } },
+      y: { title: { display: true, text: 'Close' } }
     }
   };
 
@@ -105,6 +79,3 @@ export default function Graph({ prices, selectedTicker = '', range = '', loading
     </div>
   );
 }
-
-
-
