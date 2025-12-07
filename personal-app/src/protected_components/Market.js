@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from "react";
-import Equity from "@/protected_components/price_components/Equity";
-import Cash from "@/protected_components/price_components/Cash";
+import Equity from "@/protected_components/market_components/Equity";
+import Cash from "@/protected_components/market_components/Cash";
 
 export default function Market() {
   // Equity or Cash

@@ -1,7 +1,7 @@
 'use client';
 
-import Table from "@/protected_components/price_components/Table";
-import Graph from "@/protected_components/price_components/Graph";
+import Table from "@/protected_components/market_components/Table";
+import Graph from "@/protected_components/market_components/Graph";
 import React, { useMemo, useState, useEffect } from "react";
 import { useTransactions } from "@/context/TransactionContext";
 import { usePrices } from "@/context/PriceContext";

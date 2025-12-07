@@ -16,6 +16,20 @@ const REQUIRED_HEADERS = [
   'ListingExchange',
   'CurrencyPrimary',
   'Quantity',
+  'Proceeds',
+  'Commission',
+  'TradeID',
+];
+
+const RENDERED_HEADERS = [
+  'TradeDate',
+  'ClientAccountID',
+  'AssetClass',
+  'UnderlyingSymbol',
+  'Description',
+  'ListingExchange',
+  'CurrencyPrimary',
+  'Quantity',
   'NetCash',
   'TradeID',
 ];
@@ -99,7 +113,17 @@ export default function Transactions() {
           return;
         }
 
-        const result = await putTransactions({ rows: data }, setTransactions);
+        const transformedData = data.map(row => {
+          const proceeds = parseFloat(row['Proceeds']) || 0;
+          const commission = parseFloat(row['Commission']) || 0;
+          const { Proceeds, Commission, ...rest } = row;
+          return {
+            ...rest,
+            NetCash: (proceeds + commission).toString()
+          };
+        });
+
+        const result = await putTransactions({ rows: transformedData }, setTransactions);
         if (result.status === 'Unauthorised') {
           router.push('/logout');
           return;
@@ -214,10 +238,18 @@ export default function Transactions() {
     );
   };
 
-  const formatNumber = (num) => {
-    if (num === null || num === undefined || isNaN(num)) return '-';
-    return Number(num).toFixed(2); // two decimal digits, no commas
-  };
+  const formatNumber = (num) =>
+    num === null || num === undefined
+      ? "—"
+      : Number(num).toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+
+  const getStyle = (num) => ({
+    textAlign: "right",
+    color: num < 0 ? "red" : "black"
+  });
 
   return (
     <>
@@ -282,7 +314,7 @@ export default function Transactions() {
         <table border="1" cellPadding="8" style={{ borderCollapse: 'collapse', width: '100%' }}>
           <thead>
           <tr>
-            {REQUIRED_HEADERS.map(header => (
+            {RENDERED_HEADERS.map(header => (
               <th key={header} style={{ verticalAlign: 'top' }}>
                 {renderSortControls(header)} {header.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}
               </th>
@@ -290,7 +322,7 @@ export default function Transactions() {
           </tr>
 
           <tr>
-            {REQUIRED_HEADERS.map(header => {
+            {RENDERED_HEADERS.map(header => {
               if (numericKeys.includes(header)) return <th key={header}></th>;
 
               const options = Array.from(
@@ -326,8 +358,8 @@ export default function Transactions() {
               <td>{tx.Description}</td>
               <td>{tx.ListingExchange}</td>
               <td>{tx.CurrencyPrimary}</td>
-              <td style={{ textAlign: 'right' }}>{formatNumber(tx.Quantity)}</td>
-              <td style={{ textAlign: 'right' }}>{formatNumber(tx.NetCash)}</td>
+              <td style={getStyle(tx.Quantity)}>{formatNumber(tx.Quantity)}</td>
+              <td style={getStyle(tx.NetCash)}>{formatNumber(tx.NetCash)}</td>
               <td>{tx.TradeID}</td>
             </tr>
           ))}

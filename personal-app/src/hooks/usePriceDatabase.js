@@ -108,60 +108,82 @@ export async function getInitialPrices(tickers, date, setPrices) {
 
 
 export async function getPrices(ticker, startDate, endDate, prices, setPrices) {
-  // const prices = {
-  //   "AAPL": {
-  //     "20250101": 192.55,
-  //     "20250102": 194.22
-  //   }
-  // };
-  const formatDate = (date) => {
-    const y = date.getFullYear();
-    const m = (date.getMonth() + 1).toString().padStart(2, '0');
-    const d = date.getDate().toString().padStart(2, '0');
+  // Parse date strings -> UTC dates (IMPORTANT)
+  const toUTCDate = (str) =>
+    new Date(Date.UTC(
+      +str.slice(0, 4),
+      +str.slice(4, 6) - 1,
+      +str.slice(6, 8)
+    ));
 
+  // Format UTC date -> YYYYMMDD
+  const formatUTCDate = (date) => {
+    const y = date.getUTCFullYear();
+    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(date.getUTCDate()).padStart(2, '0');
     return `${y}${m}${d}`;
   };
 
-  const toDate = (str) => new Date(
-    +str.slice(0, 4),
-    +str.slice(4, 6) - 1,
-    +str.slice(6, 8)
-  );
+  // Add 1 day in UTC safely
+  const addUTC1Day = (date) =>
+    new Date(Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate() + 1
+    ));
 
-  const start = toDate(startDate);
-  const end = toDate(endDate);
+  const start = toUTCDate(startDate);
+  const end = toUTCDate(endDate);
 
+  // ---- FIND MISSING RANGES ----
   let ranges = [];
-  let started = false;
-  let dateStr = "";
-  let prevDateStr = "";
-  for (let d = start; d <= end; d.setDate(d.getDate() + 1)) {
-    dateStr = formatDate(d);
-    if (!(ticker in prices) || !(dateStr in prices[ticker])) {
-      if (!started) {
-        ranges.push(dateStr);
-        started = true;
+  let inRange = false;
+
+  let d = start;
+  let prev = null;
+
+  while (d <= end) {
+    const dayStr = formatUTCDate(d);
+
+    const exists =
+      prices[ticker] &&
+      Object.prototype.hasOwnProperty.call(prices[ticker], dayStr);
+
+    if (!exists) {
+      if (!inRange) {
+        // starting a new missing range
+        ranges.push(dayStr);
+        inRange = true;
       }
     } else {
-      if (started) {
-        ranges.push(prevDateStr);
-        started = false;
+      if (inRange) {
+        // closing missing range
+        ranges.push(prev);
+        inRange = false;
       }
     }
-    prevDateStr = dateStr;
+
+    prev = dayStr;
+    d = addUTC1Day(d);  // safe UTC increment
   }
-  if (started) {
-    ranges.push(dateStr);
+
+  // if open missing range extends to the end
+  if (inRange) {
+    ranges.push(prev);
   }
+
+  // ---- BUILD ITEMS FOR API ----
   const items = [];
   for (let i = 0; i < ranges.length; i += 2) {
     items.push({
-      ticker: ticker,
+      ticker,
       startDate: ranges[i],
-      endDate: ranges[i + 1]
+      endDate: ranges[i + 1],
     });
   }
+
   const data = { items: JSON.stringify(items) };
+
   return await priceApi('GET', data, setPrices);
 }
 
