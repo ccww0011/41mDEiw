@@ -21,12 +21,12 @@ ChartJS.register(
   Legend
 );
 
-export default function Graph({ prices, selectedTicker = '' }) {
+export default function Graph({ prices, selectedItem = ''}) {
 
   // Flatten the prices for the selected ticker(s)
   const flattened = useMemo(() => {
     const arr = [];
-    const targets = selectedTicker ? [selectedTicker] : Object.keys(prices);
+    const targets = selectedItem ? [selectedItem] : Object.keys(prices);
 
     targets.forEach(ticker => {
       const data = prices[ticker] || {};
@@ -40,10 +40,10 @@ export default function Graph({ prices, selectedTicker = '' }) {
     });
 
     return arr.sort((a, b) => a.Date.localeCompare(b.Date));
-  }, [prices, selectedTicker]);
+  }, [prices, selectedItem]);
 
   if (flattened.length === 0)
-    return <div>No data for selected ticker.</div>;
+    return <h3>No data for selected ticker.</h3>;
 
   // Prepare datasets
   const tickers = [...new Set(flattened.map(d => d.Ticker))];

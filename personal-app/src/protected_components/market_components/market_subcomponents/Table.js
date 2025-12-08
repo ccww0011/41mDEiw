@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 
 const REQUIRED_HEADERS = ['Ticker', 'Date', 'Close'];
 
-export default function Table({ prices, selectedTicker = '' }) {
+export default function Table({ prices, selectedItem = '', digits = 2 }) {
   const [sortRules, setSortRules] = useState([]);
 
   const onSortClick = (key, directionOrRemove) => {
@@ -16,13 +16,14 @@ export default function Table({ prices, selectedTicker = '' }) {
 
   // Flatten and sort prices
   const sortedPrices = useMemo(() => {
-    if (!prices || !selectedTicker || !prices[selectedTicker]) return [];
+    if (!prices || !selectedItem || !prices[selectedItem]) return [];
 
-    const entries = Object.entries(prices[selectedTicker]).map(([date, close]) => ({
-      Ticker: selectedTicker,
+    let entries = Object.entries(prices[selectedItem]).map(([date, close]) => ({
+      Ticker: selectedItem,
       Date: date,
       Close: close,
     }));
+    entries = entries.reverse();
 
     // Apply sorting rules
     for (let i = sortRules.length - 1; i >= 0; i--) {
@@ -44,7 +45,7 @@ export default function Table({ prices, selectedTicker = '' }) {
     }
 
     return entries;
-  }, [prices, sortRules, selectedTicker]);
+  }, [prices, sortRules, selectedItem]);
 
   const renderSortControls = (key) => {
     const rule = sortRules.find(r => r.key === key);
@@ -101,7 +102,7 @@ export default function Table({ prices, selectedTicker = '' }) {
             <td>{price.Ticker}</td>
             <td>{price.Date}</td>
             <td style={{textAlign: 'right'}}>
-              {Number(price.Close).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {Number(price.Close).toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })}
             </td>
           </tr>
         ))}

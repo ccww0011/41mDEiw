@@ -147,10 +147,10 @@ export default function Holdings({ holdingsArray = [], aggregates }) {
       <h2>Holdings</h2>
 
       {aggregates.missingPLCurrencies.length > 0 && (
-        <p style={{ color: "red" }}>
-          P/L data missing for tickers in:{" "}
+        <h3>
+          P/L data loading/missing for tickers in:{" "}
           {aggregates.missingPLCurrencies.join(", ")}
-        </p>
+        </h3>
       )}
 
       {/* Aggregate table (unchanged) */}
@@ -194,17 +194,15 @@ export default function Holdings({ holdingsArray = [], aggregates }) {
       </table>
 
       {/* Sorting info */}
-      <p>
-        Sorting priority:{" "}
-        {sortRules.length === 0
-          ? "None"
-          : sortRules
-            .map((rule, i) => `(${i + 1}) ${COLUMN_NAMES[rule.key]}`)
-            .join("; ")}
-      </p>
-
       <div className="grid">
-        <div className="grid-item grid8"></div>
+        <div className="grid-item grid8">
+          Sorting priority:{" "}
+          {sortRules.length === 0
+            ? "None"
+            : sortRules
+              .map((rule, i) => `(${i + 1}) ${COLUMN_NAMES[rule.key]}`)
+              .join("; ")}
+        </div>
         <div className="grid-item grid1">
           <button
             onClick={() => setSortRules([])}
@@ -236,7 +234,6 @@ export default function Holdings({ holdingsArray = [], aggregates }) {
           ))}
         </tr>
 
-        {/* Filter row */}
         {/* Filter row */}
         <tr>
           {Object.keys(COLUMN_NAMES).map((key) => {

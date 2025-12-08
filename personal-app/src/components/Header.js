@@ -19,11 +19,12 @@ export default function Header() {
     <>
       <div className={styles.headerBanner}>
         <Image
-          alt="Joker"
+          alt="Home"
           src="/HomeLogo.jpg"
           width={400}
           height={100}
           style={{ height: "100%", width: "auto" }}
+          loading={'eager'}
           priority
         />
       </div>

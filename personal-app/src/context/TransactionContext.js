@@ -15,12 +15,11 @@ export function TransactionProvider({ children }) {
 
   useEffect(() => {
     async function fetchData() {
+      setLoadingTransactions(true);
       await getTransactions(setTransactions);
       setLoadingTransactions(false);
     }
-    setLoadingTransactions(true);
     fetchData();
-    setLoadingTransactions(false);
   }, []);
 
   const { tickers, tickerMap } = useMemo(() => {
@@ -38,11 +37,25 @@ export function TransactionProvider({ children }) {
     };
   }, [transactions]);
 
-  console.log(transactions)
-  console.log(tickers)
+  const { currencies, currencyMap } = useMemo(() => {
+    const currencySet = new Set();
+    const currencyObj = {};
+    for (let transaction of transactions) {
+      if (transaction.CurrencyPrimary != null) {
+        currencySet.add(transaction.CurrencyPrimary);
+        currencyObj[transaction.CurrencyPrimary] = transaction.CurrencyPrimary;
+      }
+    }
+    return {
+      currencies: Array.from(currencySet).sort(),
+      currencyMap: currencyObj
+    };
+  }, [transactions]);
+
+  // console.log(transactions)
 
   return (
-    <TransactionContext.Provider value={{ transactions, setTransactions, tickers, tickerMap, loadingTransactions }}>
+    <TransactionContext.Provider value={{ transactions, setTransactions, tickers, tickerMap, currencies, currencyMap, loadingTransactions, setLoadingTransactions }}>
       {children}
     </TransactionContext.Provider>
   );

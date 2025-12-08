@@ -20,7 +20,7 @@ export default function Hero(props) {
         alt={props.altText || "Image"}
         fill
         style={{ objectFit: "cover" }}
-        priority
+        loading={'eager'}
       />
 
       <div className={styles.innerContainer}>

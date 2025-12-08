@@ -1,11 +1,11 @@
 'use client';
 import React, { useState } from "react";
-import Equity from "@/protected_components/market_components/Equity";
-import Cash from "@/protected_components/market_components/Cash";
+import Stock from "@/protected_components/market_components/Stock";
+import FX from "@/protected_components/market_components/FX";
 
 export default function Market() {
-  // Equity or Cash
-  const [showTab, setShowTab] = useState("Equity");
+  // Stock or FX
+  const [showTab, setShowTab] = useState("Stock");
 
   return (
     <>
@@ -13,25 +13,25 @@ export default function Market() {
         <div className="grid-item grid1">
           <button
             type="button"
-            onClick={() => setShowTab("Equity")}
+            onClick={() => setShowTab("Stock")}
             style={{
-              backgroundColor: showTab === "Equity" ? "#08519c" : undefined,
-              color: showTab === "Equity" ? "#f7fbff" : undefined
+              backgroundColor: showTab === "Stock" ? "#08519c" : undefined,
+              color: showTab === "Stock" ? "#f7fbff" : undefined
             }}
           >
-            Equity
+            Stock
           </button>
         </div>
         <div className="grid-item grid1">
           <button
             type="button"
-            onClick={() => setShowTab("Cash")}
+            onClick={() => setShowTab("FX")}
             style={{
-              backgroundColor: showTab === "Cash" ? "#08519c" : undefined,
-              color: showTab === "Cash" ? "#f7fbff" : undefined
+              backgroundColor: showTab === "FX" ? "#08519c" : undefined,
+              color: showTab === "FX" ? "#f7fbff" : undefined
             }}
           >
-            Cash
+            FX
           </button>
         </div>
         <div className="grid-item grid8"></div>
@@ -39,11 +39,8 @@ export default function Market() {
         <div className="grid-item grid10" style={{padding: "5px 0"}}></div>
       </div>
 
-      {(showTab === 'Equity') ? (
-        <Equity/>
-      ) : (showTab === "Cash") ? (
-        <Cash/>
-      ) : null}
+      {showTab === 'Stock' && <Stock/>}
+      {showTab === "FX" && <FX/>}
     </>
   );
 }

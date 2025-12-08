@@ -2,9 +2,9 @@
 
 import {logout} from "@/hooks/useAuth";
 
-async function priceApi(method, data, setPrices) {
+async function fxApi(method, data, setFxs) {
   try {
-    let url = process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/api/price";
+    let url = process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/api/forex";
     let content = {
       method: method,
       headers: { 'content-type': 'application/json' },
@@ -23,34 +23,29 @@ async function priceApi(method, data, setPrices) {
       if (contentType && contentType.includes('text/html')) {
         return {message: "Unauthorised.", status: 'Unauthorised'};
       } else {
-        // Merge incoming data with existing prices
-        setPrices(prevPrices => {
-          const newPrices = items.data;
-
-          // Defensive: if prevPrices is null or not object, start fresh
-          if (!prevPrices || typeof prevPrices !== 'object') {
-            return newPrices;
+        // Merge incoming data with existing fxs
+        setFxs(prevFxs => {
+          const newFxs = items.data;
+          // Defensive: if prevCurrencies is null or not object, start fresh
+          if (!prevFxs || typeof prevFxs !== 'object') {
+            return newFxs;
           }
-
-          // Merge tickers
-          const merged = { ...prevPrices };
-
-          for (const ticker in newPrices) {
-            if (merged[ticker]) {
-              // Merge date-price pairs for this ticker
-              merged[ticker] = {
-                ...merged[ticker],
-                ...newPrices[ticker],
+          // Merge fxs
+          const merged = { ...prevFxs };
+          for (const fx in newFxs) {
+            if (merged[fx]) {
+              // Merge date-fx pairs for this fx
+              merged[fx] = {
+                ...merged[fx],
+                ...newFxs[fx],
               };
             } else {
-              // New ticker, add it directly
-              merged[ticker] = newPrices[ticker];
+              // New fx, add it directly
+              merged[fx] = newFxs[fx];
             }
           }
-
           return merged;
         });
-
         return {message: items.message, status: 'Success'};
       }
     } else if (response.status === 403) {
@@ -64,7 +59,8 @@ async function priceApi(method, data, setPrices) {
   }
 }
 
-export async function getInitialPrices(tickers, date, setPrices) {
+export async function getInitialFxs(currencies, date, setFxs) {
+  const filteredCurrencies = currencies.filter(currency => currency !== "USD");
   // format date as YYYYMMDD
   const formatDate = (date) => {
     const y = date.getFullYear();
@@ -90,24 +86,25 @@ export async function getInitialPrices(tickers, date, setPrices) {
     return chunks;
   };
 
-  // all tickers in chunks of 25
-  const tickerChunks = chunkArray(tickers, 25);
+  // all currencies in chunks of 25
+  const currencyChunks = chunkArray(filteredCurrencies, 25);
 
   // call API for each chunk
-  for (const chunk of tickerChunks) {
-    const items = chunk.map((ticker) => ({
-      ticker,
+  for (const chunk of currencyChunks) {
+    const items = chunk.map((currency) => ({
+      currency,
       startDate: startDateStr,
       endDate: endDateStr
     }));
 
     const data = { items: JSON.stringify(items) };
-    await priceApi('GET', data, setPrices);
+    await fxApi('GET', data, setFxs);
   }
 }
 
-
-export async function getPrices(ticker, startDate, endDate, prices, setPrices) {
+export async function getFxs(currency, startDate, endDate, fxs, setFxs) {
+  if (currency === 'USD')
+    return;
   // Parse date strings -> UTC dates (IMPORTANT)
   const toUTCDate = (str) =>
     new Date(Date.UTC(
@@ -150,8 +147,8 @@ export async function getPrices(ticker, startDate, endDate, prices, setPrices) {
     const dayStr = formatUTCDate(d);
 
     const exists =
-      prices[ticker] &&
-      Object.prototype.hasOwnProperty.call(prices[ticker], dayStr);
+      fxs[currency] &&
+      Object.prototype.hasOwnProperty.call(fxs[currency], dayStr);
 
     if (!exists) {
       if (!inRange) {
@@ -180,7 +177,7 @@ export async function getPrices(ticker, startDate, endDate, prices, setPrices) {
   const items = [];
   for (let i = 0; i < ranges.length; i += 2) {
     items.push({
-      ticker,
+      currency,
       startDate: ranges[i],
       endDate: ranges[i + 1],
     });
@@ -190,10 +187,10 @@ export async function getPrices(ticker, startDate, endDate, prices, setPrices) {
   }
 
   const data = { items: JSON.stringify(items) };
-  return await priceApi('GET', data, setPrices);
+  return await fxApi('GET', data, setFxs);
 }
 
-export async function putPrices(ticker, startDate, endDate, prices, setPrices) {
+export async function putFxs(currency, startDate, endDate, fxs, setFxs) {
   const data = [];
-  return await priceApi('PUT', data, setPrices);
+  return await fxApi('PUT', data, setFxs);
 }

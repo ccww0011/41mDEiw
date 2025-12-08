@@ -1,14 +1,14 @@
 'use client';
 
-import Table from "@/protected_components/market_components/Table";
-import Graph from "@/protected_components/market_components/Graph";
+import Table from "@/protected_components/market_components/market_subcomponents/Table";
+import Graph from "@/protected_components/market_components/market_subcomponents/Graph";
 import React, { useMemo, useState, useEffect } from "react";
 import { useTransactions } from "@/context/TransactionContext";
 import { usePrices } from "@/context/PriceContext";
 import { getPrices } from "@/hooks/usePriceDatabase";
 
-export default function Equity() {
-  const { prices, setPrices, loadingPrices } = usePrices();
+export default function Stock() {
+  const { prices, setPrices, loadingPrices,setLoadingPrices } = usePrices();
   const { tickers, tickerMap } = useTransactions();
 
   const [selectedTicker, setSelectedTicker] = useState('');
@@ -54,14 +54,16 @@ export default function Equity() {
     }
     setStartDate(start);
     setEndDate(end);
-    return [start, end];
+    return [start, end]
   };
 
   // Fetch prices whenever ticker or range changes
   useEffect(() => {
+    setLoadingPrices(true);
     if (!selectedTicker || !range) return;
     const [start, end] = getRangeDates(range);
     getPrices(selectedTicker, start, end, prices, setPrices);
+    setLoadingPrices(false);
   }, [selectedTicker, range]);
 
   // Filter prices for selected ticker and date range
@@ -105,23 +107,28 @@ export default function Equity() {
           </select>
         </div>
         <div className="grid-item grid1">
-          <button onClick={() => getPrices(selectedTicker, startDate, endDate, prices, setPrices)}>
-            Load Prices
+          <button onClick={() => {
+            setLoadingPrices(true);
+            getPrices(selectedTicker, startDate, endDate, prices, setPrices)
+            setLoadingPrices(false);
+          }}>
+            Refresh
           </button>
         </div>
         <div className="grid-item grid4"></div>
         <div className="grid-item grid10"></div>
       </div>
 
-      {loadingPrices
-        ? <div>Loading prices...</div>
-        : (!filteredPrices || Object.keys(filteredPrices[selectedTicker] || {}).length === 0)
-          ? <div>No data. Select ticker and dates, then press Load Prices button.</div>
+      {(!filteredPrices || !range || Object.keys(filteredPrices[selectedTicker] || {}).length === 0) ?
+        <h3>No data. Select both ticker and dates.</h3>
+        :
+        (loadingPrices ?
+          <div>Loading prices...</div>
           : <>
-            <Graph prices={filteredPrices} selectedTicker={selectedTicker} />
-            <Table prices={filteredPrices} selectedTicker={selectedTicker} />
+            <Graph prices={filteredPrices} selectedItem={selectedTicker}/>
+            <Table prices={filteredPrices} selectedItem={selectedTicker} digits={2}/>
           </>
-      }
+        )}
     </>
   );
 }

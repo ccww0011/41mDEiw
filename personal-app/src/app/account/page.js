@@ -4,7 +4,6 @@ import ProtectedLayout from "@/app/protected-layout";
 import {useState} from "react";
 import Market from "@/protected_components/Market";
 import Overview from "@/protected_components/Overview";
-import Performance from "@/protected_components/Performance";
 
 export default function LoginPage() {
   // Overview, Upload, Performance
@@ -40,25 +39,12 @@ export default function LoginPage() {
               Market
             </button>
           </div>
-          <div className="grid-item grid1">
-            <button
-              type="button"
-              onClick={() => setShowTab("Performance")}
-              style={{
-                backgroundColor: showTab === "Performance" ? "#08519c" : undefined,
-                color: showTab === "Performance" ? "#f7fbff" : undefined
-              }}
-            >
-              Performance
-            </button>
-          </div>
-          <div className="grid-item grid7"></div>
-      </div>
+          <div className="grid-item grid8"></div>
+        </div>
 
-      {showTab === "Overview" ? <Overview/>
-        : showTab === "Market" ? <Market/>
-          : showTab === "Performance" ? <Performance/> : null}
-    </div>
+        {showTab === "Overview" && <Overview/>}
+        {showTab === "Market" && <Market/>}
+      </div>
     </ProtectedLayout>
   );
 }

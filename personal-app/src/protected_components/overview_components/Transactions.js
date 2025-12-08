@@ -254,6 +254,7 @@ export default function Transactions() {
   return (
     <>
       <div className="grid">
+        <div className="grid-item grid10" style={{padding: "5px 0"}}></div>
         <div className="grid-item grid3">
           <button onClick={() => setShowUpload(prev => !prev)}>
             {showUpload ? 'Hide Upload' : 'Upload CSV'}
@@ -262,8 +263,8 @@ export default function Transactions() {
       </div>
 
       {showUpload && (
-        <div style={{ marginTop: '1rem' }}>
-          <h1>Upload CSV</h1>
+        <div style={{marginTop: '1rem'}}>
+        <h1>Upload CSV</h1>
           <p>Required headers: {REQUIRED_HEADERS.join(', ')}</p>
           <h4>Sample:</h4>
           <Image

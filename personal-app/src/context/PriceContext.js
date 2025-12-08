@@ -18,19 +18,20 @@ export function PriceProvider({ children }) {
   const {tickers} = useTransactions();
 
   useEffect(() => {
-    const date = new Date();
+    const date = new Date(Date.now() - 24 * 60 * 60 * 1000);
     async function fetchData() {
+      setLoadingPrices(true);
       await getInitialPrices(tickers, date, setPrices);
+      setLoadingPrices(false);
     }
-    setLoadingPrices(true);
     fetchData();
-    setLoadingPrices(false);
   }, [tickers]);
 
-  console.log(prices)
+  // console.log(tickers)
+  // console.log(prices)
 
   return (
-    <PriceContext.Provider value={{ prices, setPrices, loadingPrices }}>
+    <PriceContext.Provider value={{ prices, setPrices, loadingPrices, setLoadingPrices }}>
       {children}
     </PriceContext.Provider>
   );

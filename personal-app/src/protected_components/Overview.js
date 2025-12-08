@@ -1,7 +1,7 @@
 'use client';
 
 import {useEffect, useMemo, useState} from "react";
-import Input from "@/protected_components/overview_components/Input";
+import Performance from "@/protected_components/overview_components/Performance";
 import Transactions from "@/protected_components/overview_components/Transactions";
 import Holdings from "@/protected_components/overview_components/Holdings";
 import { useTransactions } from "@/context/TransactionContext";
@@ -11,15 +11,11 @@ export default function Overview() {
   const [showTab, setShowTab] = useState("Holdings");
   const { transactions, loadingTransactions } = useTransactions();
   const [sortedTransactions, setSortedTransactions] = useState([]);
-  const { prices, loadingPrices } = usePrices();
+  const { prices } = usePrices();
 
   useEffect(() => {
     setSortedTransactions([...transactions].sort((a, b) => parseInt(a["TradeDate"]) - parseInt(b["TradeDate"])));
   }, [transactions]);
-
-  if (loadingTransactions || loadingPrices) {
-    return <div>Loading data...</div>;
-  }
 
   const today = new Date();
   const formatDate = (date) => {
@@ -194,22 +190,22 @@ export default function Overview() {
         <div className="grid-item grid1">
           <button
             type="button"
-            onClick={() => setShowTab("Input")}
+            onClick={() => setShowTab("Performance")}
             style={{
-              backgroundColor: showTab === "Input" ? "#08519c" : undefined,
-              color: showTab === "Input" ? "#f7fbff" : undefined
+              backgroundColor: showTab === "Performance" ? "#08519c" : undefined,
+              color: showTab === "Performance" ? "#f7fbff" : undefined
             }}
           >
-            Input
+            Performance
           </button>
         </div>
         <div className="grid-item grid7"></div>
-        <div className="grid-item grid10" style={{ padding: "5px 0" }}></div>
       </div>
 
       {showTab === "Holdings" && <Holdings holdingsArray={holdingsArray} aggregates={aggregates} />}
       {showTab === "Transactions" && <Transactions />}
-      {showTab === "Input" && <Input />}
+      {showTab === "Performance" && <Performance />}
+      {(loadingTransactions) && <div><h3>Loading holdings...</h3></div>}
     </>
   );
 }

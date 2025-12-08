@@ -47,12 +47,10 @@ export default function Performance() {
           </button>
         </div>
         <div className="grid-item grid7"></div>
-
-        <div className="grid-item grid10" style={{padding: "5px 0"}}></div>
       </div>
-      {showTab === "Summary" ? <Summary/>
-        : showTab === "TWR" ? <TWR/>
-          : showTab === "MWR" ? <MWR/> : null}
+      {showTab === "Summary" && <Summary/>}
+      {showTab === "TWR" && <TWR/>}
+      {showTab === "MWR" && <MWR/>}
     </>
   );
 }
