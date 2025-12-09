@@ -13,9 +13,8 @@ export default function LoginPage() {
     <ProtectedLayout>
       <div className="container">
         <div className="grid">
-          <div className="grid-item grid10" style={{padding: "20px 0 0 0"}}></div>
-
-          <div className="grid-item grid1">
+          <div className="grid-item grid12" style={{padding: "20px 0 0 0"}}></div>
+          <div className="grid-item grid2">
             <button
               type="button"
               onClick={() => setShowTab("Overview")}
@@ -27,7 +26,7 @@ export default function LoginPage() {
               Overview
             </button>
           </div>
-          <div className="grid-item grid1">
+          <div className="grid-item grid2">
             <button
               type="button"
               onClick={() => setShowTab("Market")}

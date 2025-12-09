@@ -10,7 +10,7 @@ export default function Market() {
   return (
     <>
       <div className="grid">
-        <div className="grid-item grid1">
+        <div className="grid-item grid2">
           <button
             type="button"
             onClick={() => setShowTab("Stock")}
@@ -22,7 +22,7 @@ export default function Market() {
             Stock
           </button>
         </div>
-        <div className="grid-item grid1">
+        <div className="grid-item grid2">
           <button
             type="button"
             onClick={() => setShowTab("FX")}
@@ -36,7 +36,7 @@ export default function Market() {
         </div>
         <div className="grid-item grid8"></div>
 
-        <div className="grid-item grid10" style={{padding: "5px 0"}}></div>
+        <div className="grid-item grid12" style={{padding: "5px 0"}}></div>
       </div>
 
       {showTab === 'Stock' && <Stock/>}

@@ -71,15 +71,15 @@ export default function Table({ prices, selectedItem = '', digits = 2 }) {
   };
 
   return (
-    <div>
+    <>
       <div className="grid">
-        <div className="grid-item grid9">
+        <div className="grid-item grid10">
           Sorting priority: {sortRules.length === 0
           ? 'None'
           : sortRules.map((rule, i) => `(${i + 1}) ${rule.key}`).join('; ')
         }
         </div>
-        <div className="grid-item grid1">
+        <div className="grid-item grid2">
           <button onClick={() => setSortRules([])} style={{backgroundColor: '#fb6a4a', color: 'white'}}>
             Clear
           </button>
@@ -108,6 +108,6 @@ export default function Table({ prices, selectedItem = '', digits = 2 }) {
         ))}
         </tbody>
       </table>
-    </div>
+    </>
   );
 }

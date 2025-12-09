@@ -74,8 +74,8 @@ export default function Graph({ prices, selectedItem = ''}) {
   };
 
   return (
-    <div style={{ width: '100%', height: 500 }}>
+    <>
       <Line data={data} options={options} />
-    </div>
+    </>
   );
 }

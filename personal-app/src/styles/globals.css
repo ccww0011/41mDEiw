@@ -94,9 +94,14 @@ p {
 /* 2. Grid */
 .grid {
   display: grid;
-  grid-template-columns: repeat(10, 10%);
+  grid-template-columns: repeat(12, 1fr);
   box-sizing: border-box;
   align-self: initial;
+}
+@media (max-width: 800px) {
+  .grid {
+    grid-template-columns: repeat(8, 1fr);
+  }
 }
 
 .grid-item {
@@ -117,6 +122,8 @@ p {
 .grid8 {grid-column: span 8}
 .grid9 {grid-column: span 9}
 .grid10 {grid-column: span 10}
+.grid11 {grid-column: span 11}
+.grid12 {grid-column: span 12}
 /* 2. Grid Ends */
 
 /* 3. Column */
@@ -160,6 +167,11 @@ table {
   table-layout: auto;
   font-family: sans-serif;
   font-size: 14px;
+}
+@media (max-width: 800px) {
+  .hide-on-mobile {
+    display: none;
+  }
 }
 
 th, td {

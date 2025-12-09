@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useMemo } from "react";
 
-export default function Holdings({ holdingsArray = [], aggregates }) {
+export default function Holding({ holdingsArray = [], aggregates }) {
   const [sortRules, setSortRules] = useState([]);
   const [filters, setFilters] = useState({});   // <<< ADDED
 
@@ -19,6 +19,8 @@ export default function Holdings({ holdingsArray = [], aggregates }) {
     realisedPL: "Realised P/L",
     pl: "P/L",
   };
+
+  const hideOnMobileColumns = ["ticker", "exchange", "avgCost", "realisedPL", "pl"];
 
   const onSortClick = (key, directionOrRemove) => {
     setSortRules(prev => {
@@ -144,7 +146,7 @@ export default function Holdings({ holdingsArray = [], aggregates }) {
 
   return (
     <div>
-      <h2>Holdings</h2>
+      <h2>Holding</h2>
 
       {aggregates.missingPLCurrencies.length > 0 && (
         <h3>
@@ -157,7 +159,7 @@ export default function Holdings({ holdingsArray = [], aggregates }) {
       <table>
         <thead>
         <tr>
-          <th>Currency</th>
+          <th>Curr.</th>
           <th>Cost Basis</th>
           <th>Market Value</th>
           <th>Unrealised P/L</th>
@@ -203,7 +205,7 @@ export default function Holdings({ holdingsArray = [], aggregates }) {
               .map((rule, i) => `(${i + 1}) ${COLUMN_NAMES[rule.key]}`)
               .join("; ")}
         </div>
-        <div className="grid-item grid1">
+        <div className="grid-item grid2">
           <button
             onClick={() => setSortRules([])}
             style={{backgroundColor: "#fb6a4a", color: "white"}}
@@ -211,7 +213,7 @@ export default function Holdings({ holdingsArray = [], aggregates }) {
             Clear Sort
           </button>
         </div>
-        <div className="grid-item grid1">
+        <div className="grid-item grid2">
           <button
             onClick={() => setFilters({})}
             style={{backgroundColor: "#969696", color: "white", marginRight: 8}}
@@ -219,16 +221,22 @@ export default function Holdings({ holdingsArray = [], aggregates }) {
             Clear Filter
           </button>
         </div>
-
       </div>
 
-      {/* Holdings table */}
-      <table border="1" cellPadding="8" style={{borderCollapse: "collapse", width: "100%"}}>
+      {/* Holding table */}
+      <table
+        border="1"
+        cellPadding="8"
+        style={{borderCollapse: "collapse", width: "100%"}}
+      >
         <thead>
         {/* Header row with sort buttons */}
         <tr>
           {Object.keys(COLUMN_NAMES).map((key) => (
-            <th key={key}>
+            <th
+              key={key}
+              className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
+            >
               {renderSortControls(key)} {COLUMN_NAMES[key]}
             </th>
           ))}
@@ -237,7 +245,6 @@ export default function Holdings({ holdingsArray = [], aggregates }) {
         {/* Filter row */}
         <tr>
           {Object.keys(COLUMN_NAMES).map((key) => {
-            // Only show dropdown for non-numeric fields
             const numericKeys = [
               "totalQuantity",
               "avgCost",
@@ -250,16 +257,21 @@ export default function Holdings({ holdingsArray = [], aggregates }) {
             ];
 
             if (numericKeys.includes(key)) {
-              return <th key={key}></th>; // empty cell for numeric fields
+              return <th
+                key={key}
+                className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
+              ></th>; // empty cell for numeric fields
             }
 
-            // For non-numeric fields, compute options
             const options = Array.from(
               new Set(holdingsArray.map((h) => h[key]).filter(Boolean))
             ).sort();
 
             return (
-              <th key={key}>
+              <th
+                key={key}
+                className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
+              >
                 <select
                   value={filters[key] || "All"}
                   onChange={(e) => {
@@ -269,7 +281,7 @@ export default function Holdings({ holdingsArray = [], aggregates }) {
                       [key]: value === "All" ? undefined : value
                     }));
                   }}
-                  style={{ width: "100%" }}
+                  style={{width: "100%"}}
                 >
                   <option value="All">All</option>
                   {options.map((opt) => (
@@ -284,30 +296,20 @@ export default function Holdings({ holdingsArray = [], aggregates }) {
         </tr>
         </thead>
 
-        {/* Body */}
         <tbody>
         {sortedHoldings.map((h) => (
           <tr key={`${h.ticker}|${h.exchange}`}>
-            <td>{h.ticker}</td>
-            <td>{h.description}</td>
-            <td>{h.exchange}</td>
-            <td>{h.currency}</td>
-            <td style={getStyle(h.totalQuantity)}>
-              {formatNumber(h.totalQuantity)}
-            </td>
-            <td style={getStyle(h.avgCost)}>{formatNumber(h.avgCost)}</td>
-            <td style={getStyle(h.price)}>{formatNumber(h.price)}</td>
-            <td style={getStyle(h.totalProceeds)}>
-              {formatNumber(h.totalProceeds)}
-            </td>
-            <td style={getStyle(h.value)}>{formatNumber(h.value)}</td>
-            <td style={getStyle(h.unrealisedPL)}>
-              {formatNumber(h.unrealisedPL)}
-            </td>
-            <td style={getStyle(h.realisedPL)}>
-              {formatNumber(h.realisedPL)}
-            </td>
-            <td style={getStyle(h.pl)}>{formatNumber(h.pl)}</td>
+            {Object.keys(COLUMN_NAMES).map((key) => (
+              <td
+                key={key}
+                className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
+                style={["totalQuantity", "avgCost", "price", "totalProceeds", "value", "unrealisedPL", "realisedPL", "pl"].includes(key) ? getStyle(h[key]) : {}}
+              >
+                {["totalQuantity", "avgCost", "price", "totalProceeds", "value", "unrealisedPL", "realisedPL", "pl"].includes(key)
+                  ? formatNumber(h[key])
+                  : h[key]}
+              </td>
+            ))}
           </tr>
         ))}
         </tbody>

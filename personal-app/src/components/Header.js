@@ -40,12 +40,12 @@ export default function Header() {
             <button className={styles.buttonDark} onClick={logout}>Logout</button>
           </div>
         ) : (
-          <div className={styles.rightmost}>
-            <button className={styles.rightmost} onClick={login}>Login</button>
-          </div>
-        )}
-      </div>
-    </>
+        <div className={styles.rightmost}>
+          <button className={styles.rightmost} onClick={login}>Login</button>
+        </div>
+      )}
+    </div>
+  </>
   );
 }
 

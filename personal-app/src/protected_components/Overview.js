@@ -2,13 +2,13 @@
 
 import {useEffect, useMemo, useState} from "react";
 import Performance from "@/protected_components/overview_components/Performance";
-import Transactions from "@/protected_components/overview_components/Transactions";
-import Holdings from "@/protected_components/overview_components/Holdings";
+import Transaction from "@/protected_components/overview_components/Transaction";
+import Holding from "@/protected_components/overview_components/Holding";
 import { useTransactions } from "@/context/TransactionContext";
 import { usePrices } from "@/context/PriceContext";
 
 export default function Overview() {
-  const [showTab, setShowTab] = useState("Holdings");
+  const [showTab, setShowTab] = useState("Holding");
   const { transactions, loadingTransactions } = useTransactions();
   const [sortedTransactions, setSortedTransactions] = useState([]);
   const { prices } = usePrices();
@@ -163,31 +163,31 @@ export default function Overview() {
   return (
     <>
       <div className="grid">
-        <div className="grid-item grid1">
+        <div className="grid-item grid2">
           <button
             type="button"
-            onClick={() => setShowTab("Holdings")}
+            onClick={() => setShowTab("Holding")}
             style={{
-              backgroundColor: showTab === "Holdings" ? "#08519c" : undefined,
-              color: showTab === "Holdings" ? "#f7fbff" : undefined
+              backgroundColor: showTab === "Holding" ? "#08519c" : undefined,
+              color: showTab === "Holding" ? "#f7fbff" : undefined
             }}
           >
-            Holdings
+            Holding
           </button>
         </div>
-        <div className="grid-item grid1">
+        <div className="grid-item grid2">
           <button
             type="button"
-            onClick={() => setShowTab("Transactions")}
+            onClick={() => setShowTab("Transaction")}
             style={{
-              backgroundColor: showTab === "Transactions" ? "#08519c" : undefined,
-              color: showTab === "Transactions" ? "#f7fbff" : undefined
+              backgroundColor: showTab === "Transaction" ? "#08519c" : undefined,
+              color: showTab === "Transaction" ? "#f7fbff" : undefined
             }}
           >
-            Transactions
+            Transaction
           </button>
         </div>
-        <div className="grid-item grid1">
+        <div className="grid-item grid2">
           <button
             type="button"
             onClick={() => setShowTab("Performance")}
@@ -199,11 +199,11 @@ export default function Overview() {
             Performance
           </button>
         </div>
-        <div className="grid-item grid7"></div>
+        <div className="grid-item grid6"></div>
       </div>
 
-      {showTab === "Holdings" && <Holdings holdingsArray={holdingsArray} aggregates={aggregates} />}
-      {showTab === "Transactions" && <Transactions />}
+      {showTab === "Holding" && <Holding holdingsArray={holdingsArray} aggregates={aggregates} />}
+      {showTab === "Transaction" && <Transaction />}
       {showTab === "Performance" && <Performance />}
       {(loadingTransactions) && <div><h3>Loading holdings...</h3></div>}
     </>

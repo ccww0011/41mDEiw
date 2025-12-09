@@ -80,26 +80,19 @@ export default function Stock() {
 
   return (
     <>
-      <div className="grid">
-        <div className="grid-item grid3"><label>Description:</label></div>
-        <div className="grid-item grid1"><label>Ticker:</label></div>
-        <div className="grid-item grid1"><label>Dates:</label></div>
-        <div className="grid-item grid1"><label>Select:</label></div>
-        <div className="grid-item grid4"></div>
-      </div>
-
+      <h2>Stock</h2>
       <div className="grid">
         <div className="grid-item grid3">
           <div>{selectedTicker ? tickerMap[selectedTicker] || 'No description' : '—'}</div>
         </div>
-        <div className="grid-item grid1">
-          <select value={selectedTicker} onChange={(e) => setSelectedTicker(e.target.value)} style={{ width: '100%' }}>
+        <div className="grid-item grid2">
+          <select value={selectedTicker} onChange={(e) => setSelectedTicker(e.target.value)} style={{width: '100%'}}>
             <option value="">Select Ticker</option>
             {tickers.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
-        <div className="grid-item grid1">
-          <select value={range} onChange={(e) => setRange(e.target.value)} style={{ width: '100%' }}>
+        <div className="grid-item grid2">
+          <select value={range} onChange={(e) => setRange(e.target.value)} style={{width: '100%'}}>
             <option value="">Select Range</option>
             <option value="Last7Days">Last 7 Days</option>
             <option value="MTD">Month to Date</option>
@@ -115,19 +108,17 @@ export default function Stock() {
             Refresh
           </button>
         </div>
-        <div className="grid-item grid4"></div>
-        <div className="grid-item grid10"></div>
       </div>
 
       {(!filteredPrices || !range || Object.keys(filteredPrices[selectedTicker] || {}).length === 0) ?
         <h3>No data. Select both ticker and dates.</h3>
         :
         (loadingPrices ?
-          <div>Loading prices...</div>
-          : <>
-            <Graph prices={filteredPrices} selectedItem={selectedTicker}/>
-            <Table prices={filteredPrices} selectedItem={selectedTicker} digits={2}/>
-          </>
+            <div>Loading prices...</div>
+            : <>
+              <Graph prices={filteredPrices} selectedItem={selectedTicker}/>
+              <Table prices={filteredPrices} selectedItem={selectedTicker} digits={2}/>
+            </>
         )}
     </>
   );

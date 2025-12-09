@@ -9,7 +9,7 @@ import {getFxs} from "@/hooks/useFxDatabase";
 
 export default function FX() {
   const {fxs, setFxs, loadingFxs, setLoadingFxs} = useFxs();
-  const {currencies, currencyMap} = useTransactions();
+  const {currencies} = useTransactions();
 
   const [c1, setC1] = useState('');
   const [c2, setC2] = useState('');
@@ -116,21 +116,12 @@ export default function FX() {
 
   return (
     <>
-      <div className="grid">
-        <div className="grid-item grid3"><label>Description:</label></div>
-        <div className="grid-item grid1"><label>Currency 1:</label></div>
-        <div className="grid-item grid1"><label>Currency 2:</label></div>
-        <div className="grid-item grid1"><label>Dates:</label></div>
-        <div className="grid-item grid1"><label>Swap:</label></div>
-        <div className="grid-item grid1"><label>Select:</label></div>
-        <div className="grid-item grid2"></div>
-      </div>
-
+      <h2>Forex</h2>
       <div className="grid">
         {/* Description */}
-        <div className="grid-item grid3">
+        <div className="grid-item grid2">
           {c1 && c2
-            ? <div>{pair} | 1 {currencyMap[c1]} to {latestRate ? latestRate.toFixed(4) : '?'} {currencyMap[c2]}</div>
+            ? <div>{pair} = {latestRate ? latestRate.toFixed(2) : '?'}</div>
             : <div>—</div>}
         </div>
 
@@ -151,7 +142,7 @@ export default function FX() {
         </div>
 
         {/* Range */}
-        <div className="grid-item grid1">
+        <div className="grid-item grid2">
           <select value={range} onChange={(e) => setRange(e.target.value)}>
             <option value="">Select Range</option>
             <option value="Last7Days">Last 7 Days</option>
@@ -187,20 +178,17 @@ export default function FX() {
             Refresh
           </button>
         </div>
-
-        <div className="grid-item grid2"></div>
-        <div className="grid-item grid10"></div>
       </div>
 
       {/* Chart + table */}
       {!filteredFxs[pair] || !range || Object.keys(filteredFxs[pair]).length === 0 ?
         <h3>No data. Select both currencies and dates.</h3>
         : (loadingFxs ?
-        <div>Loading FX data...</div>
-          : <>
-            <Graph prices={filteredFxs} selectedItem={pair} />
-            <Table prices={filteredFxs} selectedItem={pair} digits={6} />
-          </>
+            <div>Loading FX data...</div>
+            : <>
+              <Graph prices={filteredFxs} selectedItem={pair}/>
+              <Table prices={filteredFxs} selectedItem={pair} digits={6}/>
+            </>
         )}
     </>
   );

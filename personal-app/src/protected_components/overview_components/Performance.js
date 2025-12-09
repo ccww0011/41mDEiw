@@ -10,7 +10,7 @@ export default function Performance() {
   return (
     <>
       <div className="grid">
-        <div className="grid-item grid1">
+        <div className="grid-item grid2">
           <button
             type="button"
             onClick={() => setShowTab("Summary")}
@@ -22,7 +22,7 @@ export default function Performance() {
             Summary
           </button>
         </div>
-        <div className="grid-item grid1">
+        <div className="grid-item grid2">
           <button
             type="button"
             onClick={() => setShowTab("TWR")}
@@ -34,7 +34,7 @@ export default function Performance() {
             Return-TWR
           </button>
         </div>
-        <div className="grid-item grid1">
+        <div className="grid-item grid2">
           <button
             type="button"
             onClick={() => setShowTab("MWR")}
@@ -46,7 +46,6 @@ export default function Performance() {
             Return-MWR
           </button>
         </div>
-        <div className="grid-item grid7"></div>
       </div>
       {showTab === "Summary" && <Summary/>}
       {showTab === "TWR" && <TWR/>}

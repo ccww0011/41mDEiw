@@ -34,6 +34,13 @@ const RENDERED_HEADERS = [
   'TradeID',
 ];
 
+const hideOnMobileColumns = [
+  'ClientAccountID',
+  'UnderlyingSymbol',
+  'ListingExchange',
+  'TradeID'
+];
+
 function parseCSV(text) {
   const lines = text.split(/\r?\n/).filter(Boolean);
   const headers = parseLine(lines[0]);
@@ -79,7 +86,7 @@ function parseLine(line) {
   return result.map(cell => cell.trim());
 }
 
-export default function Transactions() {
+export default function Transaction() {
   const router = useRouter();
   const { transactions, setTransactions } = useTransactions();
   const [showUpload, setShowUpload] = useState(false);
@@ -254,7 +261,7 @@ export default function Transactions() {
   return (
     <>
       <div className="grid">
-        <div className="grid-item grid10" style={{padding: "5px 0"}}></div>
+        <div className="grid-item grid12" style={{padding: "5px 0"}}></div>
         <div className="grid-item grid3">
           <button onClick={() => setShowUpload(prev => !prev)}>
             {showUpload ? 'Hide Upload' : 'Upload CSV'}
@@ -298,70 +305,43 @@ export default function Transactions() {
       <div>
         <h2>Transactions</h2>
 
-        <p>
-          Sorting priority: {sortRules.length === 0 ? 'None' : sortRules.map((rule, i) => `(${i + 1}) ${rule.key}`).join('; ')}
-        </p>
-
         <div className="grid">
-          <div className="grid-item grid8"></div>
-          <div className="grid-item grid1">
+          <div className="grid-item grid8">Sorting priority: {sortRules.length === 0 ? 'None' : sortRules.map((rule, i) => `(${i + 1}) ${rule.key}`).join('; ')}</div>
+          <div className="grid-item grid2">
             <button onClick={() => setSortRules([])} style={{ backgroundColor: '#fb6a4a', color: 'white' }}>Clear Sort</button>
           </div>
-          <div className="grid-item grid1">
+          <div className="grid-item grid2">
             <button onClick={() => setFilters({})} style={{ backgroundColor: '#969696', color: 'white' }}>Clear Filter</button>
           </div>
         </div>
 
-        <table border="1" cellPadding="8" style={{ borderCollapse: 'collapse', width: '100%' }}>
+        <table border="1" cellPadding="8" style={{borderCollapse: 'collapse', width: '100%'}}>
           <thead>
           <tr>
             {RENDERED_HEADERS.map(header => (
-              <th key={header} style={{ verticalAlign: 'top' }}>
+              <th
+                key={header}
+                className={hideOnMobileColumns.includes(header) ? 'hide-on-mobile' : ''}
+                style={{verticalAlign: 'top'}}
+              >
                 {renderSortControls(header)} {header.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}
               </th>
             ))}
-          </tr>
-
-          <tr>
-            {RENDERED_HEADERS.map(header => {
-              if (numericKeys.includes(header)) return <th key={header}></th>;
-
-              const options = Array.from(
-                new Set(transactions.map(tx => tx[header]).filter(Boolean))
-              ).sort();
-
-              return (
-                <th key={header}>
-                  <select
-                    value={filters[header] || 'All'}
-                    onChange={e => setFilters(prev => ({
-                      ...prev,
-                      [header]: e.target.value === 'All' ? undefined : e.target.value
-                    }))}
-                    style={{ width: '100%' }}
-                  >
-                    <option value="All">All</option>
-                    {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                  </select>
-                </th>
-              );
-            })}
           </tr>
           </thead>
 
           <tbody>
           {sortedTransactions.map((tx, idx) => (
             <tr key={idx}>
-              <td>{tx.TradeDate}</td>
-              <td>{tx.ClientAccountID}</td>
-              <td>{tx.AssetClass}</td>
-              <td>{tx.UnderlyingSymbol || '-'}</td>
-              <td>{tx.Description}</td>
-              <td>{tx.ListingExchange}</td>
-              <td>{tx.CurrencyPrimary}</td>
-              <td style={getStyle(tx.Quantity)}>{formatNumber(tx.Quantity)}</td>
-              <td style={getStyle(tx.NetCash)}>{formatNumber(tx.NetCash)}</td>
-              <td>{tx.TradeID}</td>
+              {RENDERED_HEADERS.map(header => (
+                <td
+                  key={header}
+                  className={hideOnMobileColumns.includes(header) ? 'hide-on-mobile' : ''}
+                  style={numericKeys.includes(header) ? getStyle(tx[header]) : {}}
+                >
+                  {header === 'Quantity' || header === 'NetCash' ? formatNumber(tx[header]) : tx[header] || '-'}
+                </td>
+              ))}
             </tr>
           ))}
           </tbody>
