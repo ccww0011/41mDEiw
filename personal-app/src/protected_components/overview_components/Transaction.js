@@ -328,6 +328,39 @@ export default function Transaction() {
               </th>
             ))}
           </tr>
+
+          {/* Filter row */}
+          <tr>
+            {RENDERED_HEADERS.map(header => {
+              if (numericKeys.includes(header)) return <th key={header}></th>; // no filter for numeric fields
+
+              // Get unique options for this column
+              const options = Array.from(
+                new Set(transactions.map(tx => tx[header]).filter(Boolean))
+              ).sort();
+
+              return (
+                <th key={header} className={hideOnMobileColumns.includes(header) ? 'hide-on-mobile' : ''}>
+                  <select
+                    value={filters[header] || 'All'}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFilters(prev => ({
+                        ...prev,
+                        [header]: value === 'All' ? undefined : value
+                      }));
+                    }}
+                    style={{width: '100%'}}
+                  >
+                    <option value="All">All</option>
+                    {options.map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </th>
+              );
+            })}
+          </tr>
           </thead>
 
           <tbody>
