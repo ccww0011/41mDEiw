@@ -1,9 +1,11 @@
 'use client';
 import React, { useState, useMemo } from "react";
+import {useAggregates} from "@/context/AggregateContext";
 
-export default function Holding({ holdingsArray = [], aggregates }) {
+export default function Holding() {
   const [sortRules, setSortRules] = useState([]);
-  const [filters, setFilters] = useState({});   // <<< ADDED
+  const [filters, setFilters] = useState({});
+  const {holdingsArray, aggregates, loadingAggregates} = useAggregates();
 
   const COLUMN_NAMES = {
     ticker: "Ticker",
@@ -53,25 +55,29 @@ export default function Holding({ holdingsArray = [], aggregates }) {
     });
 
     // ----- APPLY SORTS -----
-    for (let i = sortRules.length - 1; i >= 0; i--) {
-      const { key, direction } = sortRules[i];
-      array.sort((a, b) => {
-        const valA = a[key],
-          valB = b[key];
-        const numA = parseFloat(valA),
-          numB = parseFloat(valB);
-        const bothNumbers = !isNaN(numA) && !isNaN(numB);
+    if (sortRules.length > 0) {
+      for (let i = sortRules.length - 1; i >= 0; i--) {
+        const { key, direction } = sortRules[i];
+        array.sort((a, b) => {
+          const valA = a[key],
+            valB = b[key];
+          const numA = parseFloat(valA),
+            numB = parseFloat(valB);
+          const bothNumbers = !isNaN(numA) && !isNaN(numB);
 
-        if (bothNumbers)
-          return direction === "asc" ? numA - numB : numB - numA;
+          if (bothNumbers) return direction === "asc" ? numA - numB : numB - numA;
 
-        const strA = valA?.toString().toLowerCase() ?? "";
-        const strB = valB?.toString().toLowerCase() ?? "";
+          const strA = valA?.toString().toLowerCase() ?? "";
+          const strB = valB?.toString().toLowerCase() ?? "";
 
-        if (strA < strB) return direction === "asc" ? -1 : 1;
-        if (strA > strB) return direction === "asc" ? 1 : -1;
-        return 0;
-      });
+          if (strA < strB) return direction === "asc" ? -1 : 1;
+          if (strA > strB) return direction === "asc" ? 1 : -1;
+          return 0;
+        });
+      }
+    } else {
+      // default sort by descending market value
+      array.sort((a, b) => (b.value || 0) - (a.value || 0));
     }
 
     return array;
@@ -314,6 +320,7 @@ export default function Holding({ holdingsArray = [], aggregates }) {
         ))}
         </tbody>
       </table>
+      {loadingAggregates && <div><h3>Loading holdings...</h3></div>}
     </div>
   );
 }
