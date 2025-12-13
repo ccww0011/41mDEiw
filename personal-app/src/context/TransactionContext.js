@@ -26,9 +26,9 @@ export function TransactionProvider({ children }) {
     const tickerSet = new Set();
     const tickerObj = {};
     for (let transaction of transactions) {
-      if (transaction.Ticker != null) {
-        tickerSet.add(transaction.Ticker);
-        tickerObj[transaction.Ticker] = transaction.Description;
+      if (transaction.ticker != null) {
+        tickerSet.add(transaction.ticker);
+        tickerObj[transaction.ticker] = transaction.description;
       }
     }
     return {
@@ -41,9 +41,9 @@ export function TransactionProvider({ children }) {
     const currencySet = new Set();
     const currencyObj = {};
     for (let transaction of transactions) {
-      if (transaction.CurrencyPrimary != null) {
-        currencySet.add(transaction.CurrencyPrimary);
-        currencyObj[transaction.CurrencyPrimary] = transaction.CurrencyPrimary;
+      if (transaction.currencyPrimary != null) {
+        currencySet.add(transaction.currencyPrimary);
+        currencyObj[transaction.currencyPrimary] = transaction.currencyPrimary;
       }
     }
     return {

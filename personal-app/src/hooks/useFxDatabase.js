@@ -102,6 +102,7 @@ export async function getInitialFxs(currencies, date, setFxs) {
   }
 }
 
+
 export async function getFxs(currency, startDate, endDate, fxs, setFxs) {
   if (currency === 'USD')
     return;

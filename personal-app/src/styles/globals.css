@@ -174,17 +174,22 @@ table {
   }
 }
 
-th, td {
-  border: 1px solid #ccc;
-  padding: 8px;
-  text-align: left;
-  vertical-align: middle;
-}
-
 th {
+  border: 1px solid #ccc;
+  padding: 5px;
+  text-align: left;
+  vertical-align: top;
+
   background-color: #08519c;
   color: white;
   font-weight: bold;
+}
+
+td {
+  border: 1px #ccc;
+  padding: 5px;
+  text-align: left;
+  vertical-align: top;
 }
 
 tr:nth-child(even) {

@@ -22,24 +22,26 @@ const REQUIRED_HEADERS = [
 ];
 
 const RENDERED_HEADERS = [
-  'TradeDate',
-  'ClientAccountID',
-  'AssetClass',
-  'UnderlyingSymbol',
-  'Description',
-  'ListingExchange',
-  'CurrencyPrimary',
-  'Quantity',
-  'NetCash',
-  'TradeID',
+  'tradeDate',
+  'clientAccountID',
+  'assetClass',
+  'underlyingSymbol',
+  'description',
+  'listingExchange',
+  'currencyPrimary',
+  'quantity',
+  'netCash',
+  'tradeID',
 ];
 
-const hideOnMobileColumns = [
-  'ClientAccountID',
-  'UnderlyingSymbol',
-  'ListingExchange',
-  'TradeID'
+const HIDE_ON_MOBILE_COLUMNS = [
+  'clientAccountID',
+  'underlyingSymbol',
+  'listingExchange',
+  'tradeID'
 ];
+
+const NUMERIC_KEYS = ['quantity', 'netCash'];
 
 function parseCSV(text) {
   const lines = text.split(/\r?\n/).filter(Boolean);
@@ -52,12 +54,13 @@ function parseCSV(text) {
       const obj = {};
       headers.forEach((h, j) => {
         if (REQUIRED_HEADERS.includes(h)) {
-          obj[h] = row[j];
+          obj[h.substring(0, 1).toLowerCase() + h.substring(1, h.length)] = row[j];
         }
       });
       result.push(obj);
     }
   }
+  console.log(result)
   return { headers, data: result };
 }
 
@@ -121,12 +124,12 @@ export default function Transaction() {
         }
 
         const transformedData = data.map(row => {
-          const proceeds = parseFloat(row['Proceeds']) || 0;
-          const commission = parseFloat(row['Commission']) || 0;
-          const { Proceeds, Commission, ...rest } = row;
+          const proceeds_ = parseFloat(row['proceeds']) || 0;
+          const commission_ = parseFloat(row['commission']) || 0;
+          const { proceeds, commission, ...rest } = row;
           return {
             ...rest,
-            NetCash: (proceeds + commission).toString()
+            netCash: (proceeds_ + commission_).toString()
           };
         });
 
@@ -151,9 +154,6 @@ export default function Transaction() {
     onDrop,
     accept: { 'text/csv': ['.csv'] },
   });
-
-  // Sort + filter logic
-  const numericKeys = ['Quantity', 'NetCash'];
 
   const sortedTransactions = useMemo(() => {
     if (!Array.isArray(transactions)) return [];
@@ -262,7 +262,7 @@ export default function Transaction() {
     <>
       <div className="grid">
         <div className="grid-item grid12" style={{padding: "5px 0"}}></div>
-        <div className="grid-item grid3">
+        <div className="grid-item grid2">
           <button onClick={() => setShowUpload(prev => !prev)}>
             {showUpload ? 'Hide Upload' : 'Upload CSV'}
           </button>
@@ -322,9 +322,12 @@ export default function Transaction() {
               <th
                 key={header}
                 className={hideOnMobileColumns.includes(header) ? 'hide-on-mobile' : ''}
-                style={{verticalAlign: 'top'}}
+                style={{ verticalAlign: 'top' }}
               >
-                {renderSortControls(header)} {header.replace(/([a-z0-9])([A-Z])/g, '$1 $2')}
+                {renderSortControls(header)}{' '}
+                {header
+                  .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+                  .replace(/^(.)/, (match) => match.toUpperCase())}
               </th>
             ))}
           </tr>
@@ -369,10 +372,10 @@ export default function Transaction() {
               {RENDERED_HEADERS.map(header => (
                 <td
                   key={header}
-                  className={hideOnMobileColumns.includes(header) ? 'hide-on-mobile' : ''}
-                  style={numericKeys.includes(header) ? getStyle(tx[header]) : {}}
+                  className={HIDE_ON_MOBILE_COLUMNS.includes(header) ? 'hide-on-mobile' : ''}
+                  style={NUMERIC_KEYS.includes(header) ? getStyle(tx[header]) : {}}
                 >
-                  {header === 'Quantity' || header === 'NetCash' ? formatNumber(tx[header]) : tx[header] || '-'}
+                  {NUMERIC_KEYS.includes(header) ? formatNumber(tx[header]) : tx[header] || '-'}
                 </td>
               ))}
             </tr>

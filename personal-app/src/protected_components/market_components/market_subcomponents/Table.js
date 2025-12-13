@@ -75,7 +75,7 @@ export default function Table({ prices, selectedItem = '', digits = 2 }) {
       <div className="grid">
         <div className="grid-item grid10">
           Sorting priority: {sortRules.length === 0
-          ? 'None'
+          ? ''
           : sortRules.map((rule, i) => `(${i + 1}) ${rule.key}`).join('; ')
         }
         </div>

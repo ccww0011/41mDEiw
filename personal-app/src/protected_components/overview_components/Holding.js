@@ -1,21 +1,23 @@
 'use client';
 import React, { useState, useMemo } from "react";
 import {useAggregates} from "@/context/AggregateContext";
+import {useTransactions} from "@/context/TransactionContext";
 
 export default function Holding() {
   const [sortRules, setSortRules] = useState([]);
   const [filters, setFilters] = useState({});
-  const {holdingsArray, aggregates, loadingAggregates} = useAggregates();
+  const {holdingsArray, basis, setBasis, aggregates, loadingAggregates} = useAggregates();
+  const {currencies} = useTransactions();
 
   const COLUMN_NAMES = {
     ticker: "Ticker",
     description: "Description",
     exchange: "Exchange",
-    currency: "Currency",
+    tradingCurrency: "Trading Currency",
     totalQuantity: "Quantity",
     avgCost: "Average Cost",
     price: "Last Price",
-    totalProceeds: "Cost Basis",
+    costBasis: "Cost Basis",
     value: "Market Value",
     unrealisedPL: "Unrealised P/L",
     realisedPL: "Realised P/L",
@@ -151,21 +153,46 @@ export default function Holding() {
   };
 
   return (
-    <div>
-      <h2>Holding</h2>
+    <>
+      <div className="grid">
+        <div className="grid-item grid12" style={{padding: "25px 0 0 0"}}></div>
+      </div>
+      <div className="grid">
+        <div className="grid-item grid2">
+        <label>
+            Basis Currency
+          </label>
+        </div>
+        <div className="grid-item grid2">
+          <select
+            value={basis}
+            onChange={(e) => setBasis(e.target.value)}
+          >
+            <option key="Local" value="Local">Local</option>
+            {currencies.map(currency => (
+              <option key={currency} value={currency}>
+                {currency}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
-      {aggregates.missingPLCurrencies.length > 0 && (
-        <h3>
-          P/L data loading/missing for tickers in:{" "}
-          {aggregates.missingPLCurrencies.join(", ")}
-        </h3>
-      )}
+      <div style={{display: 'flex', alignItems: 'flex-end'}}>
+        <h2>Holding</h2>
+        {aggregates.missingPLCurrencies.length > 0 && (
+          <h3 style={{marginLeft: '20px', color: 'red'}}>
+            P/L data {loadingAggregates ? "loading" : "missing"} for tickers in {" "}
+            {aggregates.missingPLCurrencies.join(", ")}
+          </h3>
+        )}
+      </div>
 
       {/* Aggregate table (unchanged) */}
       <table>
         <thead>
         <tr>
-          <th>Curr.</th>
+          <th>Currency</th>
           <th>Cost Basis</th>
           <th>Market Value</th>
           <th>Unrealised P/L</th>
@@ -175,9 +202,9 @@ export default function Holding() {
         </thead>
 
         <tbody>
-        {Object.entries(aggregates.map).map(([currency, agg]) => (
-          <tr key={currency}>
-            <td>{currency}</td>
+        {Object.entries(aggregates.map).map(([tradingCurrency, agg]) => (
+          <tr key={tradingCurrency}>
+            <td>{tradingCurrency}</td>
 
             <td style={getStyle(agg.costBasis)}>
               {formatNumber(agg.costBasis)}
@@ -206,7 +233,7 @@ export default function Holding() {
         <div className="grid-item grid8">
           Sorting priority:{" "}
           {sortRules.length === 0
-            ? "None"
+            ? ""
             : sortRules
               .map((rule, i) => `(${i + 1}) ${COLUMN_NAMES[rule.key]}`)
               .join("; ")}
@@ -255,7 +282,7 @@ export default function Holding() {
               "totalQuantity",
               "avgCost",
               "price",
-              "totalProceeds",
+              "costBasis",
               "value",
               "unrealisedPL",
               "realisedPL",
@@ -309,9 +336,9 @@ export default function Holding() {
               <td
                 key={key}
                 className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
-                style={["totalQuantity", "avgCost", "price", "totalProceeds", "value", "unrealisedPL", "realisedPL", "pl"].includes(key) ? getStyle(h[key]) : {}}
+                style={["totalQuantity", "avgCost", "price", "costBasis", "value", "unrealisedPL", "realisedPL", "pl"].includes(key) ? getStyle(h[key]) : {}}
               >
-                {["totalQuantity", "avgCost", "price", "totalProceeds", "value", "unrealisedPL", "realisedPL", "pl"].includes(key)
+                {["totalQuantity", "avgCost", "price", "costBasis", "value", "unrealisedPL", "realisedPL", "pl"].includes(key)
                   ? formatNumber(h[key])
                   : h[key]}
               </td>
@@ -320,7 +347,6 @@ export default function Holding() {
         ))}
         </tbody>
       </table>
-      {loadingAggregates && <div><h3>Loading holdings...</h3></div>}
-    </div>
+    </>
   );
 }

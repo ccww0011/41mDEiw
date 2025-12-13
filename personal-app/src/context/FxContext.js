@@ -28,7 +28,7 @@ export function FxProvider({ children }) {
   }, [currencies]);
 
   // console.log(currencies)
-  console.log(fxs)
+  // console.log(fxs)
 
   return (
     <FxContext.Provider value={{ fxs, setFxs, loadingFxs, setLoadingFxs }}>
