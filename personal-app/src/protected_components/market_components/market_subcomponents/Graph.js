@@ -21,7 +21,7 @@ ChartJS.register(
   Legend
 );
 
-export default function Graph({ prices, selectedItem = ''}) {
+export default function Graph({ prices, selectedItem = '' }) {
 
   // Flatten the prices for the selected ticker(s)
   const flattened = useMemo(() => {
@@ -57,7 +57,22 @@ export default function Graph({ prices, selectedItem = ''}) {
       borderColor: colorPalette[idx % colorPalette.length],
       backgroundColor: colorPalette[idx % colorPalette.length],
       tension: 0.2,
-      pointRadius: 0
+      pointRadius: function(context) {
+        const label = context.chart.data.labels[context.dataIndex];
+        const year = parseInt(label.slice(0, 4));
+        const month = parseInt(label.slice(4, 6)) - 1;
+        const day = parseInt(label.slice(6, 8));
+        const lastDay = new Date(year, month + 1, 0).getDate();
+        return day === lastDay ? 4 : 0;  // bigger points for last day
+      },
+      pointStyle: function(context) {
+        const label = context.chart.data.labels[context.dataIndex];
+        const year = parseInt(label.slice(0, 4));
+        const month = parseInt(label.slice(4, 6)) - 1;
+        const day = parseInt(label.slice(6, 8));
+        const lastDay = new Date(year, month + 1, 0).getDate();
+        return day === lastDay ? 'cross' : 'circle'; // Use 'cross' for last day, 'circle' for others
+      },
     };
   });
 
@@ -67,6 +82,34 @@ export default function Graph({ prices, selectedItem = ''}) {
 
   const options = {
     responsive: true,
+    plugins: {
+      tooltip: { enabled: true }, // normal hover tooltip
+      datalabels: {
+        display: function(context) {
+          const label = context.chart.data.labels[context.dataIndex];
+          const year = parseInt(label.slice(0, 4));
+          const month = parseInt(label.slice(4, 6)) - 1; // Months are 0-based
+          const day = parseInt(label.slice(6, 8));
+          const lastDay = new Date(year, month + 1, 0).getDate();
+          return day === lastDay; // Only show for last day of month
+        },
+        anchor: 'end',
+        align: 'top',
+        offset: 10,
+        backgroundColor: 'rgba(0,0,0,0.1)', // background color for the label
+        color: '#08306b', // text color
+        borderRadius: 4,
+        padding: 4,
+        font: { size: 12 },
+        formatter: function(value, context) {
+          const label = context.chart.data.labels[context.dataIndex];
+          const month = label.slice(4, 6); // MM part of the date
+          const day = label.slice(6, 8); // DD part of the date
+          const price = value.toFixed(2); // Price value for that date
+          return `${day}/${month} ${price}`; // Show MM/DD and price
+        }
+      }
+    },
     scales: {
       x: { title: { display: true, text: 'Date' } },
       y: { title: { display: true, text: 'Close' } }
@@ -74,8 +117,7 @@ export default function Graph({ prices, selectedItem = ''}) {
   };
 
   return (
-    <>
-      <Line data={data} options={options} />
-    </>
+    <Line data={data} options={options} />
   );
 }
+

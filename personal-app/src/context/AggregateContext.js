@@ -210,6 +210,63 @@ export function AggregateProvider({ children }) {
     };
   }, [holdingsArray]);
 
+  // ---------------------------------------------------------
+  // Market Value (USD)
+  // ---------------------------------------------------------
+  const marketValueByTicker = useMemo(() => {
+    const allTickers = holdingsArray
+      .map(h => {
+        if (h.value == null) return null;
+        let marketValue = h.value;
+        if (basis === "Local") {
+          const tickerPrices = prices[h.ticker];
+          if (!tickerPrices) return null;
+          const latestDate = Object.keys(tickerPrices).sort().pop();
+          if (!latestDate) return null;
+          const fx = getFxRate(fxs, h.tradingCurrency, latestDate, "USD");
+          if (fx == null) return null;
+          marketValue = h.value * fx;
+        }
+        return { ticker: h.ticker, marketValue };
+      })
+      .filter(Boolean);
+
+    const totalMarketValue = allTickers.reduce((sum, t) => sum + t.marketValue, 0);
+
+    return allTickers
+      .sort((a, b) => b.marketValue - a.marketValue)
+      .slice(0, 10)
+      .map(t => ({ ...t, percent: t.marketValue / totalMarketValue }));
+  }, [holdingsArray, prices, fxs, basis]);
+
+  const marketValueByTradingCurrency = useMemo(() => {
+    const map = {};
+    holdingsArray.forEach(h => {
+      if (h.value == null) return;
+      let marketValue = h.value;
+      if (basis === "Local") {
+        const tickerPrices = prices[h.ticker];
+        if (!tickerPrices) return;
+        const latestDate = Object.keys(tickerPrices).sort().pop();
+        if (!latestDate) return;
+        const fx = getFxRate(fxs, h.tradingCurrency, latestDate, "USD");
+        if (fx == null) return;
+        marketValue = h.value * fx;
+      }
+      if (!map[h.tradingCurrency]) map[h.tradingCurrency] = 0;
+      map[h.tradingCurrency] += marketValue;
+    });
+
+    const totalMarketValue = Object.values(map).reduce((sum, v) => sum + v, 0);
+
+    return Object.entries(map).map(([tradingCurrency, marketValue]) => ({
+      tradingCurrency,
+      marketValue,
+      percent: marketValue / totalMarketValue
+    }));
+  }, [holdingsArray, prices, fxs, basis]);
+
+
   return (
     <AggregateContext.Provider
       value={{
@@ -217,10 +274,12 @@ export function AggregateProvider({ children }) {
         aggregates,
         basis,
         setBasis,
-        loadingAggregates
+        loadingAggregates,
+        marketValueByTicker,
+        marketValueByTradingCurrency
       }}
     >
-      {children}
+    {children}
     </AggregateContext.Provider>
   );
 }

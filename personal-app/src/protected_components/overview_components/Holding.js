@@ -2,11 +2,13 @@
 import React, { useState, useMemo } from "react";
 import {useAggregates} from "@/context/AggregateContext";
 import {useTransactions} from "@/context/TransactionContext";
+import PieChart from "@/components/PieChart";
+import BarChart from "@/components/BarChart";
 
 export default function Holding() {
   const [sortRules, setSortRules] = useState([]);
   const [filters, setFilters] = useState({});
-  const {holdingsArray, basis, setBasis, aggregates, loadingAggregates} = useAggregates();
+  const {holdingsArray, basis, setBasis, marketValueByTicker, marketValueByTradingCurrency, aggregates, loadingAggregates} = useAggregates();
   const {currencies} = useTransactions();
 
   const COLUMN_NAMES = {
@@ -159,7 +161,7 @@ export default function Holding() {
       </div>
       <div className="grid">
         <div className="grid-item grid2">
-        <label>
+          <label>
             Basis Currency
           </label>
         </div>
@@ -178,14 +180,41 @@ export default function Holding() {
         </div>
       </div>
 
-      <div style={{display: 'flex', alignItems: 'flex-end'}}>
-        <h2>Holding</h2>
-        {aggregates.missingPLCurrencies.length > 0 && (
-          <h3 style={{marginLeft: '20px', color: 'red'}}>
-            P/L data {loadingAggregates ? "loading" : "missing"} for tickers in {" "}
-            {aggregates.missingPLCurrencies.join(", ")}
-          </h3>
-        )}
+      <div className="grid">
+        <div className="grid-item grid2">
+          <h2>Holding</h2>
+        </div>
+        <div className="grid-item grid10">
+          {aggregates.missingPLCurrencies.length > 0 && (
+            <h3 style={{marginLeft: '20px', color: 'red'}}>
+              {loadingAggregates ? "Loading" : "Missing"} P/L data for tickers in {" "}
+              {aggregates.missingPLCurrencies.join(", ")}
+            </h3>
+          )}
+        </div>
+      </div>
+
+      <div className="grid">
+        <div className="grid-item grid6" style={{ flex: "1 1 300px", display: "flex", alignItems: "center" }}>
+          <p>Market Value by Trading Currency</p>
+          <div style={{width: "100%", maxWidth: 400, height: 200}}>
+            <PieChart
+              data={marketValueByTradingCurrency.sort((a, b) => b.percent - a.percent)}
+              labelKey="tradingCurrency"
+              valueKey="marketValue"
+            />
+          </div>
+        </div>
+        <div className="grid-item grid6" style={{ flex: "1 1 300px", display: "flex", alignItems: "center" }}>
+          <p>Top 10 Market Value by Stock</p>
+          <div style={{width: "100%", maxWidth: 400, height: 200}}>
+            <BarChart
+              data={marketValueByTicker.sort((a, b) => b.percent - a.percent)}
+              labelKey="ticker"
+              valueKey="percent"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Aggregate table (unchanged) */}

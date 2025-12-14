@@ -321,7 +321,7 @@ export default function Transaction() {
             {RENDERED_HEADERS.map(header => (
               <th
                 key={header}
-                className={hideOnMobileColumns.includes(header) ? 'hide-on-mobile' : ''}
+                className={HIDE_ON_MOBILE_COLUMNS.includes(header) ? 'hide-on-mobile' : ''}
                 style={{ verticalAlign: 'top' }}
               >
                 {renderSortControls(header)}{' '}
@@ -335,7 +335,7 @@ export default function Transaction() {
           {/* Filter row */}
           <tr>
             {RENDERED_HEADERS.map(header => {
-              if (numericKeys.includes(header)) return <th key={header}></th>; // no filter for numeric fields
+              if (NUMERIC_KEYS.includes(header)) return <th key={header}></th>; // no filter for numeric fields
 
               // Get unique options for this column
               const options = Array.from(
@@ -343,7 +343,7 @@ export default function Transaction() {
               ).sort();
 
               return (
-                <th key={header} className={hideOnMobileColumns.includes(header) ? 'hide-on-mobile' : ''}>
+                <th key={header} className={HIDE_ON_MOBILE_COLUMNS.includes(header) ? 'hide-on-mobile' : ''}>
                   <select
                     value={filters[header] || 'All'}
                     onChange={(e) => {

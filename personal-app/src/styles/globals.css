@@ -175,7 +175,7 @@ table {
 }
 
 th {
-  border: 1px solid #ccc;
+  border: 1px solid #f7fbff;
   padding: 5px;
   text-align: left;
   vertical-align: top;
@@ -186,7 +186,7 @@ th {
 }
 
 td {
-  border: 1px #ccc;
+  border: 1px #f7fbff;
   padding: 5px;
   text-align: left;
   vertical-align: top;
