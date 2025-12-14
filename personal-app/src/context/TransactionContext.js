@@ -1,7 +1,9 @@
 import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { getTransactions } from "@/hooks/useTransactionDatabase";
 
-const TransactionContext = createContext();
+const TransactionContext = createContext(
+  {loadingTransactions: true}
+);
 
 export function useTransactions() {
   const context = useContext(TransactionContext);
@@ -11,7 +13,7 @@ export function useTransactions() {
 
 export function TransactionProvider({ children }) {
   const [transactions, setTransactions] = useState([]);
-  const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [loadingTransactions, setLoadingTransactions] = useState(true);
 
   useEffect(() => {
     async function fetchData() {

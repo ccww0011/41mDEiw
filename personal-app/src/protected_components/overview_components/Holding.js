@@ -187,35 +187,37 @@ export default function Holding() {
         <div className="grid-item grid10">
           {aggregates.missingPLCurrencies.length > 0 && (
             <h3 style={{marginLeft: '20px', color: 'red'}}>
-              {loadingAggregates ? "Loading" : "Missing"} P/L data for tickers in {" "}
+              {"Loading P/L data for tickers "}
               {aggregates.missingPLCurrencies.join(", ")}
             </h3>
           )}
         </div>
       </div>
 
-      <div className="grid">
-        <div className="grid-item grid6" style={{ flex: "1 1 300px", display: "flex", alignItems: "center" }}>
-          <p>Market Value by Trading Currency</p>
-          <div style={{width: "100%", maxWidth: 400, height: 200}}>
-            <PieChart
-              data={marketValueByTradingCurrency.sort((a, b) => b.percent - a.percent)}
-              labelKey="tradingCurrency"
-              valueKey="marketValue"
-            />
+      {(loadingAggregates != null && loadingAggregates.size === 0) &&
+        <div className="grid">
+          <div className="grid-item grid6" style={{ flex: "1 1 300px", display: "flex", alignItems: "center" }}>
+            <p>Market Value by Trading Currency</p>
+            <div style={{width: "100%", maxWidth: 400, height: 200}}>
+              <PieChart
+                data={marketValueByTradingCurrency.sort((a, b) => b.percent - a.percent)}
+                labelKey="tradingCurrency"
+                valueKey="marketValue"
+              />
+            </div>
+          </div>
+          <div className="grid-item grid6" style={{ flex: "1 1 300px", display: "flex", alignItems: "center" }}>
+            <p>Top 10 Market Value by Stock</p>
+            <div style={{width: "100%", maxWidth: 400, height: 200}}>
+              <BarChart
+                data={marketValueByTicker.sort((a, b) => b.percent - a.percent)}
+                labelKey="ticker"
+                valueKey="percent"
+              />
+            </div>
           </div>
         </div>
-        <div className="grid-item grid6" style={{ flex: "1 1 300px", display: "flex", alignItems: "center" }}>
-          <p>Top 10 Market Value by Stock</p>
-          <div style={{width: "100%", maxWidth: 400, height: 200}}>
-            <BarChart
-              data={marketValueByTicker.sort((a, b) => b.percent - a.percent)}
-              labelKey="ticker"
-              valueKey="percent"
-            />
-          </div>
-        </div>
-      </div>
+      }
 
       {/* Aggregate table (unchanged) */}
       <table>

@@ -11,7 +11,7 @@ const AggregateContext = createContext({
   aggregates: {},
   missingFX: [],
   basis: "local",
-  loadingAggregates: true,
+  loadingAggregates: new Set(["Loading Transactions", "Loading Prices", "Loading Fxs"]),
 });
 
 export function useAggregates() {
@@ -45,18 +45,31 @@ const yesterdayStr = yesterday.toISOString().slice(0, 10).replace(/-/g, '');
 export function AggregateProvider({ children }) {
   const { transactions, loadingTransactions } = useTransactions();
   const { prices, loadingPrices } = usePrices();
-  const { fxs, setFxs, loadingFxs } = useFxs();
+  const { fxs, setFxs, loadingFxs, setLoadingFxs } = useFxs();
 
-  const [loadingAggregates, setLoadingAggregates] = useState(new Map());
+  const [loadingAggregates, setLoadingAggregates] = useState(new Set(["Loading Transactions", "Loading Prices", "Loading Fxs"]));
   const [basis, setBasis] = useState("Local");
   const [holdingsArray, setHoldingsArray] = useState([]);
 
   useEffect(() => {
-    loadingAggregates.set("Loading Transactions", loadingTransactions);
-    loadingAggregates.set("Loading Prices", loadingPrices);
-    loadingAggregates.set("Loading Exchange Rates", loadingFxs);
-    setLoadingAggregates(loadingAggregates);
-  }, [loadingTransactions, loadingPrices, loadingFxs])
+    const updatedAggregates = new Set(loadingAggregates);
+    if (loadingTransactions) {
+      updatedAggregates.add("Loading Transactions");
+    } else {
+      updatedAggregates.delete("Loading Transactions");
+    }
+    if (loadingPrices) {
+      updatedAggregates.add("Loading Prices");
+    } else {
+      updatedAggregates.delete("Loading Prices");
+    }
+    if (loadingFxs) {
+      updatedAggregates.add("Loading Fxs");
+    } else {
+      updatedAggregates.delete("Loading Fxs");
+    }
+    setLoadingAggregates(updatedAggregates);
+  }, [loadingTransactions, loadingPrices, loadingFxs]);
 
   const requests = useMemo(() => {
     const newRequests = new Map();
@@ -80,11 +93,22 @@ export function AggregateProvider({ children }) {
       let startDate = year + "0101", endDate = year + "1231";
       if (startDate > yesterdayStr) return;
       if (endDate > yesterdayStr) endDate = yesterdayStr;
-      for (let currency of currencies) {
-        (async () => {
-          await getFxs(currency, startDate, endDate, fxs, setFxs);
-        })();
+      const fetchAllFxs = async () => {
+        setLoadingFxs(true);
+        const promises = Array.from(currencies).map(currency => getFxs(currency, startDate, endDate, fxs, setFxs));
+        try {
+          await Promise.all(promises);
+          console.log("All FX data fetched successfully!");
+        } catch (error) {
+          console.error("Error fetching FX data:", error);
+        } finally {
+          // Delay setting loading state to ensure React processes the update
+          setTimeout(() => {
+            setLoadingFxs(false);
+          }, 100);
+        }
       }
+      fetchAllFxs();
     });
   }, [requests]);
 
@@ -99,7 +123,7 @@ export function AggregateProvider({ children }) {
       return {...tx, netCashTranslated, fxRate};
     });
   }, [sortedTransactions, fxs, prices, basis]);
-  console.log(translatedTransactions)
+  //console.log(translatedTransactions)
   /*
   {
     "quantity": "1",
@@ -265,7 +289,6 @@ export function AggregateProvider({ children }) {
       percent: marketValue / totalMarketValue
     }));
   }, [holdingsArray, prices, fxs, basis]);
-
 
   return (
     <AggregateContext.Provider

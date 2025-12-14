@@ -4,7 +4,9 @@ import {createContext, useContext, useEffect, useState} from 'react';
 import {useTransactions} from "@/context/TransactionContext";
 import {getInitialFxs} from "@/hooks/useFxDatabase";
 
-const FxContext = createContext();
+const FxContext = createContext(
+  {loadingFxs: true}
+);
 
 export function useFxs() {
   const context = useContext(FxContext);
@@ -14,7 +16,7 @@ export function useFxs() {
 
 export function FxProvider({ children }) {
   const [fxs, setFxs] = useState({});
-  const [loadingFxs, setLoadingFxs] = useState(false);
+  const [loadingFxs, setLoadingFxs] = useState(true);
   const {currencies} = useTransactions();
 
   useEffect(() => {

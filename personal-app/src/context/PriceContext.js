@@ -4,7 +4,9 @@ import {createContext, useContext, useEffect, useState} from 'react';
 import {getInitialPrices} from "@/hooks/usePriceDatabase";
 import {useTransactions} from "@/context/TransactionContext";
 
-const PriceContext = createContext();
+const PriceContext = createContext(
+  {loadingPrices: true}
+);
 
 export function usePrices() {
   const context = useContext(PriceContext);
@@ -14,7 +16,7 @@ export function usePrices() {
 
 export function PriceProvider({ children }) {
   const [prices, setPrices] = useState({});
-  const [loadingPrices, setLoadingPrices] = useState(false);
+  const [loadingPrices, setLoadingPrices] = useState(true);
   const {tickers} = useTransactions();
 
   useEffect(() => {
