@@ -97,16 +97,16 @@ export default function Graph({ prices, selectedItem = '' }) {
         align: 'top',
         offset: 10,
         backgroundColor: 'rgba(0,0,0,0.1)', // background color for the label
-        color: '#08306b', // text color
+        color: '#08306b',
         borderRadius: 4,
         padding: 4,
-        font: { size: 12 },
+        font: { bold: true, size: 12 },
         formatter: function(value, context) {
           const label = context.chart.data.labels[context.dataIndex];
           const month = label.slice(4, 6); // MM part of the date
           const day = label.slice(6, 8); // DD part of the date
           const price = value.toFixed(2); // Price value for that date
-          return `${day}/${month} ${price}`; // Show MM/DD and price
+          return `${day}/${month}\n${price}`; // Show MM/DD and price
         }
       }
     },

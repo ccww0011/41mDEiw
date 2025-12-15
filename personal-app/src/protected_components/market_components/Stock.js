@@ -59,11 +59,18 @@ export default function Stock() {
 
   // Fetch prices whenever ticker or range changes
   useEffect(() => {
-    setLoadingPrices(true);
-    if (!selectedTicker || !range) return;
-    const [start, end] = getRangeDates(range);
-    getPrices(selectedTicker, start, end, prices, setPrices);
-    setLoadingPrices(false);
+    const fetchData = async () => {
+      try {
+        setLoadingPrices(true);
+        const[start, end] = getRangeDates(range);
+        await getPrices(selectedTicker, start, end, prices, setPrices);
+      } catch (err) {
+
+      } finally {
+        setLoadingPrices(false);
+      }
+    };
+    fetchData();
   }, [selectedTicker, range]);
 
   // Filter prices for selected ticker and date range

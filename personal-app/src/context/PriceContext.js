@@ -16,12 +16,12 @@ export function usePrices() {
 
 export function PriceProvider({ children }) {
   const [prices, setPrices] = useState({});
-  const [loadingPrices, setLoadingPrices] = useState(true);
+  const [loadingPrices, setLoadingPrices] = useState(false);
   const {tickers} = useTransactions();
 
   useEffect(() => {
     const date = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    async function fetchData() {
+    const fetchData = async () => {
       setLoadingPrices(true);
       await getInitialPrices(tickers, date, setPrices);
       setLoadingPrices(false);

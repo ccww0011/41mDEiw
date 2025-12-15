@@ -47,7 +47,7 @@ export function AggregateProvider({ children }) {
   const { prices, loadingPrices } = usePrices();
   const { fxs, setFxs, loadingFxs, setLoadingFxs } = useFxs();
 
-  const [loadingAggregates, setLoadingAggregates] = useState(new Set(["Loading Transactions", "Loading Prices", "Loading Fxs"]));
+  const [loadingAggregates, setLoadingAggregates] = useState(new Set());
   const [basis, setBasis] = useState("Local");
   const [holdingsArray, setHoldingsArray] = useState([]);
 
@@ -70,6 +70,7 @@ export function AggregateProvider({ children }) {
     }
     setLoadingAggregates(updatedAggregates);
   }, [loadingTransactions, loadingPrices, loadingFxs]);
+  console.log(loadingAggregates)
 
   const requests = useMemo(() => {
     const newRequests = new Map();
@@ -98,9 +99,8 @@ export function AggregateProvider({ children }) {
         const promises = Array.from(currencies).map(currency => getFxs(currency, startDate, endDate, fxs, setFxs));
         try {
           await Promise.all(promises);
-          console.log("All FX data fetched successfully!");
         } catch (error) {
-          console.error("Error fetching FX data:", error);
+
         } finally {
           // Delay setting loading state to ensure React processes the update
           setTimeout(() => {

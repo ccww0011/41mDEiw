@@ -13,10 +13,10 @@ export function useTransactions() {
 
 export function TransactionProvider({ children }) {
   const [transactions, setTransactions] = useState([]);
-  const [loadingTransactions, setLoadingTransactions] = useState(true);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
 
   useEffect(() => {
-    async function fetchData() {
+    const fetchData = async () => {
       setLoadingTransactions(true);
       await getTransactions(setTransactions);
       setLoadingTransactions(false);

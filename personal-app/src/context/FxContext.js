@@ -16,12 +16,12 @@ export function useFxs() {
 
 export function FxProvider({ children }) {
   const [fxs, setFxs] = useState({});
-  const [loadingFxs, setLoadingFxs] = useState(true);
+  const [loadingFxs, setLoadingFxs] = useState(false);
   const {currencies} = useTransactions();
 
   useEffect(() => {
     const date = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    async function fetchData() {
+    const fetchData = async () => {
       setLoadingFxs(true);
       await getInitialFxs(currencies, date, setFxs);
       setLoadingFxs(false);

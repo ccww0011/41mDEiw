@@ -22,7 +22,7 @@ async function transactionApi(method, body = null, setTransactions) {
         setTransactions(items.data);
         return {message: items.message, status: 'Success'};
       }
-    } else if (response.status === 403) {
+    } else if (response.status === 401 || response.status === 403) {
       logout();
       return {message: "Unauthorised.", status: 'Unauthorised'};
     } else {

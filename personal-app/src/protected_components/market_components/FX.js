@@ -61,12 +61,20 @@ export default function FX() {
 
   // Fetch FX for both currencies whenever range/currency changes
   useEffect(() => {
-    setLoadingFxs(true);
-    if (!c1 || !c2 || !range) return;
-    const [start, end] = getRangeDates(range);
-    getFxs(c1, start, end, fxs, setFxs);
-    getFxs(c2, start, end, fxs, setFxs);
-    setLoadingFxs(false);
+    const fetchData = async () => {
+      try {
+        setLoadingFxs(true);
+        if (!c1 || !c2 || !range) return;
+        const [start, end] = getRangeDates(range);
+        await getFxs(c1, start, end, fxs, setFxs);
+        await getFxs(c2, start, end, fxs, setFxs);
+      } catch (err) {
+
+      } finally {
+        setLoadingFxs(false);
+      }
+    }
+    fetchData();
   }, [c1, c2, range]);
 
   // Compute currency pair: FX = FX[c2] / FX[c1]
