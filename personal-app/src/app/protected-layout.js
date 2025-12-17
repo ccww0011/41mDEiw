@@ -6,7 +6,8 @@ import { useEffect } from "react";
 import {TransactionProvider} from "@/context/TransactionContext";
 import {PriceProvider} from "@/context/PriceContext";
 import {FxProvider} from "@/context/FxContext";
-import {AggregateProvider} from "@/context/AggregateContext";
+import {ValuationProvider} from "@/context/ValuationContext";
+
 
 export default function ProtectedLayout({ children }) {
   const { user, loading } = useAuth();
@@ -38,9 +39,9 @@ export default function ProtectedLayout({ children }) {
     <TransactionProvider>
       <PriceProvider>
         <FxProvider>
-          <AggregateProvider>
+          <ValuationProvider>
             {children}
-          </AggregateProvider>
+          </ValuationProvider>
         </FxProvider>
       </PriceProvider>
     </TransactionProvider>

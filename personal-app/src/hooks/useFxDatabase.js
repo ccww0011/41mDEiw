@@ -102,6 +102,56 @@ export async function getInitialFxs(currencies, date, setFxs) {
   }
 }
 
+export async function getMissingFxs(currencies, valuationDateStr, fxs, setFxs) {
+  const filteredCurrencies = currencies.filter(currency => currency !== "USD");
+
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  const formatDate = (date) => {
+    const y = date.getFullYear();
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const d = date.getDate().toString().padStart(2, '0');
+    return `${y}${m}${d}`;
+  };
+
+  const parseYYYYMMDD = (str) => new Date(str.slice(0, 4), parseInt(str.slice(4, 6)) - 1, str.slice(6, 8));
+
+  const endOfYear = (year) => new Date(year, 11, 31);
+  const startOfYear = (year) => new Date(year, 0, 1);
+
+  const valuationDate = parseYYYYMMDD(valuationDateStr);
+
+  for (const currency of [...filteredCurrencies]) {
+    const year = valuationDate.getFullYear();
+    const startDateStr = formatDate(startOfYear(year));
+    const endDateCandidate = endOfYear(year) < yesterday ? endOfYear(year) : yesterday;
+    const endDateStr = formatDate(endDateCandidate);
+
+    // Check if all dates in range are already in fxs
+    const existingDates = fxs[currency] ? Object.keys(fxs[currency]) : [];
+    let allDatesPresent = true;
+    let d = new Date(startOfYear(year));
+    while (d <= endDateCandidate) {
+      const dateStr = formatDate(d);
+      if (!existingDates.includes(dateStr)) {
+        allDatesPresent = false;
+        break;
+      }
+      d.setDate(d.getDate() + 1);
+    }
+
+    if (allDatesPresent) continue; // skip this currency
+
+    // Fetch missing FXs
+    const items = [{ currency, startDate: startDateStr, endDate: endDateStr }];
+    const data = { items: JSON.stringify(items) };
+    await fxApi('GET', data, setFxs);
+  }
+}
+
+
 
 export async function getFxs(currency, startDate, endDate, fxs, setFxs) {
   if (currency === 'USD')

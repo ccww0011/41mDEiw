@@ -1,15 +1,24 @@
 'use client';
 import React, { useState, useMemo } from "react";
-import {useAggregates} from "@/context/AggregateContext";
 import {useTransactions} from "@/context/TransactionContext";
 import PieChart from "@/components/PieChart";
 import BarChart from "@/components/BarChart";
+import {useValuationContext} from "@/context/ValuationContext";
+import {useFxs} from "@/context/FxContext";
+import {usePrices} from "@/context/PriceContext";
+import {useValuation} from "@/hooks/useValuation";
 
 export default function Holding() {
   const [sortRules, setSortRules] = useState([]);
   const [filters, setFilters] = useState({});
-  const {holdingsArray, basis, setBasis, marketValueByTicker, marketValueByTradingCurrency, aggregates, loadingAggregates} = useAggregates();
-  const {currencies} = useTransactions();
+
+  const {currencies, transactions, loadingTransactions} = useTransactions();
+  const {prices, loadingPrices} = usePrices();
+  const {fxs, setFxs, loadingFxs, setLoadingFxs} = useFxs();
+  const {basis, setBasis, endDate} = useValuationContext();
+
+  const {holdings, aggregates, marketValueByTicker, marketValueByTradingCurrency}
+    = useValuation(transactions, prices, fxs, setFxs, setLoadingFxs, basis, endDate);
 
   const COLUMN_NAMES = {
     ticker: "Ticker",
@@ -23,10 +32,10 @@ export default function Holding() {
     value: "Market Value",
     unrealisedPL: "Unrealised P/L",
     realisedPL: "Realised P/L",
-    pl: "P/L",
+    pL: "P/L",
   };
 
-  const hideOnMobileColumns = ["ticker", "exchange", "avgCost", "realisedPL", "pl"];
+  const hideOnMobileColumns = ["ticker", "exchange", "avgCost", "realisedPL", "pL"];
 
   const onSortClick = (key, directionOrRemove) => {
     setSortRules(prev => {
@@ -40,12 +49,12 @@ export default function Holding() {
   //     SORT + FILTER LOGIC
   // ---------------------------
   const sortedHoldings = useMemo(() => {
-    let array = [...holdingsArray];
+    let array = [...holdings];
 
     // compute combined P/L
     array = array.map(h => ({
       ...h,
-      pl:
+      pL:
         h.unrealisedPL !== null && h.realisedPL !== null
           ? h.unrealisedPL + h.realisedPL
           : null
@@ -85,7 +94,7 @@ export default function Holding() {
     }
 
     return array;
-  }, [holdingsArray, sortRules, filters]);
+  }, [holdings, sortRules, filters]);
   // ---------------------------
 
   const formatNumber = (num) =>
@@ -185,7 +194,7 @@ export default function Holding() {
           <h2>Holding</h2>
         </div>
         <div className="grid-item grid10">
-          {aggregates.missingPLCurrencies.length > 0 && (
+          {(loadingTransactions || loadingPrices || loadingFxs) && (
             <h3 style={{marginLeft: '20px', color: 'red'}}>
               {"Loading P/L data for tickers "}
               {aggregates.missingPLCurrencies.join(", ")}
@@ -194,7 +203,7 @@ export default function Holding() {
         </div>
       </div>
 
-      {(loadingAggregates != null && loadingAggregates.size === 0) &&
+      {(aggregates.missingPLCurrencies?.length === 0 || (loadingTransactions && loadingPrices && loadingFxs)) &&
         <div className="grid">
           <div className="grid-item grid6" style={{ flex: "1 1 300px", display: "flex", alignItems: "center" }}>
             <p>Market Value by Trading Currency</p>
@@ -233,7 +242,7 @@ export default function Holding() {
         </thead>
 
         <tbody>
-        {Object.entries(aggregates.map).map(([tradingCurrency, agg]) => (
+        {Object.entries(aggregates.aggMap).map(([tradingCurrency, agg]) => (
           <tr key={tradingCurrency}>
             <td>{tradingCurrency}</td>
 
@@ -253,7 +262,7 @@ export default function Holding() {
               {formatNumber(agg.realisedPL)}
             </td>
 
-            <td style={getStyle(agg.pl)}>{formatNumber(agg.pl)}</td>
+            <td style={getStyle(agg.pL)}>{formatNumber(agg.pL)}</td>
           </tr>
         ))}
         </tbody>
@@ -317,7 +326,7 @@ export default function Holding() {
               "value",
               "unrealisedPL",
               "realisedPL",
-              "pl"
+              "pL"
             ];
 
             if (numericKeys.includes(key)) {
@@ -328,7 +337,7 @@ export default function Holding() {
             }
 
             const options = Array.from(
-              new Set(holdingsArray.map((h) => h[key]).filter(Boolean))
+              new Set(holdings.map((h) => h[key]).filter(Boolean))
             ).sort();
 
             return (
@@ -367,9 +376,9 @@ export default function Holding() {
               <td
                 key={key}
                 className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
-                style={["totalQuantity", "avgCost", "price", "costBasis", "value", "unrealisedPL", "realisedPL", "pl"].includes(key) ? getStyle(h[key]) : {}}
+                style={["totalQuantity", "avgCost", "price", "costBasis", "value", "unrealisedPL", "realisedPL", "pL"].includes(key) ? getStyle(h[key]) : {}}
               >
-                {["totalQuantity", "avgCost", "price", "costBasis", "value", "unrealisedPL", "realisedPL", "pl"].includes(key)
+                {["totalQuantity", "avgCost", "price", "costBasis", "value", "unrealisedPL", "realisedPL", "pL"].includes(key)
                   ? formatNumber(h[key])
                   : h[key]}
               </td>

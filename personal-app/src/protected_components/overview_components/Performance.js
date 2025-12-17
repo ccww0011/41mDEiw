@@ -2,13 +2,13 @@ import React, {useState} from "react";
 import Summary from "@/protected_components/overview_components/performance_subcomponents/Summary";
 import TWR from "@/protected_components/overview_components/performance_subcomponents/TWR";
 import MWR from "@/protected_components/overview_components/performance_subcomponents/MWR";
-import {useAggregates} from "@/context/AggregateContext";
 import {useTransactions} from "@/context/TransactionContext";
+import {useValuationContext} from "@/context/ValuationContext";
 
 export default function Performance() {
   // Summary, TWR, MWR
   const [showTab, setShowTab] = useState("Summary");
-  const {basis, setBasis} = useAggregates();
+  const {basis, setBasis} = useValuationContext();
   const {currencies} = useTransactions();
 
   return (
