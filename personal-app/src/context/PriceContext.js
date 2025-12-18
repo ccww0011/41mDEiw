@@ -1,6 +1,6 @@
 'use client';
 
-import {createContext, useContext, useEffect, useState} from 'react';
+import {createContext, useContext, useEffect, useMemo, useState} from 'react';
 import {getInitialPrices} from "@/hooks/usePriceDatabase";
 import {useTransactions} from "@/context/TransactionContext";
 
@@ -29,11 +29,23 @@ export function PriceProvider({ children }) {
     fetchData();
   }, [tickers]);
 
-  // console.log(tickers)
+  const lastPriceDate = useMemo(() => {
+    let lastDate = "00000000";
+    const anyCurrencyFxMap = Object.values(prices)[0];
+    if (anyCurrencyFxMap) {
+      lastDate = Object.keys(anyCurrencyFxMap).reduce(
+        (max, date) => (date > max ? date : max),
+        "00000000"
+      );
+    }
+    return lastDate;
+  }, [prices]);
+
+  // console.log(lastPriceDate)
   // console.log(prices)
 
   return (
-    <PriceContext.Provider value={{ prices, setPrices, loadingPrices, setLoadingPrices }}>
+    <PriceContext.Provider value={{ prices, setPrices, lastPriceDate, loadingPrices, setLoadingPrices }}>
       {children}
     </PriceContext.Provider>
   );

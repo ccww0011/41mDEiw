@@ -36,5 +36,3 @@ export function logout() {
   const redirectUri = process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/oauth2/logout"
   window.location.href = `${cognitoUrl}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(redirectUri)}`;
 }
-
-

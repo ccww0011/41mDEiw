@@ -151,8 +151,6 @@ export async function getMissingFxs(currencies, valuationDateStr, fxs, setFxs) {
   }
 }
 
-
-
 export async function getFxs(currency, startDate, endDate, fxs, setFxs) {
   if (currency === 'USD')
     return;

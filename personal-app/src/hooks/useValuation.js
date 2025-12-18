@@ -21,9 +21,21 @@ function getPrice(prices, ticker, date) {
   return tickerPrices[date] ?? null;
 }
 
-const today = new Date(), yesterday = new Date();
-yesterday.setDate(today.getDate() - 1);
-const yesterdayStr = yesterday.toISOString().slice(0, 10).replace(/-/g, '');
+// Get today's date in UTC
+const todayUTC = new Date();
+const yesterdayUTC = new Date(Date.UTC(
+  todayUTC.getUTCFullYear(),
+  todayUTC.getUTCMonth(),
+  todayUTC.getUTCDate() - 1
+));
+
+// Format as YYYYMMDD (UTC)
+const yesterdayStr = `${yesterdayUTC.getUTCFullYear()}${String(
+  yesterdayUTC.getUTCMonth() + 1
+).padStart(2, '0')}${String(
+  yesterdayUTC.getUTCDate()
+).padStart(2, '0')}`;
+
 
 const EMPTY_RESULT = {
   holdings: [],
@@ -138,8 +150,6 @@ export function useValuation(transactions, prices, fxs, setFxs, setLoadingFxs, b
       if (h.realisedPL != null) aggMap[curr].realisedPL += h.realisedPL; else missingPLCurrencies.add(curr);
       if (h.unrealisedPL !== null && h.realisedPL !== null) aggMap[curr].pL += h.unrealisedPL + h.realisedPL; else missingPLCurrencies.add(curr);
     });
-
-    console.log(aggMap)
 
     const allTickers = holdings.filter(h => h.valueUSD != null).map(h => ({ ticker: h.ticker, marketValue: h.valueUSD }));
     const totalMarketValue = allTickers.reduce((sum, t) => sum + t.marketValue, 0);

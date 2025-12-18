@@ -176,12 +176,16 @@ export default function FX() {
 
         {/* Refresh */}
         <div className="grid-item grid1">
-          <button onClick={() => {
-            setLoadingFxs(true);
-            getRangeDates(range);
-            getFxs(c1, startDate, endDate, fxs, setFxs);
-            getFxs(c2, startDate, endDate, fxs, setFxs);
-            setLoadingFxs(false);
+          <button onClick={async () => {
+            try {
+              setLoadingFxs(true);
+              await Promise.all([
+                getFxs(c1, startDate, endDate, fxs, setFxs),
+                getFxs(c2, startDate, endDate, fxs, setFxs),
+              ]);
+            } finally {
+              setLoadingFxs(false); // ensures loading stops even if there's an error
+            }
           }}>
             Refresh
           </button>
