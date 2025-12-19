@@ -65,8 +65,8 @@ export default function Demo() {
     <>
       <div className="container">
         <h2>Expertise and Cases</h2>
-        <div className="column">
-          <div className="col-6" style={{borderRight: "10px solid #ffffff"}}>
+        <div className="grid">
+          <div className="grid-item grid6" style={{border: "10px #ffffff", backgroundColor: "#deebf7", padding: "0 10px"}}>
             <h3>Technological Solutions tailored to Business Needs</h3>
             <p>Creating efficient, automated systems that align with your business goals.</p>
             <p>Designing resilient and cost effective solutions that simplify complex tasks.</p>
@@ -74,7 +74,7 @@ export default function Demo() {
             <p></p>
           </div>
 
-          <div className="col-6" style={{borderLeft: "10px solid #ffffff"}}>
+          <div className="grid-item grid6" style={{border: "10px #ffffff", backgroundColor: "#deebf7", padding: "0 10px"}}>
             <h3>Streamlining Processes</h3>
             <p>Assessing current business processes and identifying areas for improvement.</p>
             <p>Automating routine tasks to help organisation focus on what matters most.</p>

@@ -39,12 +39,12 @@ const yesterdayStr = `${yesterdayUTC.getUTCFullYear()}${String(
 
 const EMPTY_RESULT = {
   holdings: [],
-  aggregates: { aggMap: {}, missingPLCurrencies: []},
+  aggregates: { aggMap: {}, missingPLCurrencies: null},
   marketValueByTicker: [],
   marketValueByTradingCurrency: []
 };
 
-export function useValuation(transactions, prices, fxs, setFxs, setLoadingFxs, basis, valuationDate = yesterdayStr) {
+export function useValuation(transactions, prices, fxs, setFxs, setLoadingFxs, basis, startDate, valuationDate = yesterdayStr) {
   useEffect(() => {
     const fetchFxs = async () => {
       const requests = new Map();
@@ -58,17 +58,11 @@ export function useValuation(transactions, prices, fxs, setFxs, setLoadingFxs, b
       for (const [year, currencies] of requests.entries()) {
         let date = year + "0101";
         if (date > valuationDate) continue;
-        setLoadingFxs(true);
-        try {
-          await getMissingFxs([...currencies], date, fxs, setFxs);
-        } finally {
-          setLoadingFxs(false);
-        }
+        return await getMissingFxs([...currencies], date, fxs, setFxs, setLoadingFxs);
       }
     };
     fetchFxs();
   }, [transactions, basis, valuationDate]);
-
 
   return useMemo(() => {
     if (!transactions?.length || !prices || !fxs) return EMPTY_RESULT;
@@ -111,6 +105,7 @@ export function useValuation(transactions, prices, fxs, setFxs, setLoadingFxs, b
         const avgCost = prevQty !== 0 ? item.costBasis / prevQty : 0;
         item.realisedPL += netCash - avgCost * quantity;
         item.costBasis += avgCost * quantity;
+
         const avgCostUSD = prevQty !== 0 ? item.costBasisUSD / prevQty : 0;
         item.realisedPLUSD += netCashUSD - avgCostUSD * quantity;
         item.costBasisUSD += avgCostUSD * quantity;
@@ -164,4 +159,96 @@ export function useValuation(transactions, prices, fxs, setFxs, setLoadingFxs, b
 
     return { holdings, aggregates: { aggMap, missingPLCurrencies: [...missingPLCurrencies] }, marketValueByTicker, marketValueByTradingCurrency };
   }, [transactions, prices, fxs, basis, valuationDate]);
+}
+
+export function useCumulativePL(transactions, prices, fxs, basis, startDate, endDate) {
+  return useMemo(() => {
+    if (!transactions?.length || !prices || !fxs || !startDate || !endDate) return {};
+    if (basis === 'Local')
+      basis = 'USD'
+    const translatedTransactions = transactions.map(tx => {
+      const fxRate = getFxRate(fxs, tx.currencyPrimary, tx.tradeDate, basis);
+      const netCashTranslated = fxRate == null ? null : parseFloat(tx.netCash) * fxRate;
+      const fxRateBasis = getFxRate(fxs, tx.currencyPrimary, tx.tradeDate, basis);
+      const netCashBasis = fxRateBasis == null ? null : parseFloat(tx.netCash) * fxRateBasis;
+      return { ...tx, netCashTranslated, fxRate, netCashBasis, fxRateBasis };
+    });
+
+    const sortedTransactions = [...translatedTransactions].sort((a, b) => parseInt(a.tradeDate) - parseInt(b.tradeDate));
+    const stockTx = sortedTransactions.filter(tx => tx.assetClass === "STK");
+
+    const dates = [];
+    let d = new Date(
+      Number(startDate.slice(0, 4)),
+      Number(startDate.slice(4, 6)) - 1,
+      Number(startDate.slice(6, 8))
+    );
+    const end = new Date(
+      Number(endDate.slice(0, 4)),
+      Number(endDate.slice(4, 6)) - 1,
+      Number(endDate.slice(6, 8))
+    );
+    while (d <= end) {
+      const dateStr = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+      dates.push(dateStr);
+      d.setDate(d.getDate() + 1);
+    }
+    const cumulativePLByDate = {};
+    const aggRealisedPLBasis = {};
+
+    for (const date of dates) {
+      const txUpToDate = stockTx.filter(tx => tx.tradeDate <= date);
+      const holdingsMap = {};
+      // Build holdings snapshot and calculate realised P/L manually
+      txUpToDate.forEach(tx => {
+        const key = `${tx.ticker}|${tx.listingExchange}`;
+        const quantity = parseFloat(tx.quantity);
+        const netCash = parseFloat(tx.netCashTranslated);
+        const netCashBasis = parseFloat(tx.netCashBasis);
+
+        if (!holdingsMap[key]) holdingsMap[key] = {
+          ticker: tx.ticker,
+          description: tx.description,
+          exchange: tx.listingExchange,
+          tradingCurrency: tx.currencyPrimary,
+          totalQuantity: 0,
+          costBasis: 0,
+          realisedPL: 0,
+          costBasisBasis: 0,
+          realisedPLBasis: 0
+        };
+        const h = holdingsMap[key];
+        const prevQty = h.totalQuantity;
+        h.totalQuantity += quantity;
+
+        if ((prevQty > 0 && quantity < 0) || (prevQty < 0 && quantity > 0)) {
+          const avgCost = prevQty !== 0 ? h.costBasis / prevQty : 0;
+          h.realisedPL += netCash - avgCost * quantity;
+          h.costBasis += avgCost * quantity;
+
+          const avgCostBasis = prevQty !== 0 ? h.costBasisBasis / prevQty : 0;
+          h.realisedPLBasis += netCashBasis - avgCostBasis * quantity;
+          h.costBasisBasis += avgCostBasis * quantity;
+        } else {
+          h.costBasis += netCash;
+          h.costBasisBasis += netCashBasis;
+        }
+        aggRealisedPLBasis[key] = h.realisedPLBasis;
+      });
+
+      let totalPLBasis = 0;
+      Object.values(holdingsMap).forEach(h => {
+        const priceLocal = getPrice(prices, h.ticker, date);
+        const fxPriceBasis = getFxRate(fxs, h.tradingCurrency, date, basis);
+        const priceBasis = priceLocal != null && fxPriceBasis != null ? parseFloat(priceLocal) * parseFloat(fxPriceBasis) : 0;
+        const valueBasis = priceBasis * h.totalQuantity;
+
+        const unrealisedPLBasis = valueBasis + h.costBasisBasis;
+        const realisedPLBasis = aggRealisedPLBasis[`${h.ticker}|${h.exchange}`] || 0;
+        totalPLBasis += unrealisedPLBasis + realisedPLBasis;
+      });
+      cumulativePLByDate[date] = totalPLBasis;
+    }
+    return cumulativePLByDate;
+  }, [transactions, prices, fxs, basis, startDate, endDate]);
 }

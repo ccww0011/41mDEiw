@@ -6,19 +6,26 @@ import BarChart from "@/components/BarChart";
 import {useValuationContext} from "@/context/ValuationContext";
 import {useFxs} from "@/context/FxContext";
 import {usePrices} from "@/context/PriceContext";
-import {useValuation} from "@/hooks/useValuation";
+import {useCumulativePL, useValuation} from "@/hooks/useValuation";
+import LineChart from "@/components/LineChart";
 
 export default function Holding() {
-  const [sortRules, setSortRules] = useState([]);
-  const [filters, setFilters] = useState({});
-
   const {currencies, transactions, loadingTransactions} = useTransactions();
   const {prices, loadingPrices} = usePrices();
   const {fxs, setFxs, loadingFxs, setLoadingFxs} = useFxs();
-  const {basis, setBasis, endDate} = useValuationContext();
+  const {basis, setBasis, startDate, endDate} = useValuationContext();
+
+  const [sortRules, setSortRules] = useState([]);
+  const [filters, setFilters] = useState({});
+  const [showTab, setShowTab] = useState(0);
 
   const {holdings, aggregates, marketValueByTicker, marketValueByTradingCurrency}
-    = useValuation(transactions, prices, fxs, setFxs, setLoadingFxs, basis, endDate);
+    = useValuation(transactions, prices, fxs, setFxs, setLoadingFxs, basis, startDate, endDate);
+  const cumulativePLByDate = useCumulativePL(transactions, prices, fxs, basis,endDate.slice(0, 4) + "0101", endDate);
+  const cumulativePLArray = Object.entries(cumulativePLByDate).map(
+    ([date, cumulativePLUSD]) => ({ date, cumulativePLUSD })
+  );
+
 
   const COLUMN_NAMES = {
     ticker: "Ticker",
@@ -197,155 +204,220 @@ export default function Holding() {
           {(loadingTransactions || loadingPrices || loadingFxs) && (
             <h3 style={{marginLeft: '20px', color: 'red'}}>
               {"Loading P/L data for tickers "}
-              {aggregates.missingPLCurrencies.join(", ")}
+              {aggregates.missingPLCurrencies?.join(", ")}
             </h3>
           )}
         </div>
       </div>
 
-      {(aggregates.missingPLCurrencies?.length === 0 || (loadingTransactions && loadingPrices && loadingFxs)) &&
+      {(aggregates.missingPLCurrencies?.length === 0 ||
+        (!loadingTransactions && !loadingPrices && !loadingFxs)) && (
+
         <div className="grid">
-          <div className="grid-item grid6" style={{ flex: "1 1 300px", display: "flex", alignItems: "center" }}>
-            <p>Market Value by Trading Currency</p>
-            <div style={{width: "100%", maxWidth: 400, height: 200}}>
-              <PieChart
-                data={marketValueByTradingCurrency.sort((a, b) => b.percent - a.percent)}
-                labelKey="tradingCurrency"
-                valueKey="marketValue"
-              />
+
+          {/* Charts section */}
+          <div className="grid-item grid6">
+            <div className="grid">
+              <div className="grid-item grid3">
+                <button
+                  onClick={() => setShowTab(0)}
+                  style={{
+                    backgroundColor: showTab === 0 ? "#08519c" : undefined,
+                    color: showTab === 0 ? "#f7fbff" : undefined
+                  }}
+                >
+                  Value - {basis === "Local" ? "USD" : basis}
+                </button>
+              </div>
+
+              <div className="grid-item grid3">
+                <button
+                  onClick={() => setShowTab(1)}
+                  style={{
+                    backgroundColor: showTab === 1 ? "#08519c" : undefined,
+                    color: showTab === 1 ? "#f7fbff" : undefined
+                  }}
+                >
+                  Value - Top 10
+                </button>
+              </div>
+
+              <div className="grid-item grid3">
+                <button
+                  onClick={() => setShowTab(2)}
+                  style={{
+                    backgroundColor: showTab === 2 ? "#08519c" : undefined,
+                    color: showTab === 2 ? "#f7fbff" : undefined
+                  }}
+                >
+                  Value - FX
+                </button>
+              </div>
             </div>
+
+            {showTab === 0 && (
+              <>
+                <h4>Market Value - YTD</h4>
+                <div style={{
+                  width: "100%",
+                  height: "200px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}>
+                  <LineChart
+                    data={cumulativePLArray}
+                    labelKey="date"
+                    valueKey="cumulativePLUSD"
+                  />
+                </div>
+              </>
+            )}
+
+            {showTab === 1 && (
+              <>
+                <h4>Market Value by Stock - Top 10</h4>
+                <div style={{
+                  width: "100%",
+                  height: "200px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}>
+                  <BarChart
+                    data={[...marketValueByTicker].sort((a, b) => b.percent - a.percent)}
+                    labelKey="ticker"
+                    valueKey="percent"
+                  />
+                </div>
+              </>
+            )}
+
+            {showTab === 2 && (
+              <>
+                <h4>Market Value by Trading Currency</h4>
+                <div style={{ width: "100%", height: "200px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <PieChart
+                    data={[...marketValueByTradingCurrency].sort((a, b) => b.percent - a.percent)}
+                    labelKey="tradingCurrency"
+                    valueKey="marketValue"
+                  />
+                </div>
+              </>
+            )}
           </div>
-          <div className="grid-item grid6" style={{ flex: "1 1 300px", display: "flex", alignItems: "center" }}>
-            <p>Top 10 Market Value by Stock</p>
-            <div style={{width: "100%", maxWidth: 400, height: 200}}>
-              <BarChart
-                data={marketValueByTicker.sort((a, b) => b.percent - a.percent)}
-                labelKey="ticker"
-                valueKey="percent"
-              />
-            </div>
+
+          {/* Aggregate table */}
+          <div className="grid-item grid6">
+            <table>
+              <thead>
+              <tr>
+                <th>Currency</th>
+                <th>Cost Basis</th>
+                <th>Market Value</th>
+                <th>Unrealised P/L</th>
+                <th>Realised P/L</th>
+                <th>Total P/L</th>
+              </tr>
+              </thead>
+
+              <tbody>
+              {Object.entries(aggregates.aggMap).map(([tradingCurrency, agg]) => (
+                <tr key={tradingCurrency}>
+                  <td>{tradingCurrency}</td>
+                  <td style={getStyle(agg.costBasis)}>{formatNumber(agg.costBasis)}</td>
+                  <td style={getStyle(agg.marketValue)}>{formatNumber(agg.marketValue)}</td>
+                  <td style={getStyle(agg.unrealisedPL)}>{formatNumber(agg.unrealisedPL)}</td>
+                  <td style={getStyle(agg.realisedPL)}>{formatNumber(agg.realisedPL)}</td>
+                  <td style={getStyle(agg.pL)}>{formatNumber(agg.pL)}</td>
+                </tr>
+              ))}
+              </tbody>
+            </table>
           </div>
         </div>
-      }
-
-      {/* Aggregate table (unchanged) */}
-      <table>
-        <thead>
-        <tr>
-          <th>Currency</th>
-          <th>Cost Basis</th>
-          <th>Market Value</th>
-          <th>Unrealised P/L</th>
-          <th>Realised P/L</th>
-          <th>Total P/L</th>
-        </tr>
-        </thead>
-
-        <tbody>
-        {Object.entries(aggregates.aggMap).map(([tradingCurrency, agg]) => (
-          <tr key={tradingCurrency}>
-            <td>{tradingCurrency}</td>
-
-            <td style={getStyle(agg.costBasis)}>
-              {formatNumber(agg.costBasis)}
-            </td>
-
-            <td style={getStyle(agg.marketValue)}>
-              {formatNumber(agg.marketValue)}
-            </td>
-
-            <td style={getStyle(agg.unrealisedPL)}>
-              {formatNumber(agg.unrealisedPL)}
-            </td>
-
-            <td style={getStyle(agg.realisedPL)}>
-              {formatNumber(agg.realisedPL)}
-            </td>
-
-            <td style={getStyle(agg.pL)}>{formatNumber(agg.pL)}</td>
-          </tr>
-        ))}
-        </tbody>
-      </table>
+      )}
 
       {/* Sorting info */}
-      <div className="grid">
+        <div className="grid">
         <div className="grid-item grid8">
-          Sorting priority:{" "}
-          {sortRules.length === 0
-            ? ""
-            : sortRules
-              .map((rule, i) => `(${i + 1}) ${COLUMN_NAMES[rule.key]}`)
-              .join("; ")}
-        </div>
-        <div className="grid-item grid2">
-          <button
-            onClick={() => setSortRules([])}
-            style={{backgroundColor: "#fb6a4a", color: "white"}}
+        Sorting priority:{" "}
+      {sortRules.length === 0
+        ? ""
+        : sortRules
+          .map((rule, i) => `(${i + 1}) ${COLUMN_NAMES[rule.key]}`)
+          .join("; ")}
+    </div>
+  <div className="grid-item grid2">
+    <button
+      onClick={() => setSortRules([])}
+      style={{backgroundColor: "#fb6a4a", color: "white"}}
+    >
+      Clear Sort
+    </button>
+  </div>
+
+  <div className="grid-item grid2">
+    <button
+      onClick={() => setFilters({})}
+      style={{backgroundColor: "#969696", color: "white", marginRight: 8}}
+    >
+      Clear Filter
+    </button>
+  </div>
+</div>
+
+  {/* Holding table */
+  }
+  <table
+    border="1"
+    cellPadding="8"
+    style={{borderCollapse: "collapse", width: "100%"}}
+  >
+    <thead>
+    {/* Header row with sort buttons */}
+    <tr>
+      {Object.keys(COLUMN_NAMES).map((key) => (
+        <th
+          key={key}
+          className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
+        >
+          {renderSortControls(key)} {COLUMN_NAMES[key]}
+        </th>
+      ))}
+    </tr>
+
+    {/* Filter row */}
+    <tr>
+      {Object.keys(COLUMN_NAMES).map((key) => {
+        const numericKeys = [
+          "totalQuantity",
+          "avgCost",
+          "price",
+          "costBasis",
+          "value",
+          "unrealisedPL",
+          "realisedPL",
+          "pL"
+        ];
+
+        if (numericKeys.includes(key)) {
+          return <th
+            key={key}
+            className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
+          ></th>; // empty cell for numeric fields
+        }
+
+        const options = Array.from(
+          new Set(holdings.map((h) => h[key]).filter(Boolean))
+        ).sort();
+
+        return (
+          <th
+            key={key}
+            className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
           >
-            Clear Sort
-          </button>
-        </div>
-        <div className="grid-item grid2">
-          <button
-            onClick={() => setFilters({})}
-            style={{backgroundColor: "#969696", color: "white", marginRight: 8}}
-          >
-            Clear Filter
-          </button>
-        </div>
-      </div>
-
-      {/* Holding table */}
-      <table
-        border="1"
-        cellPadding="8"
-        style={{borderCollapse: "collapse", width: "100%"}}
-      >
-        <thead>
-        {/* Header row with sort buttons */}
-        <tr>
-          {Object.keys(COLUMN_NAMES).map((key) => (
-            <th
-              key={key}
-              className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
-            >
-              {renderSortControls(key)} {COLUMN_NAMES[key]}
-            </th>
-          ))}
-        </tr>
-
-        {/* Filter row */}
-        <tr>
-          {Object.keys(COLUMN_NAMES).map((key) => {
-            const numericKeys = [
-              "totalQuantity",
-              "avgCost",
-              "price",
-              "costBasis",
-              "value",
-              "unrealisedPL",
-              "realisedPL",
-              "pL"
-            ];
-
-            if (numericKeys.includes(key)) {
-              return <th
-                key={key}
-                className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
-              ></th>; // empty cell for numeric fields
-            }
-
-            const options = Array.from(
-              new Set(holdings.map((h) => h[key]).filter(Boolean))
-            ).sort();
-
-            return (
-              <th
-                key={key}
-                className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
-              >
-                <select
+            <select
                   value={filters[key] || "All"}
                   onChange={(e) => {
                     const value = e.target.value;

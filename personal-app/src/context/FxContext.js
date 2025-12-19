@@ -16,14 +16,17 @@ export function useFxs() {
 
 export function FxProvider({ children }) {
   const [fxs, setFxs] = useState({});
-  const [loadingFxs, setLoadingFxs] = useState(false);
+  const [loadingFxs, setLoadingFxs] = useState(true);
   const {currencies} = useTransactions();
 
   useEffect(() => {
-    const date = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const dateStr = new Date(Date.now() - 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10)
+      .replace(/-/g, '');
     const fetchData = async () => {
       setLoadingFxs(true);
-      await getInitialFxs(currencies, date, setFxs);
+      await getInitialFxs(currencies, dateStr, setFxs);
       setLoadingFxs(false);
     }
     fetchData();
@@ -41,7 +44,7 @@ export function FxProvider({ children }) {
     return lastDate;
   }, [fxs]);
 
-  // console.log(lastFxDate)
+  // console.log(currencies)
   // console.log(fxs)
 
   return (

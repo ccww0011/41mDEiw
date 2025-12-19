@@ -6,16 +6,23 @@ import React, {useEffect, useMemo, useState} from "react";
 import {useTransactions} from "@/context/TransactionContext";
 import {useFxs} from "@/context/FxContext";
 import {getFxs} from "@/hooks/useFxDatabase";
+import {useValuationContext} from "@/context/ValuationContext";
 
 export default function FX() {
   const {fxs, setFxs, loadingFxs, setLoadingFxs} = useFxs();
   const {currencies} = useTransactions();
+  const {basis} = useValuationContext();
 
   const [c1, setC1] = useState('');
-  const [c2, setC2] = useState('');
-  const [range, setRange] = useState('');
+  const [c2, setC2] = useState('USD');
+  const [range, setRange] = useState('YTD');
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
+
+  useEffect(() => {
+    if (basis !== "Local")
+      setC1(basis);
+  }, [basis]);
 
   // Format date YYYYMMDD
   const formatDate = (date) => {

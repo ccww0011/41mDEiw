@@ -16,7 +16,7 @@ export function usePrices() {
 
 export function PriceProvider({ children }) {
   const [prices, setPrices] = useState({});
-  const [loadingPrices, setLoadingPrices] = useState(false);
+  const [loadingPrices, setLoadingPrices] = useState(true);
   const {tickers} = useTransactions();
 
   useEffect(() => {

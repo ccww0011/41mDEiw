@@ -11,10 +11,15 @@ export default function Stock() {
   const { prices, setPrices, loadingPrices,setLoadingPrices } = usePrices();
   const { tickers, tickerMap } = useTransactions();
 
-  const [selectedTicker, setSelectedTicker] = useState('');
-  const [range, setRange] = useState('');
+  const [selectedTicker, setSelectedTicker] = useState();
+  const [range, setRange] = useState('YTD');
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
+
+  useEffect(() => {
+    if (tickers?.size !== 0)
+      setSelectedTicker(tickers[0]);
+  }, [tickers])
 
   const formatDate = (date) => {
     const yyyy = date.getFullYear();

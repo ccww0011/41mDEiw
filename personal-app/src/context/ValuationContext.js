@@ -16,12 +16,11 @@ export function useValuationContext() {
 export function ValuationProvider({ children }) {
   const {lastPriceDate} = usePrices();
   const {lastFxDate} = useFxs();
-  const {transactions} = useTransactions();
+  const {firstTransactionDate} = useTransactions();
 
   const [basis, setBasis] = useState("Local");
-
-  const [endDate, setEndDate] = useState('');
   const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   useEffect(() => {
     if (!lastPriceDate && !lastFxDate) {
@@ -36,14 +35,14 @@ export function ValuationProvider({ children }) {
   }, [lastPriceDate, lastFxDate]);
 
   useEffect(() => {
-    if (transactions.length === 0) return;
-    let minDate = '99999999';
-    transactions.forEach(tx => {
-      if (tx.tradeDate < minDate) minDate = tx.tradeDate;
-    });
-    setStartDate(minDate);
-  }, [transactions]);
+    if (!firstTransactionDate) {
+      setStartDate('');
+    } else {
+      setStartDate(firstTransactionDate);
+    }
+  }, [firstTransactionDate]);
 
+  //console.log(startDate, endDate)
 
   return (
     <ValuationContext.Provider

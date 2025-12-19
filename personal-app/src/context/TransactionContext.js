@@ -13,7 +13,7 @@ export function useTransactions() {
 
 export function TransactionProvider({ children }) {
   const [transactions, setTransactions] = useState([]);
-  const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [loadingTransactions, setLoadingTransactions] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -23,6 +23,15 @@ export function TransactionProvider({ children }) {
     }
     fetchData();
   }, []);
+
+  const firstTransactionDate = useMemo(() => {
+    if (transactions.length === 0) return;
+    let firstDate = '99999999';
+    transactions.forEach(tx => {
+      if (tx.tradeDate < firstDate) firstDate = tx.tradeDate;
+    });
+    return firstDate;
+  }, [transactions]);
 
   const { tickers, tickerMap } = useMemo(() => {
     const tickerSet = new Set();
@@ -57,7 +66,7 @@ export function TransactionProvider({ children }) {
   // console.log(transactions)
 
   return (
-    <TransactionContext.Provider value={{ transactions, setTransactions, tickers, tickerMap, currencies, currencyMap, loadingTransactions, setLoadingTransactions }}>
+    <TransactionContext.Provider value={{ transactions, setTransactions, firstTransactionDate, tickers, tickerMap, currencies, currencyMap, loadingTransactions, setLoadingTransactions }}>
       {children}
     </TransactionContext.Provider>
   );

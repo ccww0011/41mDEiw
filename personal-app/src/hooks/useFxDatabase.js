@@ -23,24 +23,19 @@ async function fxApi(method, data, setFxs) {
       if (contentType && contentType.includes('text/html')) {
         return {message: "Unauthorised.", status: 'Unauthorised'};
       } else {
-        // Merge incoming data with existing fxs
         setFxs(prevFxs => {
           const newFxs = items.data;
-          // Defensive: if prevCurrencies is null or not object, start fresh
           if (!prevFxs || typeof prevFxs !== 'object') {
             return newFxs;
           }
-          // Merge fxs
           const merged = { ...prevFxs };
           for (const fx in newFxs) {
             if (merged[fx]) {
-              // Merge date-fx pairs for this fx
               merged[fx] = {
                 ...merged[fx],
                 ...newFxs[fx],
               };
             } else {
-              // New fx, add it directly
               merged[fx] = newFxs[fx];
             }
           }
@@ -59,23 +54,11 @@ async function fxApi(method, data, setFxs) {
   }
 }
 
-export async function getInitialFxs(currencies, date, setFxs) {
+export async function getInitialFxs(currencies, dateStr, setFxs) {
   const filteredCurrencies = currencies.filter(currency => currency !== "USD");
-  // format date as YYYYMMDD
-  const formatDate = (date) => {
-    const y = date.getFullYear();
-    const m = (date.getMonth() + 1).toString().padStart(2, '0');
-    const d = date.getDate().toString().padStart(2, '0');
-    return `${y}${m}${d}`;
-  };
-
-  // get first and last day of this year
-  const getStartOfYear = (year) => new Date(year, 0, 1);
-  const getEndOfYear = (year) => new Date(year, 11, 31);
-
-  const thisYear = date.getFullYear();
-  const startDateStr = formatDate(getStartOfYear(thisYear));
-  const endDateStr = formatDate(getEndOfYear(thisYear));
+  const year = dateStr.slice(0, 4).toString();
+  const startDateStr = year + "0101";
+  const endDateStr   = year + "1231";
 
   // function to split array into chunks of size n
   const chunkArray = (arr, size) => {
@@ -102,52 +85,55 @@ export async function getInitialFxs(currencies, date, setFxs) {
   }
 }
 
-export async function getMissingFxs(currencies, valuationDateStr, fxs, setFxs) {
+export async function getMissingFxs(currencies, valuationDateStr, fxs, setFxs, setLoadingFxs) {
   const filteredCurrencies = currencies.filter(currency => currency !== "USD");
 
-  const today = new Date();
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
-
-  const formatDate = (date) => {
-    const y = date.getFullYear();
-    const m = (date.getMonth() + 1).toString().padStart(2, '0');
-    const d = date.getDate().toString().padStart(2, '0');
-    return `${y}${m}${d}`;
-  };
-
-  const parseYYYYMMDD = (str) => new Date(str.slice(0, 4), parseInt(str.slice(4, 6)) - 1, str.slice(6, 8));
-
-  const endOfYear = (year) => new Date(year, 11, 31);
-  const startOfYear = (year) => new Date(year, 0, 1);
-
-  const valuationDate = parseYYYYMMDD(valuationDateStr);
+  const year = valuationDateStr.slice(0, 4);
+  const startDateStr = year + "0101";
+  let endDateStr   = year + "1231";
+  const yesterdayStr = new Date(Date.now() - 86400000)
+    .toISOString()
+    .slice(0, 10)
+    .replace(/-/g, '');
 
   for (const currency of [...filteredCurrencies]) {
-    const year = valuationDate.getFullYear();
-    const startDateStr = formatDate(startOfYear(year));
-    const endDateCandidate = endOfYear(year) < yesterday ? endOfYear(year) : yesterday;
-    const endDateStr = formatDate(endDateCandidate);
+    endDateStr = endDateStr < yesterdayStr ? endDateStr : yesterdayStr;
 
-    // Check if all dates in range are already in fxs
-    const existingDates = fxs[currency] ? Object.keys(fxs[currency]) : [];
     let allDatesPresent = true;
-    let d = new Date(startOfYear(year));
-    while (d <= endDateCandidate) {
-      const dateStr = formatDate(d);
-      if (!existingDates.includes(dateStr)) {
+    let d = new Date(
+      Number(startDateStr.slice(0, 4)),
+      Number(startDateStr.slice(4, 6)) - 1,
+      Number(startDateStr.slice(6, 8))
+    );
+    const endDate = new Date(
+      Number(endDateStr.slice(0, 4)),
+      Number(endDateStr.slice(4, 6)) - 1,
+      Number(endDateStr.slice(6, 8))
+    );
+    const existingDatesSet = new Set(Object.keys(fxs[currency] ?? {}));
+    while (d <= endDate) {
+      const dateStr =
+        d.getFullYear().toString() +
+        String(d.getMonth() + 1).padStart(2, '0') +
+        String(d.getDate()).padStart(2, '0');
+      if (!existingDatesSet.has(dateStr)) {
         allDatesPresent = false;
         break;
       }
       d.setDate(d.getDate() + 1);
     }
 
-    if (allDatesPresent) continue; // skip this currency
+    if (!allDatesPresent) {
+      const items = [{ currency, startDate: startDateStr, endDate: endDateStr }];
+      const data = { items: JSON.stringify(items) };
 
-    // Fetch missing FXs
-    const items = [{ currency, startDate: startDateStr, endDate: endDateStr }];
-    const data = { items: JSON.stringify(items) };
-    await fxApi('GET', data, setFxs);
+      setLoadingFxs(true);
+      try {
+        await fxApi('GET', data, setFxs);
+      } finally {
+        setLoadingFxs(false);
+      }
+    }
   }
 }
 
