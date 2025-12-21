@@ -4,8 +4,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useTransactions } from "@/context/TransactionContext";
 import { useFxs } from "@/context/FxContext";
 import { usePrices } from "@/context/PriceContext";
-import { getMissingFxs } from "@/hooks/useFxDatabase";
-import { getMissingPrices } from "@/hooks/usePriceDatabase";
+import { getFxs } from "@/hooks/useFxDatabase";
+import { getPrices } from "@/hooks/usePriceDatabase";
 
 const d0 = new Date();
 d0.setDate(d0.getDate() - 1);
@@ -69,7 +69,7 @@ export function ValuationProvider({ children }) {
           return startDate <= endDateDisplay ? { currency, startDate, endDate: endDateDisplay } : null;
         })
         .filter(Boolean);
-      if (items.length) await getMissingFxs(items, fxs, setFxs, setLoadingFxs);
+      if (items.length) await getFxs(items, fxs, setFxs, setLoadingFxs);
     };
 
     fetchFxs();
@@ -98,7 +98,7 @@ export function ValuationProvider({ children }) {
           }
         })
         .filter(Boolean);
-      if (items.length) await getMissingPrices(items, prices, setPrices, setLoadingPrices);
+      if (items.length) await getPrices(items, prices, setPrices, setLoadingPrices);
     };
 
     fetchPrices();

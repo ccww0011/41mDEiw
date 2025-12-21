@@ -55,7 +55,8 @@ async function fxApi(method, data, setFxs) {
 }
 
 // item = {currency, startDate, endDate}
-export async function getMissingFxs(items, fxs, setFxs, setLoadingFxs) {
+export async function getFxs(items, fxs, setFxs, setLoadingFxs) {
+  if (items?.length === 0 || fxs == null) return
   const d0 = new Date();
   d0.setDate(d0.getDate() - 1);
   const yesterdayStr = d0.getFullYear().toString() + String(d0.getMonth() + 1).padStart(2, '0') + String(d0.getDate()).padStart(2, '0');
@@ -99,94 +100,6 @@ export async function getMissingFxs(items, fxs, setFxs, setLoadingFxs) {
   }
 }
 
-
-export async function getFxs(currency, startDate, endDate, fxs, setFxs) {
-  if (currency === 'USD')
-    return;
-  // Parse date strings -> UTC dates (IMPORTANT)
-  const toUTCDate = (str) =>
-    new Date(Date.UTC(
-      +str.slice(0, 4),
-      +str.slice(4, 6) - 1,
-      +str.slice(6, 8)
-    ));
-
-  // Format UTC date -> YYYYMMDD
-  const formatUTCDate = (date) => {
-    const y = date.getUTCFullYear();
-    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const d = String(date.getUTCDate()).padStart(2, '0');
-    return `${y}${m}${d}`;
-  };
-
-  // Add 1 day in UTC safely
-  const addUTC1Day = (date) =>
-    new Date(Date.UTC(
-      date.getUTCFullYear(),
-      date.getUTCMonth(),
-      date.getUTCDate() + 1
-    ));
-
-  const start = toUTCDate(startDate);
-
-// Clamp end date to yesterday
-  const today = new Date(Date.now() - 24 * 60 * 60 * 1000); // yesterday
-  const endCandidate = toUTCDate(endDate);
-  const end = endCandidate > today ? today : endCandidate;
-
-  // ---- FIND MISSING RANGES ----
-  let ranges = [];
-  let inRange = false;
-
-  let d = start;
-  let prev = null;
-
-  while (d <= end) {
-    const dayStr = formatUTCDate(d);
-
-    const exists =
-      fxs[currency] &&
-      Object.prototype.hasOwnProperty.call(fxs[currency], dayStr);
-
-    if (!exists) {
-      if (!inRange) {
-        // starting a new missing range
-        ranges.push(dayStr);
-        inRange = true;
-      }
-    } else {
-      if (inRange) {
-        // closing missing range
-        ranges.push(prev);
-        inRange = false;
-      }
-    }
-
-    prev = dayStr;
-    d = addUTC1Day(d);  // safe UTC increment
-  }
-
-  // if open missing range extends to the end
-  if (inRange) {
-    ranges.push(prev);
-  }
-
-  // ---- BUILD ITEMS FOR API ----
-  const items = [];
-  for (let i = 0; i < ranges.length; i += 2) {
-    items.push({
-      currency,
-      startDate: ranges[i],
-      endDate: ranges[i + 1],
-    });
-  }
-  if (items.length === 0) {
-    return;
-  }
-
-  const data = { items: JSON.stringify(items) };
-  return await fxApi('GET', data, setFxs);
-}
 
 export async function putFxs(currency, startDate, endDate, fxs, setFxs) {
   const data = [];

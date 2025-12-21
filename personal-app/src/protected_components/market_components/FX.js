@@ -1,214 +1,168 @@
 'use client';
 
+import React, { useEffect, useMemo, useState } from "react";
 import Table from "@/protected_components/market_components/market_subcomponents/Table";
 import Graph from "@/protected_components/market_components/market_subcomponents/Graph";
-import React, {useEffect, useMemo, useState} from "react";
-import {useTransactions} from "@/context/TransactionContext";
-import {useFxs} from "@/context/FxContext";
-import {getFxs} from "@/hooks/useFxDatabase";
-import {useValuationContext} from "@/context/ValuationContext";
+import { useTransactions } from "@/context/TransactionContext";
+import { useFxs } from "@/context/FxContext";
+import { useValuationContext } from "@/context/ValuationContext";
+import { getFxs } from "@/hooks/useFxDatabase";
 
 export default function FX() {
-  const {fxs, setFxs, loadingFxs, setLoadingFxs} = useFxs();
-  const {currencies} = useTransactions();
-  const {basis} = useValuationContext();
+  const { fxs, setFxs, loadingFxs, setLoadingFxs } = useFxs();
+  const { currencies } = useTransactions();
+  const { basis } = useValuationContext();
 
-  const [c1, setC1] = useState('');
-  const [c2, setC2] = useState('USD');
-  const [range, setRange] = useState('YTD');
+  const [c1, setC1] = useState("");
+  const [c2, setC2] = useState("USD");
+  const [range, setRange] = useState("YTD");
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
 
+  // Default base currency
   useEffect(() => {
-    if (basis !== "Local")
-      setC1(basis);
+    if (basis !== "Local") setC1(basis);
   }, [basis]);
 
-  // Format date YYYYMMDD
-  const formatDate = (date) => {
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    return `${yyyy}${mm}${dd}`;
-  };
+  // ---------- Date helpers ----------
+  const formatDate = (date) =>
+    `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(
+      date.getDate()
+    ).padStart(2, "0")}`;
 
-  const startOfMonth = (date) => new Date(date.getFullYear(), date.getMonth(), 1);
-  const startOfYear = (date) => new Date(date.getFullYear(), 0, 1);
-  const subDays = (date, n) => {
-    const d = new Date(date);
-    d.setDate(d.getDate() - n);
-    return d;
-  };
-
-  // Date range based on selected period
   const getRangeDates = (range) => {
     const now = new Date();
-    let start, end;
     switch (range) {
-      case 'Last7Days':
-        start = formatDate(subDays(now, 6));
-        end = formatDate(now);
-        break;
-      case 'MTD':
-        start = formatDate(startOfMonth(now));
-        end = formatDate(now);
-        break;
-      case 'YTD':
-        start = formatDate(startOfYear(now));
-        end = formatDate(now);
-        break;
+      case "Last7Days":
+        return [formatDate(new Date(now.setDate(now.getDate() - 6))), formatDate(new Date())];
+      case "MTD":
+        return [formatDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)), formatDate(new Date())];
+      case "YTD":
+        return [formatDate(new Date(new Date().getFullYear(), 0, 1)), formatDate(new Date())];
       default:
-        start = null;
-        end = null;
+        return [null, null];
     }
-    setStartDate(start);
-    setEndDate(end);
-    return [start, end];
   };
 
-  // Fetch FX for both currencies whenever range/currency changes
+  // ---------- Fetch FXs (ASYNC, awaited) ----------
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoadingFxs(true);
-        if (!c1 || !c2 || !range) return;
-        const [start, end] = getRangeDates(range);
-        await getFxs(c1, start, end, fxs, setFxs);
-        await getFxs(c2, start, end, fxs, setFxs);
-      } catch (err) {
+    if (!c1 || !c2 || !range) return;
 
-      } finally {
-        setLoadingFxs(false);
+    const fetchFxs = async () => {
+      const [start, end] = getRangeDates(range);
+      if (!start || !end) return;
+
+      setStartDate(start);
+      setEndDate(end);
+
+      const items = [c1, c2]
+        .filter(c => c && c !== "USD")
+        .map(currency => ({
+          currency,
+          startDate: start,
+          endDate: end,
+        }));
+
+      if (items.length) {
+        await getFxs(items, fxs, setFxs, setLoadingFxs);
       }
-    }
-    fetchData();
+    };
+
+    fetchFxs();
   }, [c1, c2, range]);
 
-  // Compute currency pair: FX = FX[c2] / FX[c1]
-  // Compute currency pair FX, handle USD properly
-  const filteredFxs = useMemo(() => {
-    if (!c1 || !c2) return {};
-    const fx1 = c1 === "USD" ? {} : fxs[c1] || {};
-    const fx2 = c2 === "USD" ? {} : fxs[c2] || {};
-    // Collect all dates from both currencies (or generate from fx)
-    const allDates = new Set([
-      ...Object.keys(fx1),
-      ...Object.keys(fx2),
-    ]);
-    // If both USD, synthesize some dates (last 30 days as example)
-    if (c1 === "USD" && c2 === "USD" && allDates.size === 0) {
-      const today = new Date();
-      for (let i = 0; i < 30; i++) {
-        const d = new Date(today);
-        d.setDate(today.getDate() - i);
-        allDates.add(formatDate(d));
-      }
-    }
-    const result = {};
-    allDates.forEach(date => {
-      if (startDate && endDate) {
-        if (date < startDate || date > endDate) return;
-      }
-      const v1 = c1 === "USD" ? 1 : fx1[date];
-      const v2 = c2 === "USD" ? 1 : fx2[date];
-      if (v1 == null || v2 == null) return; // skip missing
-      result[date] = v2 / v1;
-    });
-    return { [`${c1}/${c2}`]: result };
-  }, [fxs, c1, c2, startDate, endDate]);
-
+  // ---------- Compute FX pair ----------
   const pair = `${c1}/${c2}`;
 
+  const filteredFxs = useMemo(() => {
+    if (!c1 || !c2) return {};
+
+    const fx1 = c1 === "USD" ? {} : fxs[c1] || {};
+    const fx2 = c2 === "USD" ? {} : fxs[c2] || {};
+
+    const allDates = new Set([...Object.keys(fx1), ...Object.keys(fx2)]);
+    const result = {};
+
+    allDates.forEach(date => {
+      if (date < startDate || date > endDate) return;
+      const v1 = c1 === "USD" ? 1 : fx1[date];
+      const v2 = c2 === "USD" ? 1 : fx2[date];
+      if (v1 == null || v2 == null) return;
+      result[date] = v2 / v1;
+    });
+
+    return { [pair]: result };
+  }, [fxs, c1, c2, startDate, endDate]);
+
+  // ---------- Latest rate ----------
   const latestRate = useMemo(() => {
     const data = filteredFxs[pair];
     if (!data) return null;
-
-    // Get the latest date
-    const dates = Object.keys(data).sort((a, b) => b.localeCompare(a));
-    const latestDate = dates[0];
-    return data[latestDate];
+    return data[Object.keys(data).sort().at(-1)];
   }, [filteredFxs, pair]);
 
+  // ---------- Render ----------
   return (
     <>
       <h2>Forex</h2>
+
       <div className="grid">
-        {/* Description */}
         <div className="grid-item grid2">
-          {c1 && c2
-            ? <div>{pair} = {latestRate ? latestRate.toFixed(2) : '?'}</div>
-            : <div>—</div>}
+          {c1 && c2 ? `${pair} = ${latestRate?.toFixed(6) ?? "?"}` : "—"}
         </div>
 
-        {/* Currency 1 */}
         <div className="grid-item grid1">
-          <select value={c1} onChange={(e) => setC1(e.target.value)}>
+          <select value={c1} onChange={e => setC1(e.target.value)}>
             <option value="">Select</option>
-            {currencies.map(t => <option key={t} value={t}>{t}</option>)}
+            {currencies.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
 
-        {/* Currency 2 */}
         <div className="grid-item grid1">
-          <select value={c2} onChange={(e) => setC2(e.target.value)}>
+          <select value={c2} onChange={e => setC2(e.target.value)}>
             <option value="">Select</option>
-            {currencies.map(t => <option key={t} value={t}>{t}</option>)}
+            {currencies.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
 
-        {/* Range */}
         <div className="grid-item grid2">
-          <select value={range} onChange={(e) => setRange(e.target.value)}>
-            <option value="">Select Range</option>
+          <select value={range} onChange={e => setRange(e.target.value)}>
             <option value="Last7Days">Last 7 Days</option>
             <option value="MTD">Month to Date</option>
             <option value="YTD">Year to Date</option>
           </select>
         </div>
 
-        {/* Swap button */}
         <div className="grid-item grid1">
-          <button
-            type="button"
-            onClick={() => {
-              setC1(prev => {
-                setC2(prev); // swap
-                return c2;
-              });
-            }}
-          >
-            ⇄
-          </button>
+          <button onClick={() => ([setC1(c2), setC2(c1)])}>⇄</button>
         </div>
 
-        {/* Refresh */}
         <div className="grid-item grid1">
-          <button onClick={async () => {
-            try {
-              setLoadingFxs(true);
-              await Promise.all([
-                getFxs(c1, startDate, endDate, fxs, setFxs),
-                getFxs(c2, startDate, endDate, fxs, setFxs),
-              ]);
-            } finally {
-              setLoadingFxs(false); // ensures loading stops even if there's an error
-            }
-          }}>
-            Refresh
+          <button
+            disabled={loadingFxs}
+            onClick={async () => {
+              if (!startDate || !endDate) return;
+              const items = [c1, c2]
+                .filter(c => c && c !== "USD")
+                .map(currency => ({ currency, startDate, endDate }));
+              await getFxs(items, fxs, setFxs, setLoadingFxs);
+            }}
+          >
+            {loadingFxs ? "Loading..." : "Refresh"}
           </button>
         </div>
       </div>
 
-      {/* Chart + table */}
-      {!filteredFxs[pair] || !range || Object.keys(filteredFxs[pair]).length === 0 ?
+      {!filteredFxs[pair] || Object.keys(filteredFxs[pair]).length === 0 ? (
         <h3>No data. Select both currencies and dates.</h3>
-        : (loadingFxs ?
-            <div>Loading FX data...</div>
-            : <>
-              <Graph prices={filteredFxs} selectedItem={pair}/>
-              <Table prices={filteredFxs} selectedItem={pair} digits={6}/>
-            </>
-        )}
+      ) : loadingFxs ? (
+        <div>Loading FX data...</div>
+      ) : (
+        <>
+          <Graph prices={filteredFxs} selectedItem={pair} />
+          <Table prices={filteredFxs} selectedItem={pair} digits={6} />
+        </>
+      )}
     </>
   );
 }

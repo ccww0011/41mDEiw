@@ -1,138 +1,143 @@
 'use client';
 
+import React, { useEffect, useMemo, useState } from "react";
 import Table from "@/protected_components/market_components/market_subcomponents/Table";
 import Graph from "@/protected_components/market_components/market_subcomponents/Graph";
-import React, { useMemo, useState, useEffect } from "react";
 import { useTransactions } from "@/context/TransactionContext";
 import { usePrices } from "@/context/PriceContext";
 import { getPrices } from "@/hooks/usePriceDatabase";
 
 export default function Stock() {
-  const { prices, setPrices, loadingPrices,setLoadingPrices } = usePrices();
+  const { prices, setPrices, loadingPrices, setLoadingPrices } = usePrices();
   const { tickers, tickerMap } = useTransactions();
 
-  const [selectedTicker, setSelectedTicker] = useState();
-  const [range, setRange] = useState('YTD');
+  const [selectedTicker, setSelectedTicker] = useState("");
+  const [range, setRange] = useState("YTD");
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
 
+  // Default ticker
   useEffect(() => {
-    if (tickers?.size !== 0)
+    if (tickers?.length && !selectedTicker) {
       setSelectedTicker(tickers[0]);
-  }, [tickers])
+    }
+  }, [tickers, selectedTicker]);
 
-  const formatDate = (date) => {
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    return `${yyyy}${mm}${dd}`;
-  };
+  // ---------- Date helpers ----------
+  const formatDate = (date) =>
+    `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(
+      date.getDate()
+    ).padStart(2, "0")}`;
 
-  const startOfMonth = (date) => new Date(date.getFullYear(), date.getMonth(), 1);
-  const startOfYear = (date) => new Date(date.getFullYear(), 0, 1);
   const subDays = (date, n) => {
-    const newDate = new Date(date);
-    newDate.setDate(newDate.getDate() - n);
-    return newDate;
+    const d = new Date(date);
+    d.setDate(d.getDate() - n);
+    return d;
   };
 
-  // Calculate start/end dates from selected range
   const getRangeDates = (range) => {
     const now = new Date();
-    let start, end;
     switch (range) {
-      case 'Last7Days':
-        start = formatDate(subDays(now, 6));
-        end = formatDate(now);
-        break;
-      case 'MTD':
-        start = formatDate(startOfMonth(now));
-        end = formatDate(now);
-        break;
-      case 'YTD':
-        start = formatDate(startOfYear(now));
-        end = formatDate(now);
-        break;
+      case "Last7Days":
+        return [formatDate(subDays(now, 6)), formatDate(now)];
+      case "MTD":
+        return [formatDate(new Date(now.getFullYear(), now.getMonth(), 1)), formatDate(now)];
+      case "YTD":
+        return [formatDate(new Date(now.getFullYear(), 0, 1)), formatDate(now)];
       default:
-        start = null;
-        end = null;
+        return [null, null];
     }
-    setStartDate(start);
-    setEndDate(end);
-    return [start, end]
   };
 
-  // Fetch prices whenever ticker or range changes
+  // ---------- Fetch prices (async, awaited) ----------
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoadingPrices(true);
-        const[start, end] = getRangeDates(range);
-        if (selectedTicker?.length === 0 || start == null || end == null || prices == null) return
-        await getPrices(selectedTicker, start, end, prices, setPrices);
-      } catch (err) {
+    if (!selectedTicker || !range) return;
 
-      } finally {
-        setLoadingPrices(false);
-      }
+    const fetchPrices = async () => {
+      const [start, end] = getRangeDates(range);
+      if (!start || !end) return;
+
+      setStartDate(start);
+      setEndDate(end);
+
+      await getPrices(
+        [{ ticker: selectedTicker, startDate: start, endDate: end }],
+        prices,
+        setPrices,
+        setLoadingPrices
+      );
     };
-    fetchData();
+
+    fetchPrices();
   }, [selectedTicker, range]);
 
-  // Filter prices for selected ticker and date range
+  // ---------- Filter prices ----------
   const filteredPrices = useMemo(() => {
-    if (!selectedTicker || !prices[selectedTicker]) return {};
-    if (!startDate || !endDate) return { [selectedTicker]: prices[selectedTicker] };
+    if (!selectedTicker || !prices[selectedTicker]) return null;
 
-    const tickerPrices = prices[selectedTicker];
-    const filtered = Object.fromEntries(
-      Object.entries(tickerPrices).filter(([date]) => date >= startDate && date <= endDate)
+    const data = Object.fromEntries(
+      Object.entries(prices[selectedTicker]).filter(
+        ([date]) => date >= startDate && date <= endDate
+      )
     );
-    return { [selectedTicker]: filtered };
+
+    return { [selectedTicker]: data };
   }, [prices, selectedTicker, startDate, endDate]);
 
+  // ---------- Render ----------
   return (
     <>
       <h2>Stock</h2>
+
       <div className="grid">
         <div className="grid-item grid3">
-          <div>{selectedTicker ? tickerMap[selectedTicker] || 'No description' : '—'}</div>
+          {selectedTicker ? tickerMap[selectedTicker] || "No description" : "—"}
         </div>
+
         <div className="grid-item grid2">
-          <select value={selectedTicker} onChange={(e) => setSelectedTicker(e.target.value)} style={{width: '100%'}}>
-            <option value="">Select Ticker</option>
-            {tickers.map(t => <option key={t} value={t}>{t}</option>)}
+          <select value={selectedTicker} onChange={(e) => setSelectedTicker(e.target.value)}>
+            {tickers.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
           </select>
         </div>
+
         <div className="grid-item grid2">
-          <select value={range} onChange={(e) => setRange(e.target.value)} style={{width: '100%'}}>
-            <option value="">Select Range</option>
+          <select value={range} onChange={(e) => setRange(e.target.value)}>
             <option value="Last7Days">Last 7 Days</option>
             <option value="MTD">Month to Date</option>
             <option value="YTD">Year to Date</option>
           </select>
         </div>
+
         <div className="grid-item grid1">
-          <button onClick={() => {
-            setLoadingPrices(true);
-            getPrices(selectedTicker, startDate, endDate, prices, setPrices)
-            setLoadingPrices(false);
-          }}>
-            Refresh
+          <button
+            disabled={loadingPrices}
+            onClick={async () => {
+              if (!selectedTicker || !startDate || !endDate) return;
+              await getPrices(
+                [{ ticker: selectedTicker, startDate, endDate }],
+                prices,
+                setPrices,
+                setLoadingPrices
+              );
+            }}
+          >
+            {loadingPrices ? "Loading..." : "Refresh"}
           </button>
         </div>
       </div>
 
-      {(!filteredPrices || !range || Object.keys(filteredPrices[selectedTicker] || {}).length === 0) ?
+      {!filteredPrices || Object.keys(filteredPrices[selectedTicker] || {}).length === 0 ? (
         <h3>No data. Select both ticker and dates.</h3>
-        :
-        (loadingPrices ?
-            <div>Loading prices...</div>
-            : <>
-              <Graph prices={filteredPrices} selectedItem={selectedTicker}/>
-              <Table prices={filteredPrices} selectedItem={selectedTicker} digits={2}/>
-            </>
-        )}
+      ) : loadingPrices ? (
+        <div>Loading prices...</div>
+      ) : (
+        <>
+          <Graph prices={filteredPrices} selectedItem={selectedTicker} />
+          <Table prices={filteredPrices} selectedItem={selectedTicker} digits={2} />
+        </>
+      )}
     </>
   );
 }
