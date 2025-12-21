@@ -327,7 +327,7 @@ export default function Holding() {
 
             {showTab === 0 && (
               <>
-                <h4>Profit - {basis} {(cumulativePLByDate[endDateDisplay] - cumulativePLByDate[startDateDisplay]).toLocaleString('en-US', {
+                <h4>Profit - {basis === "Local" ? "USD" : basis} {(cumulativePLByDate[endDateDisplay] - cumulativePLByDate[startDateDisplay]).toLocaleString('en-US', {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2
                 })}</h4>
