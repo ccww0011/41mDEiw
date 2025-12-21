@@ -64,45 +64,47 @@ async function priceApi(method, data, setPrices) {
   }
 }
 
-export async function getInitialPrices(tickers, date, setPrices) {
-  // format date as YYYYMMDD
-  const formatDate = (date) => {
-    const y = date.getFullYear();
-    const m = (date.getMonth() + 1).toString().padStart(2, '0');
-    const d = date.getDate().toString().padStart(2, '0');
-    return `${y}${m}${d}`;
-  };
-
-  // get first and last day of this year
-  const getStartOfYear = (year) => new Date(year, 0, 1);
-  const getEndOfYear = (year) => new Date(year, 11, 31);
-
-  const thisYear = date.getFullYear();
-  const startDateStr = formatDate(getStartOfYear(thisYear));
-  const endDateStr = formatDate(getEndOfYear(thisYear));
-
-  // function to split array into chunks of size n
-  const chunkArray = (arr, size) => {
-    const chunks = [];
-    for (let i = 0; i < arr.length; i += size) {
-      chunks.push(arr.slice(i, i + size));
+// item = {ticker, startDate, endDate}
+export async function getMissingPrices(items, prices, setPrices, setLoadingPrices) {
+  const d0 = new Date();
+  d0.setDate(d0.getDate() - 1);
+  const yesterdayStr = d0.getFullYear().toString() + String(d0.getMonth() + 1).padStart(2, '0') + String(d0.getDate()).padStart(2, '0');
+  const requestMap = new Map();
+  for (const item of items) {
+    const ticker = item.ticker;
+    const startDateStr = item.startDate;
+    const endDateStr = item.endDate < yesterdayStr ? item.endDate : yesterdayStr;
+    const existingDates = new Set(Object.keys(prices[ticker] ?? {}));
+    let d = new Date(Number(startDateStr.slice(0, 4)), Number(startDateStr.slice(4, 6)) - 1, Number(startDateStr.slice(6, 8)));
+    const endD = new Date(Number(endDateStr.slice(0, 4)), Number(endDateStr.slice(4, 6)) - 1, Number(endDateStr.slice(6, 8)));
+    while (d <= endD) {
+      const dateStr = d.getFullYear().toString() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+      d.setDate(d.getDate() + 1);
+      if (!existingDates.has(dateStr)) {
+        if (requestMap.has(ticker)) {
+          requestMap.get(ticker).add(dateStr.slice(0, 4));
+        } else {
+          requestMap.set(ticker, new Set([dateStr.slice(0, 4)]));
+        }
+        d = new Date(Number(dateStr.slice(0, 4)) + 1, 0, 1);
+      }
     }
-    return chunks;
-  };
+  }
+  if (requestMap.size === 0) return;
+  const requests = [];
 
-  // all tickers in chunks of 25
-  const tickerChunks = chunkArray(tickers, 25);
-
-  // call API for each chunk
-  for (const chunk of tickerChunks) {
-    const items = chunk.map((ticker) => ({
-      ticker,
-      startDate: startDateStr,
-      endDate: endDateStr
-    }));
-
-    const data = { items: JSON.stringify(items) };
-    await priceApi('GET', data, setPrices);
+  for (const [ticker, startYears] of requestMap) {
+    startYears.forEach( startYear => {
+      if (startYear > yesterdayStr) return
+      const endDate =  startYear + "1231" > yesterdayStr ? yesterdayStr : startYear + "1231"
+      requests.push({ticker, startDate: startYear + "0101", endDate})
+    })
+  }
+  setLoadingPrices(true);
+  try {
+    await priceApi('GET', { items: JSON.stringify(requests) }, setPrices);
+  } finally {
+    setLoadingPrices(false);
   }
 }
 

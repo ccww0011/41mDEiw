@@ -3,12 +3,7 @@
 import React, { createContext, useState, useEffect, useContext } from "react";
 import { fetchUser, login as loginApi, logout as logoutApi } from "@/hooks/useAuth";
 
-const AuthContext = createContext({
-  user: null,
-  loading: true,
-  login: () => {},
-  logout: () => {},
-});
+const AuthContext = createContext(null);
 
 // Provider component
 export function AuthProvider({ children }) {

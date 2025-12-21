@@ -1,0 +1,11 @@
+.dashboard_container {
+    margin: 0 auto;
+    padding: 0;
+    width: 100%;
+    max-width: 100%;
+    min-height: 200px;
+
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}

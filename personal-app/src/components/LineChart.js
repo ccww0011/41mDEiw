@@ -32,7 +32,6 @@ export default function LineChart({ data, labelKey, valueKey }) {
         borderColor: '#6a3d9a',
         backgroundColor: 'rgba(106, 61, 154, 0.2)',
         tension: 0.2,
-        fill: true,
         pointRadius: 0,        // hides the circles
       }
     ]

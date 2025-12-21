@@ -1,52 +1,45 @@
 'use client';
 
-import {createContext, useContext, useEffect, useMemo, useState} from 'react';
-import {getInitialPrices} from "@/hooks/usePriceDatabase";
-import {useTransactions} from "@/context/TransactionContext";
+import { createContext, useContext, useMemo, useState } from 'react';
 
-const PriceContext = createContext(
-  {loadingPrices: true}
-);
+const PriceContext = createContext(null);
 
 export function usePrices() {
   const context = useContext(PriceContext);
-  if (!context) throw new Error("usePrices must be used within PriceProvider");
+  if (context === null) throw new Error('usePrices must be used within PriceProvider');
   return context;
 }
 
 export function PriceProvider({ children }) {
   const [prices, setPrices] = useState({});
   const [loadingPrices, setLoadingPrices] = useState(true);
-  const {tickers} = useTransactions();
 
-  useEffect(() => {
-    const date = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const fetchData = async () => {
-      setLoadingPrices(true);
-      await getInitialPrices(tickers, date, setPrices);
-      setLoadingPrices(false);
-    }
-    fetchData();
-  }, [tickers]);
-
+  // Compute last price date across all items
   const lastPriceDate = useMemo(() => {
-    let lastDate = "00000000";
-    const anyCurrencyFxMap = Object.values(prices)[0];
-    if (anyCurrencyFxMap) {
-      lastDate = Object.keys(anyCurrencyFxMap).reduce(
-        (max, date) => (date > max ? date : max),
-        "00000000"
-      );
+    let latest = null;
+
+    for (const priceMap of Object.values(prices)) {
+      for (const date of Object.keys(priceMap)) {
+        if (latest === null || date > latest) {
+          latest = date;
+        }
+      }
     }
-    return lastDate;
+    return latest;
   }, [prices]);
 
-  // console.log(lastPriceDate)
   // console.log(prices)
 
-  return (
-    <PriceContext.Provider value={{ prices, setPrices, lastPriceDate, loadingPrices, setLoadingPrices }}>
-      {children}
-    </PriceContext.Provider>
+  const value = useMemo(
+    () => ({
+      prices,
+      setPrices,
+      loadingPrices,
+      setLoadingPrices,
+      lastPriceDate,
+    }),
+    [prices, loadingPrices, lastPriceDate]
   );
+
+  return <PriceContext.Provider value={value}>{children}</PriceContext.Provider>;
 }

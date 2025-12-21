@@ -68,6 +68,7 @@ export default function Stock() {
       try {
         setLoadingPrices(true);
         const[start, end] = getRangeDates(range);
+        if (selectedTicker?.length === 0 || start == null || end == null || prices == null) return
         await getPrices(selectedTicker, start, end, prices, setPrices);
       } catch (err) {
 

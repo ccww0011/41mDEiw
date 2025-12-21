@@ -1,30 +1,42 @@
 'use client';
-import React, { useState, useMemo } from "react";
+import React, {useState, useMemo, useEffect} from "react";
 import {useTransactions} from "@/context/TransactionContext";
 import PieChart from "@/components/PieChart";
 import BarChart from "@/components/BarChart";
 import {useValuationContext} from "@/context/ValuationContext";
 import {useFxs} from "@/context/FxContext";
 import {usePrices} from "@/context/PriceContext";
-import {useCumulativePL, useValuation} from "@/hooks/useValuation";
+import {usePL, useValuation} from "@/hooks/useValuation";
 import LineChart from "@/components/LineChart";
 
 export default function Holding() {
-  const {currencies, transactions, loadingTransactions} = useTransactions();
-  const {prices, loadingPrices} = usePrices();
-  const {fxs, setFxs, loadingFxs, setLoadingFxs} = useFxs();
-  const {basis, setBasis, startDate, endDate} = useValuationContext();
+  const {currencies, transactions, loadingTransactions, firstTransactionDate} = useTransactions();
+  const {prices, setPrices, loadingPrices, setLoadingPrices, lastPriceDate} = usePrices();
+  const {fxs, setFxs, loadingFxs, setLoadingFxs, lastFxDate} = useFxs();
+  const {basis, setBasis, startDateDisplay, endDateDisplay, setStartDateDisplay, setEndDateDisplay} = useValuationContext();
+
+  const [showTab, setShowTab] = useState(0);
+  const [startDateInput, setStartDateInput] = useState('')
+  const [endDateInput, setEndDateInput] = useState('')
+  const [inputError, setInputError] = useState('')
 
   const [sortRules, setSortRules] = useState([]);
   const [filters, setFilters] = useState({});
-  const [showTab, setShowTab] = useState(0);
 
   const {holdings, aggregates, marketValueByTicker, marketValueByTradingCurrency}
-    = useValuation(transactions, prices, fxs, setFxs, setLoadingFxs, basis, startDate, endDate);
-  const cumulativePLByDate = useCumulativePL(transactions, prices, fxs, basis,endDate.slice(0, 4) + "0101", endDate);
+    = useValuation(transactions, prices, fxs, setFxs, setLoadingFxs, basis, endDateDisplay);
+  const { cumulativePLByDate } = usePL(transactions, prices, setPrices, setLoadingPrices, fxs, basis, startDateDisplay, endDateDisplay);
   const cumulativePLArray = Object.entries(cumulativePLByDate).map(
     ([date, cumulativePLUSD]) => ({ date, cumulativePLUSD })
   );
+
+
+  useEffect(() => {
+    if (endDateDisplay !== "") {
+      setStartDateInput(startDateDisplay);
+      setEndDateInput(endDateDisplay);
+    }
+  }, [startDateDisplay, endDateDisplay]);
 
 
   const COLUMN_NAMES = {
@@ -175,24 +187,82 @@ export default function Holding() {
       <div className="grid">
         <div className="grid-item grid12" style={{padding: "25px 0 0 0"}}></div>
       </div>
+
       <div className="grid">
+        <div className="grid-item grid2"><label>Basis Currency</label></div>
         <div className="grid-item grid2">
-          <label>
-            Basis Currency
-          </label>
-        </div>
-        <div className="grid-item grid2">
-          <select
-            value={basis}
-            onChange={(e) => setBasis(e.target.value)}
-          >
+          <select value={basis} onChange={(e) => setBasis(e.target.value)}>
             <option key="Local" value="Local">Local</option>
             {currencies.map(currency => (
-              <option key={currency} value={currency}>
-                {currency}
-              </option>
+              <option key={currency} value={currency}>{currency}</option>
             ))}
           </select>
+        </div>
+      </div>
+
+      <div className="grid">
+        <div className="grid-item grid2"><label>Start Date</label></div>
+        <div className="grid-item grid2">
+          <input
+            type="text"
+            placeholder="YYYYMMDD"
+            value={startDateInput ?? ""}
+            onChange={(e) => {
+              const val = e.target.value.replace(/\D/g, "").slice(0, 8);
+              setStartDateInput(val);
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="grid">
+        <div className="grid-item grid2"><label>End Date</label></div>
+        <div className="grid-item grid2">
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="YYYYMMDD"
+            value={endDateInput ?? ""}
+            onChange={(e) => {
+              const val = e.target.value.replace(/\D/g, "").slice(0, 8);
+              setEndDateInput(val);
+            }}
+          />
+        </div>
+        <div className="grid-item grid1">
+          <button
+            onClick={() => {
+              if (!firstTransactionDate || !lastPriceDate || !lastFxDate) return;
+              const s = new Date(+startDateInput.slice(0, 4), +startDateInput.slice(4, 6) - 1, +startDateInput.slice(6, 8));
+              const e = new Date(+endDateInput.slice(0, 4), +endDateInput.slice(4, 6) - 1, +endDateInput.slice(6, 8));
+              const first = new Date(+firstTransactionDate.slice(0, 4), +firstTransactionDate.slice(4, 6) - 1, +firstTransactionDate.slice(6, 8));
+              const last = new Date(+lastPriceDate.slice(0, 4), +lastPriceDate.slice(4, 6) - 1, +lastPriceDate.slice(6, 8));
+              const maxEnd = lastPriceDate > lastFxDate ? new Date(+lastFxDate.slice(0, 4), +lastFxDate.slice(4, 6) - 1, +lastFxDate.slice(6, 8)) : last;
+              if (isNaN(s) || isNaN(e)) return setInputError("Invalid date! Use YYYYMMDD.");
+              const newStart = s < first ? first : s;
+              const newEnd = e > maxEnd ? maxEnd : e;
+              if (newStart > newEnd) return setInputError("The start date must be earlier than the end date!");
+              setStartDateDisplay(`${newStart.getFullYear()}${String(newStart.getMonth() + 1).padStart(2, "0")}${String(newStart.getDate()).padStart(2, "0")}`);
+              setEndDateDisplay(`${newEnd.getFullYear()}${String(newEnd.getMonth() + 1).padStart(2, "0")}${String(newEnd.getDate()).padStart(2, "0")}`);
+              setInputError("");
+
+            }}
+          >
+            Apply
+          </button>
+        </div>
+        <div className="grid-item grid1">
+          <button
+            onClick={() => {
+              setEndDateDisplay(lastPriceDate > lastFxDate ? lastFxDate : lastPriceDate);
+              setInputError("");
+            }}
+          >
+            Latest
+          </button>
+        </div>
+        <div className="grid-item grid6" style={{color: "red"}}>
+          {inputError}
         </div>
       </div>
 
@@ -226,7 +296,7 @@ export default function Holding() {
                     color: showTab === 0 ? "#f7fbff" : undefined
                   }}
                 >
-                  Value - {basis === "Local" ? "USD" : basis}
+                  Profit - {basis === "Local" ? "USD" : basis}
                 </button>
               </div>
 
@@ -257,7 +327,10 @@ export default function Holding() {
 
             {showTab === 0 && (
               <>
-                <h4>Market Value - YTD</h4>
+                <h4>Profit - {basis} {(cumulativePLByDate[endDateDisplay] - cumulativePLByDate[startDateDisplay]).toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}</h4>
                 <div style={{
                   width: "100%",
                   height: "200px",
@@ -296,7 +369,7 @@ export default function Holding() {
             {showTab === 2 && (
               <>
                 <h4>Market Value by Trading Currency</h4>
-                <div style={{ width: "100%", height: "200px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{width: "100%", height: "200px", display: "flex", alignItems: "center", justifyContent: "center"}}>
                   <PieChart
                     data={[...marketValueByTradingCurrency].sort((a, b) => b.percent - a.percent)}
                     labelKey="tradingCurrency"
@@ -339,85 +412,91 @@ export default function Holding() {
       )}
 
       {/* Sorting info */}
-        <div className="grid">
+      <div className="grid">
         <div className="grid-item grid8">
-        Sorting priority:{" "}
-      {sortRules.length === 0
-        ? ""
-        : sortRules
-          .map((rule, i) => `(${i + 1}) ${COLUMN_NAMES[rule.key]}`)
-          .join("; ")}
-    </div>
-  <div className="grid-item grid2">
-    <button
-      onClick={() => setSortRules([])}
-      style={{backgroundColor: "#fb6a4a", color: "white"}}
-    >
-      Clear Sort
-    </button>
-  </div>
-
-  <div className="grid-item grid2">
-    <button
-      onClick={() => setFilters({})}
-      style={{backgroundColor: "#969696", color: "white", marginRight: 8}}
-    >
-      Clear Filter
-    </button>
-  </div>
-</div>
-
-  {/* Holding table */
-  }
-  <table
-    border="1"
-    cellPadding="8"
-    style={{borderCollapse: "collapse", width: "100%"}}
-  >
-    <thead>
-    {/* Header row with sort buttons */}
-    <tr>
-      {Object.keys(COLUMN_NAMES).map((key) => (
-        <th
-          key={key}
-          className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
-        >
-          {renderSortControls(key)} {COLUMN_NAMES[key]}
-        </th>
-      ))}
-    </tr>
-
-    {/* Filter row */}
-    <tr>
-      {Object.keys(COLUMN_NAMES).map((key) => {
-        const numericKeys = [
-          "totalQuantity",
-          "avgCost",
-          "price",
-          "costBasis",
-          "value",
-          "unrealisedPL",
-          "realisedPL",
-          "pL"
-        ];
-
-        if (numericKeys.includes(key)) {
-          return <th
-            key={key}
-            className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
-          ></th>; // empty cell for numeric fields
-        }
-
-        const options = Array.from(
-          new Set(holdings.map((h) => h[key]).filter(Boolean))
-        ).sort();
-
-        return (
-          <th
-            key={key}
-            className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
+          Sorting priority:{" "}
+          {sortRules.length === 0
+            ? ""
+            : sortRules
+              .map((rule, i) => `(${i + 1}) ${COLUMN_NAMES[rule.key]}`)
+              .join("; ")}
+        </div>
+        <div className="grid-item grid2">
+          <button
+            onClick={() => setSortRules([])}
+            style={{backgroundColor: "#fb6a4a", color: "white"}}
           >
-            <select
+            Clear Sort
+          </button>
+        </div>
+
+        <div className="grid-item grid2">
+          <button
+            onClick={() => setFilters({})}
+            style={{backgroundColor: "#969696", color: "white", marginRight: 8}}
+          >
+            Clear Filter
+          </button>
+        </div>
+      </div>
+
+      <div className="grid">
+        <div className="grid-item grid12" style={{paddingTop: "10px", textAlign: "right"}}>
+          Value Date: {endDateDisplay}
+        </div>
+      </div>
+
+      {/* Holding table */
+      }
+      <table
+        border="1"
+        cellPadding="8"
+        style={{borderCollapse: "collapse", width: "100%"}}
+      >
+        <thead>
+        {/* Header row with sort buttons */}
+        <tr>
+          {Object.keys(COLUMN_NAMES).map((key) => (
+            <th
+              key={key}
+              className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
+            >
+              {renderSortControls(key)} {COLUMN_NAMES[key]}
+            </th>
+          ))}
+        </tr>
+
+        {/* Filter row */}
+        <tr>
+          {Object.keys(COLUMN_NAMES).map((key) => {
+            const numericKeys = [
+              "totalQuantity",
+              "avgCost",
+              "price",
+              "costBasis",
+              "value",
+              "unrealisedPL",
+              "realisedPL",
+              "pL"
+            ];
+
+            if (numericKeys.includes(key)) {
+              return <th
+                key={key}
+                className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
+              ></th>; // empty cell for numeric fields
+            }
+
+            const options = Array.from(
+              new Set(holdings.map((h) => h[key]).filter(Boolean))
+            ).sort();
+
+            return (
+              <th
+                key={key}
+                className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
+              >
+                <select
                   value={filters[key] || "All"}
                   onChange={(e) => {
                     const value = e.target.value;
