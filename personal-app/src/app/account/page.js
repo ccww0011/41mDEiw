@@ -2,13 +2,13 @@
 
 import ProtectedLayout from "@/app/protected-layout";
 import {useState} from "react";
-import Market from "@/protected_components/Market";
-import Overview from "@/protected_components/Overview";
-import Transaction from "@/protected_components/Transaction";
+import Market from "@/components_protected/Market";
+import Overview from "@/components_protected/Overview";
+import Transaction from "@/components_protected/Transaction";
 
 export default function LoginPage() {
-  // Overview, Market, Transaction
-  const [showTab, setShowTab] = useState("Overview");
+  // DemoOverview, DemoMarket, DemoTransaction
+  const [showTab, setShowTab] = useState("DemoOverview");
 
   return (
     <ProtectedLayout>
@@ -18,10 +18,10 @@ export default function LoginPage() {
           <div className="grid-item grid2">
             <button
               type="button"
-              onClick={() => setShowTab("Overview")}
+              onClick={() => setShowTab("DemoOverview")}
               style={{
-                backgroundColor: showTab === "Overview" ? "#08519c" : undefined,
-                color: showTab === "Overview" ? "#f7fbff" : undefined
+                backgroundColor: showTab === "DemoOverview" ? "#08519c" : undefined,
+                color: showTab === "DemoOverview" ? "#f7fbff" : undefined
               }}
             >
               Overview
@@ -30,10 +30,10 @@ export default function LoginPage() {
           <div className="grid-item grid2">
             <button
               type="button"
-              onClick={() => setShowTab("Market")}
+              onClick={() => setShowTab("DemoMarket")}
               style={{
-                backgroundColor: showTab === "Market" ? "#08519c" : undefined,
-                color: showTab === "Market" ? "#f7fbff" : undefined
+                backgroundColor: showTab === "DemoMarket" ? "#08519c" : undefined,
+                color: showTab === "DemoMarket" ? "#f7fbff" : undefined
               }}
             >
               Market
@@ -42,10 +42,10 @@ export default function LoginPage() {
           <div className="grid-item grid2">
             <button
               type="button"
-              onClick={() => setShowTab("Transaction")}
+              onClick={() => setShowTab("DemoTransaction")}
               style={{
-                backgroundColor: showTab === "Transaction" ? "#08519c" : undefined,
-                color: showTab === "Transaction" ? "#f7fbff" : undefined
+                backgroundColor: showTab === "DemoTransaction" ? "#08519c" : undefined,
+                color: showTab === "DemoTransaction" ? "#f7fbff" : undefined
               }}
             >
               Transaction
@@ -53,9 +53,9 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {showTab === "Overview" && <Overview/>}
-        {showTab === "Market" && <Market/>}
-        {showTab === "Transaction" && <Transaction/>}
+        {showTab === "DemoOverview" && <Overview/>}
+        {showTab === "DemoMarket" && <Market/>}
+        {showTab === "DemoTransaction" && <Transaction/>}
       </div>
     </ProtectedLayout>
   );

@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from "react";
-import Stock from "@/protected_components/market_components/Stock";
-import FX from "@/protected_components/market_components/FX";
+import Stock from "@/components_protected/market_components/Stock";
+import FX from "@/components_protected/market_components/FX";
 
 export default function Market() {
   // Stock or FX

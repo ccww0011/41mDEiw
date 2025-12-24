@@ -26,7 +26,7 @@ export default function Hero(props) {
       <div className={styles.innerContainer}>
         <h1>{props.title}</h1>
         <p>{props.text}</p>
-        {props.path && (
+        {props.path && props.navigate && props.button && (
           <button
             className={styles.button}
             onClick={() => handleNavigation(props.navigate)}

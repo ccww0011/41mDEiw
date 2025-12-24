@@ -1,6 +1,6 @@
 'use client';
 
-import {logout} from "@/hooks/useAuth";
+import {logout} from "@/hooks_protected/useAuth";
 
 async function transactionApi(method, body = null, setTransactions) {
   try {

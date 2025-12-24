@@ -1,13 +1,13 @@
 'use client';
 import React, {useState, useMemo, useEffect} from "react";
 import {useTransactions} from "@/context/TransactionContext";
-import PieChart from "@/components/PieChart";
+import PieChart from "@/components_protected/overview_components/holding_subcomponents/PieChart";
 import BarChart from "@/components/BarChart";
 import {useValuationContext} from "@/context/ValuationContext";
 import {useFxs} from "@/context/FxContext";
 import {usePrices} from "@/context/PriceContext";
-import {usePL, useValuation} from "@/hooks/useValuation";
-import LineChart from "@/components/LineChart";
+import {usePL, useValuation} from "@/hooks_protected/useValuation";
+import LineChart from "@/components_protected/overview_components/holding_subcomponents/LineChart";
 
 export default function Holding() {
   const {currencies, transactions, loadingTransactions, firstTransactionDate} = useTransactions();

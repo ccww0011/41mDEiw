@@ -31,6 +31,7 @@ export default function Header() {
 
       <div className={styles.topnavContainer}>
         <button onClick={() => handleNavigation("/")}>Home</button>
+        <button onClick={() => handleNavigation("/cases")}>Cases</button>
         <button onClick={() => handleNavigation("/demo")}>Demo</button>
         <button onClick={() => handleNavigation("/contact-us")}>Contact Us</button>
         {user ? (
@@ -40,12 +41,12 @@ export default function Header() {
             <button className={styles.buttonDark} onClick={logout}>Logout</button>
           </div>
         ) : (
-        <div className={styles.rightmost}>
-          <button className={styles.rightmost} onClick={login}>Login</button>
-        </div>
-      )}
-    </div>
-  </>
+          <div className={styles.rightmost}>
+            <button className={styles.rightmost} onClick={login}>Login</button>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 

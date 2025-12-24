@@ -9,8 +9,8 @@ export default function Home() {
     altText: "Welcome!",
     title: "Technology Expertise for All Corporations.",
     text: "Enhancing efficiency and decision-making across all business operations.",
-    button: "Quick Demo",
-    navigate: "/demo",
+    button: "My Cases",
+    navigate: "/cases",
   };
 
   const contactProps = {

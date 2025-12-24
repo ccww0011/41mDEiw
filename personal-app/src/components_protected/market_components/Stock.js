@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from "react";
-import Table from "@/protected_components/market_components/market_subcomponents/Table";
-import Graph from "@/protected_components/market_components/market_subcomponents/Graph";
+import Table from "@/components_protected/market_components/market_subcomponents/Table";
+import Graph from "@/components_protected/market_components/market_subcomponents/Graph";
 import { useTransactions } from "@/context/TransactionContext";
 import { usePrices } from "@/context/PriceContext";
-import { getPrices } from "@/hooks/usePriceDatabase";
+import { getPrices } from "@/hooks_protected/usePriceDatabase";
 
 export default function Stock() {
   const { prices, setPrices, loadingPrices, setLoadingPrices } = usePrices();
@@ -131,7 +131,7 @@ export default function Stock() {
       {!filteredPrices || Object.keys(filteredPrices[selectedTicker] || {}).length === 0 ? (
         <h3>No data. Select both ticker and dates.</h3>
       ) : loadingPrices ? (
-        <div>Loading prices...</div>
+        <h3>Loading prices...</h3>
       ) : (
         <>
           <Graph prices={filteredPrices} selectedItem={selectedTicker} />

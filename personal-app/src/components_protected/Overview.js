@@ -1,8 +1,8 @@
 'use client';
 
 import {useState} from "react";
-import Performance from "@/protected_components/overview_components/Performance";
-import Holding from "@/protected_components/overview_components/Holding";
+import Performance from "@/components_protected/overview_components/Performance";
+import Holding from "@/components_protected/overview_components/Holding";
 
 export default function Overview() {
   const [showTab, setShowTab] = useState("Holding");

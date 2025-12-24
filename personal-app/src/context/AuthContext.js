@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useState, useEffect, useContext } from "react";
-import { fetchUser, login as loginApi, logout as logoutApi } from "@/hooks/useAuth";
+import { fetchUser, login as loginApi, logout as logoutApi } from "@/hooks_protected/useAuth";
 
 const AuthContext = createContext(null);
 

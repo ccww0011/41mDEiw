@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from "react";
-import Table from "@/protected_components/market_components/market_subcomponents/Table";
-import Graph from "@/protected_components/market_components/market_subcomponents/Graph";
+import Table from "@/components_protected/market_components/market_subcomponents/Table";
+import Graph from "@/components_protected/market_components/market_subcomponents/Graph";
 import { useTransactions } from "@/context/TransactionContext";
 import { useFxs } from "@/context/FxContext";
 import { useValuationContext } from "@/context/ValuationContext";
-import { getFxs } from "@/hooks/useFxDatabase";
+import { getFxs } from "@/hooks_protected/useFxDatabase";
 
 export default function FX() {
   const { fxs, setFxs, loadingFxs, setLoadingFxs } = useFxs();

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import { getTransactions } from "@/hooks/useTransactionDatabase";
+import { getTransactions } from "@/hooks_protected/useTransactionDatabase";
 
 const TransactionContext = createContext(null);
 
@@ -82,6 +82,8 @@ export function TransactionProvider({ children }) {
     }),
     [transactions, firstTransactionDate, tickers, tickerMap, currencies, currencyMap, loadingTransactions]
   );
+
+  // console.log(transactions);
 
   return (
     <TransactionContext.Provider value={value}>

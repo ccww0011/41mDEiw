@@ -89,7 +89,53 @@ p {
   flex-direction: column;
   flex-grow: 1;
 }
+
+.gate-box {
+  /* 1. Box Model */
+  padding: 10px 20px 20px 20px;
+  width: 30%;
+  min-width: 300px;
+  max-width: 400px;
+
+  /* 2. Layout */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
+
+  /* 3. Visual */
+  background-color: #f7fbff;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px #08306b;
+
+  /* 4. Typography */
+  text-align: center;
+  color: #000000
+}
+
+.gate-box-next {
+  width: 20%;
+  min-width: 200px;
+
+  top: auto;       /* remove vertical centering */
+  left: auto;      /* remove horizontal centering */
+  bottom: 10vh;
+  right: 10vh;
+  transform: none; /* not needed for bottom-right */
+}
+
+.content-gated {}
+
+.content-gated.is-locked {
+  filter: blur(3px);
+  pointer-events: none;
+  user-select: none;
+}
+
+
 /* 1. Wrapper and Container Ends */
+
 
 /* 2. Grid */
 .grid {
@@ -257,6 +303,7 @@ input[type="number"] {
 }
 /* 4. Text Input Ends */
 
+
 /* 5. Button */
 .container button {
   flex: 0 0 auto;
@@ -299,7 +346,28 @@ input[type="number"] {
   color: #f7fbff;
   cursor: pointer;
 }
+
+.gate-box button {
+  flex: 0 0 auto;
+  background-color: #c6dbef;
+  margin: 0;
+  border: 0;
+  border-radius: 2px;
+  padding: 5px 0;
+  text-align: center;
+  text-decoration: none;        /* Remove underline */
+  color: #08306b;
+  display: block;               /* Ensure links are block-level elements */
+  height: 25px;
+  width: 100%;
+}
+.gate-box button:hover {
+  background-color: #08519c;
+  color: #f7fbff;
+  cursor: pointer;
+}
 /* 5. Button Ends */
+
 
 .grecaptcha-badge {
   opacity: 0.3;

@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useRef } from 'react';
+import { useRouter } from "next/navigation";
 import styles from '@/components/HorizontalScrollerWithButtons.module.css';
 
 const HorizontalScrollerWithButtons = ( {items} ) => {
+  const router = useRouter();
   const scrollContainerRef = useRef();
 
   return (
@@ -24,8 +26,8 @@ const HorizontalScrollerWithButtons = ( {items} ) => {
                       {feature}
                     </li>
                   ))}
+                  {item.button && <><button onClick={() => router.push(item.button.route)}>{item.button.text}</button></>}
                 </ul>
-                <p></p>
               </div>
             </div>
           ))}

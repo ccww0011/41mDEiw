@@ -5,7 +5,7 @@ import { useDropzone } from 'react-dropzone';
 import { useRouter } from 'next/navigation';
 import Image from "next/image";
 import { useTransactions } from "@/context/TransactionContext";
-import { putTransactions } from '@/hooks/useTransactionDatabase';
+import { putTransactions } from '@/hooks_protected/useTransactionDatabase';
 
 const REQUIRED_HEADERS = [
   'TradeDate',
@@ -33,6 +33,20 @@ const RENDERED_HEADERS = [
   'netCash',
   'tradeID',
 ];
+
+const COLUMN_NAMES = {
+  tradeDate: "Trade Date",
+  clientAccountID: "Client ID",
+  assetClass: "Asset Class",
+  underlyingSymbol: "Ticker",
+  description: "Description",
+  listingExchange: "Exchange",
+  currencyPrimary: "Trading Currency",
+  quantity: "Quantity",
+  netCash: "Net Cash",
+  tradeID: "Trade ID",
+};
+
 
 const HIDE_ON_MOBILE_COLUMNS = [
   'clientAccountID',
@@ -98,7 +112,7 @@ export default function Transaction() {
 
   // Multi-sort & filters
   const [filters, setFilters] = useState({});
-  const [sortRules, setSortRules] = useState([]);
+  const [sortRules, setSortRules] = useState([{ key: 'tradeID', direction: 'asc' }]);
 
   const onDrop = useCallback((acceptedFiles) => {
     const file = acceptedFiles[0];
@@ -161,7 +175,7 @@ export default function Transaction() {
     // Filter non-numeric fields only
     let filtered = [...transactions];
     Object.entries(filters).forEach(([key, value]) => {
-      if (!numericKeys.includes(key) && value && value !== 'All') {
+      if (!NUMERIC_KEYS.includes(key) && value && value !== 'All') {
         filtered = filtered.filter(item => item[key] === value);
       }
     });
@@ -306,7 +320,7 @@ export default function Transaction() {
         <h2>Transactions</h2>
 
         <div className="grid">
-          <div className="grid-item grid8">Sorting priority: {sortRules.length === 0 ? 'None' : sortRules.map((rule, i) => `(${i + 1}) ${rule.key}`).join('; ')}</div>
+          <div className="grid-item grid8">Sorting priority: {sortRules.length === 0 ? 'None' : sortRules.map((rule, i) => `(${i + 1}) ${COLUMN_NAMES[rule.key]}`).join('; ')}</div>
           <div className="grid-item grid2">
             <button onClick={() => setSortRules([])} style={{ backgroundColor: '#fb6a4a', color: 'white' }}>Clear Sort</button>
           </div>
@@ -325,9 +339,7 @@ export default function Transaction() {
                 style={{ verticalAlign: 'top' }}
               >
                 {renderSortControls(header)}{' '}
-                {header
-                  .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-                  .replace(/^(.)/, (match) => match.toUpperCase())}
+                {COLUMN_NAMES[header]}
               </th>
             ))}
           </tr>

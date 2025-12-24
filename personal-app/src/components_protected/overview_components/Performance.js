@@ -1,7 +1,7 @@
 import React, {useState} from "react";
-import Summary from "@/protected_components/overview_components/performance_subcomponents/Summary";
-import TWR from "@/protected_components/overview_components/performance_subcomponents/TWR";
-import MWR from "@/protected_components/overview_components/performance_subcomponents/MWR";
+import Summary from "@/components_protected/overview_components/performance_subcomponents/Summary";
+import TWR from "@/components_protected/overview_components/performance_subcomponents/TWR";
+import MWR from "@/components_protected/overview_components/performance_subcomponents/MWR";
 import {useTransactions} from "@/context/TransactionContext";
 import {useValuationContext} from "@/context/ValuationContext";
 
