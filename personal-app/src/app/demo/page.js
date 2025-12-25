@@ -2,7 +2,7 @@
 
 import Hero from "@/components/Hero";
 
-export default function LoginPage() {
+export default function Demo() {
   // Demo, Overview, Market, Transaction
 
   const demoProps = {
@@ -12,7 +12,7 @@ export default function LoginPage() {
     title: "Demo Centre",
     text: "Preview features in the restricted area",
     button: "Get started",
-    navigate: "/tutorial",
+    navigate: "/walkthrough",
   };
 
   return (

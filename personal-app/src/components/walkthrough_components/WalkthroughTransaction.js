@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import {useDemoContext} from "@/context/DemoContext";
+import {useWalkthroughContext} from "@/context/WalkthroughContext";
 
 const COLUMN_NAMES = {
   tradeDate: "Trade Date",
@@ -38,8 +38,8 @@ const HIDE_ON_MOBILE_COLUMNS = [
 
 const NUMERIC_KEYS = ['quantity', 'netCash'];
 
-export default function DemoTransaction() {
-  const {transactions} = useDemoContext();
+export default function WalkthroughTransaction() {
+  const {transactions} = useWalkthroughContext();
   // Multi-sort & filters
   const [filters, setFilters] = useState({});
   const [sortRules, setSortRules] = useState([{ key: 'tradeID', direction: 'asc' }]);

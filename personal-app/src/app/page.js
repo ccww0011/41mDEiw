@@ -3,6 +3,7 @@
 import Hero from "@/components/Hero";
 
 export default function Home() {
+
   const homeProps = {
     path: "/Home1.jpg",
     height: 40,

@@ -7,8 +7,8 @@ import Overview from "@/components_protected/Overview";
 import Transaction from "@/components_protected/Transaction";
 
 export default function LoginPage() {
-  // DemoOverview, DemoMarket, DemoTransaction
-  const [showTab, setShowTab] = useState("DemoOverview");
+  // WalkthroughOverview, WalkthroughMarket, WalkthroughTransaction
+  const [showTab, setShowTab] = useState("WalkthroughOverview");
 
   return (
     <ProtectedLayout>
@@ -18,10 +18,10 @@ export default function LoginPage() {
           <div className="grid-item grid2">
             <button
               type="button"
-              onClick={() => setShowTab("DemoOverview")}
+              onClick={() => setShowTab("WalkthroughOverview")}
               style={{
-                backgroundColor: showTab === "DemoOverview" ? "#08519c" : undefined,
-                color: showTab === "DemoOverview" ? "#f7fbff" : undefined
+                backgroundColor: showTab === "WalkthroughOverview" ? "#08519c" : undefined,
+                color: showTab === "WalkthroughOverview" ? "#f7fbff" : undefined
               }}
             >
               Overview
@@ -30,10 +30,10 @@ export default function LoginPage() {
           <div className="grid-item grid2">
             <button
               type="button"
-              onClick={() => setShowTab("DemoMarket")}
+              onClick={() => setShowTab("WalkthroughMarket")}
               style={{
-                backgroundColor: showTab === "DemoMarket" ? "#08519c" : undefined,
-                color: showTab === "DemoMarket" ? "#f7fbff" : undefined
+                backgroundColor: showTab === "WalkthroughMarket" ? "#08519c" : undefined,
+                color: showTab === "WalkthroughMarket" ? "#f7fbff" : undefined
               }}
             >
               Market
@@ -42,10 +42,10 @@ export default function LoginPage() {
           <div className="grid-item grid2">
             <button
               type="button"
-              onClick={() => setShowTab("DemoTransaction")}
+              onClick={() => setShowTab("WalkthroughTransaction")}
               style={{
-                backgroundColor: showTab === "DemoTransaction" ? "#08519c" : undefined,
-                color: showTab === "DemoTransaction" ? "#f7fbff" : undefined
+                backgroundColor: showTab === "WalkthroughTransaction" ? "#08519c" : undefined,
+                color: showTab === "WalkthroughTransaction" ? "#f7fbff" : undefined
               }}
             >
               Transaction
@@ -53,9 +53,9 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {showTab === "DemoOverview" && <Overview/>}
-        {showTab === "DemoMarket" && <Market/>}
-        {showTab === "DemoTransaction" && <Transaction/>}
+        {showTab === "WalkthroughOverview" && <Overview/>}
+        {showTab === "WalkthroughMarket" && <Market/>}
+        {showTab === "WalkthroughTransaction" && <Transaction/>}
       </div>
     </ProtectedLayout>
   );

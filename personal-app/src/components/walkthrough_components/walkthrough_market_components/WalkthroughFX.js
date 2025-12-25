@@ -1,19 +1,23 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from "react";
-import Table from "@/components_protected/market_components/market_subcomponents/Table";
-import Graph from "@/components_protected/market_components/market_subcomponents/Graph";
-import { useTransactions } from "@/context/TransactionContext";
-import { useFxs } from "@/context/FxContext";
-import { useValuationContext } from "@/context/ValuationContext";
-import { getFxs } from "@/hooks_protected/useFxDatabase";
+import WalkthroughTable from "@/components/walkthrough_components/walkthrough_market_components/walkthrough_market_subcomponents/WalkthroughTable";
+import WalkthroughGraph from "@/components/walkthrough_components/walkthrough_market_components/walkthrough_market_subcomponents/WalkthroughGraph";
+import {useWalkthroughContext} from "@/context/WalkthroughContext";
+import {getWalkthroughFxs} from "@/hooks/useWalkthroughFx";
 
-export default function FX() {
-  const { fxs, setFxs, loadingFxs, setLoadingFxs } = useFxs();
-  const { currencies } = useTransactions();
-  const { basis } = useValuationContext();
+export default function WalkthroughFX() {
 
-  const [c1, setC1] = useState("");
+  const {
+    currencies,
+    fxs,
+    setFxs,
+    loadingFxs,
+    setLoadingFxs,
+    basis
+  } = useWalkthroughContext()
+
+  const [c1, setC1] = useState(currencies[0]);
   const [c2, setC2] = useState("USD");
   const [range, setRange] = useState("YTD");
   const [startDate, setStartDate] = useState(null);
@@ -64,7 +68,7 @@ export default function FX() {
         }));
 
       if (items.length) {
-        await getFxs(items, fxs, setFxs, setLoadingFxs);
+        await getWalkthroughFxs(items, fxs, setFxs, setLoadingFxs);
       }
     };
 
@@ -154,7 +158,7 @@ export default function FX() {
               const items = [c1, c2]
                 .filter(c => c && c !== "USD")
                 .map(currency => ({ currency, startDate, endDate }));
-              await getFxs(items, fxs, setFxs, setLoadingFxs);
+              await getWalkthroughFxs(items, fxs, setFxs, setLoadingFxs);
             }}
           >
             {loadingFxs ? "Loading..." : "Refresh"}
@@ -168,8 +172,8 @@ export default function FX() {
         <div>Loading FX data...</div>
       ) : (
         <>
-          <Graph prices={filteredFxs} selectedItem={pair} />
-          <Table prices={filteredFxs} selectedItem={pair} digits={6} />
+          <WalkthroughGraph prices={filteredFxs} selectedItem={pair} />
+          <WalkthroughTable prices={filteredFxs} selectedItem={pair} digits={6} />
         </>
       )}
     </>

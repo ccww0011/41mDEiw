@@ -1,8 +1,9 @@
 'use client';
 import React, { useState } from "react";
-import DemoStock from "@/components/demo_components/DemoStock";
+import WalkthroughStock from "@/components/walkthrough_components/walkthrough_market_components/WalkthroughStock";
+import WalkthroughFX from "@/components/walkthrough_components/walkthrough_market_components/WalkthroughFX";
 
-export default function DemoMarket() {
+export default function WalkthroughMarket() {
   // Stock or FX
   const [showTab, setShowTab] = useState("Stock");
   const tabs = ["Stock", "FX"];
@@ -28,8 +29,8 @@ export default function DemoMarket() {
 
       <div className="grid"><div className="grid-item grid12" style={{padding: "5px 0"}}></div></div>
 
-        {showTab === 'Stock' && <DemoStock/>}
-      {/*showTab === "FX" && <DemoFX/>*/}
+      {showTab === 'Stock' && <WalkthroughStock/>}
+      {showTab === "FX" && <WalkthroughFX/>}
     </>
   );
 }
