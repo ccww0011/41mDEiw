@@ -163,7 +163,8 @@ export function usePL(transactions, prices, setPrices, setLoadingPrices, fxs, ba
       Number(startDate.slice(0, 4)),
       Number(startDate.slice(4, 6)) - 1,
       Number(startDate.slice(6, 8))
-    );
+    )
+    d.setDate(d.getDate() - 1);
     const endD = new Date(
       Number(endDate.slice(0, 4)),
       Number(endDate.slice(4, 6)) - 1,

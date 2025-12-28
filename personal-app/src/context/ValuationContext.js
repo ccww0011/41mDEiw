@@ -78,6 +78,17 @@ export function ValuationProvider({ children }) {
   // Fetch missing Prices
   useEffect(() => {
     if (!transactions?.length || !startDateDisplay || !endDateDisplay) return;
+    let startDateRequest = new Date(
+      Number(startDateDisplay.slice(0, 4)),
+      Number(startDateDisplay.slice(4, 6)) - 1,
+      Number(startDateDisplay.slice(6, 8))
+    )
+    startDateRequest.setDate(startDateRequest.getDate() - 1);
+    const startDateYYYYMMDD =
+      startDateRequest.getFullYear().toString() +
+      String(startDateRequest.getMonth() + 1).padStart(2, "0") +
+      String(startDateRequest.getDate()).padStart(2, "0");
+
     const fetchPrices = async () => {
       const requests = new Map();
       transactions.forEach(tx => {
@@ -89,8 +100,8 @@ export function ValuationProvider({ children }) {
       const items = Array.from(requests.entries())
         .map(([ticker, minYear]) => {
           const startDate = `${minYear}0101`;
-          if (startDate < startDateDisplay) {
-            return { ticker, startDate: startDateDisplay, endDate: endDateDisplay };
+          if (startDate < startDateYYYYMMDD) {
+            return { ticker, startDate: startDateYYYYMMDD, endDate: endDateDisplay };
           } else if (startDate <= endDateDisplay) {
             return { ticker, startDate, endDate: endDateDisplay };
           } else {

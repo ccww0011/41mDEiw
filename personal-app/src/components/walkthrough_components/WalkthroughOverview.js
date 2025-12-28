@@ -55,6 +55,25 @@ export default function WalkthroughOverview() {
     }
   }, [startDateDisplay, endDateDisplay]);
 
+  const profit = useMemo(() => {
+    // compute (startDateDisplay - 1 day)
+    const year = Number(startDateDisplay.slice(0, 4));
+    const month = Number(startDateDisplay.slice(4, 6)) - 1;
+    const day = Number(startDateDisplay.slice(6, 8));
+
+    const date = new Date(year, month, day);
+    date.setDate(date.getDate() - 1);
+
+    const prevStartDate =
+      date.getFullYear().toString() +
+      String(date.getMonth() + 1).padStart(2, "0") +
+      String(date.getDate()).padStart(2, "0");
+    const endValue = cumulativePLByDate[endDateDisplay] ?? 0;
+    const startValue = cumulativePLByDate[prevStartDate] ?? 0;
+
+    return endValue - startValue;
+  }, [cumulativePLByDate, startDateDisplay, endDateDisplay]);
+
 
   const COLUMN_NAMES = {
     ticker: "Ticker",
@@ -344,9 +363,9 @@ export default function WalkthroughOverview() {
 
             {showTab === 0 && (
               <>
-                <h4>Profit - {basis === "Local" ? "USD" : basis} {(cumulativePLByDate[endDateDisplay] - cumulativePLByDate[startDateDisplay]).toLocaleString('en-US', {
+                <h4>Profit - {basis === "Local" ? "USD" : basis} {profit.toLocaleString("en-US", {
                   minimumFractionDigits: 2,
-                  maximumFractionDigits: 2
+                  maximumFractionDigits: 2,
                 })}</h4>
                 <div style={{
                   width: "100%",

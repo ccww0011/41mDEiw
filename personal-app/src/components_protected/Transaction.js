@@ -18,6 +18,7 @@ const REQUIRED_HEADERS = [
   'Quantity',
   'Proceeds',
   'Commission',
+  'NetCash',
   'TradeID',
 ];
 
@@ -138,6 +139,11 @@ export default function Transaction() {
         }
 
         const transformedData = data.map(row => {
+          const netCash = row['netCash']
+          if (netCash != null && netCash !== 0) {
+            const {proceeds, commission, ...rest} = row;
+            return {...rest};
+          }
           const proceeds_ = parseFloat(row['proceeds']) || 0;
           const commission_ = parseFloat(row['commission']) || 0;
           const { proceeds, commission, ...rest } = row;

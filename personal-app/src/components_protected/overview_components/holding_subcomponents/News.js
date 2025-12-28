@@ -14,7 +14,7 @@ export function News() {
       if (result.status === "Success") {
         setNewsData(result.data.slice(0, 10));
       } else if (result.status === "Unauthorised") {
-        setError("You are not authorised.");
+        setError("Error loading news. Please try again.");
         setNewsData([]);
       } else {
         setError(result.message || "Failed to fetch news");
