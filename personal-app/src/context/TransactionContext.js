@@ -83,7 +83,7 @@ export function TransactionProvider({ children }) {
     [transactions, firstTransactionDate, tickers, tickerMap, currencies, currencyMap, loadingTransactions]
   );
 
-  console.log(transactions);
+  // console.log(transactions);
 
   return (
     <TransactionContext.Provider value={value}>

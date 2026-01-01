@@ -102,7 +102,7 @@ export async function getPrices(items, prices, setPrices, setLoadingPrices) {
   }
   setLoadingPrices(true);
   try {
-    await priceApi('GET', { items: JSON.stringify(requests) }, setPrices);
+    await priceApi('POST', { items: JSON.stringify(requests) }, setPrices);
   } finally {
     setLoadingPrices(false);
   }

@@ -94,7 +94,7 @@ export async function getFxs(items, fxs, setFxs, setLoadingFxs) {
   }
   setLoadingFxs(true);
   try {
-    await fxApi('GET', { items: JSON.stringify(requests) }, setFxs);
+    await fxApi('POST', { items: JSON.stringify(requests) }, setFxs);
   } finally {
     setLoadingFxs(false);
   }

@@ -70,10 +70,43 @@ export default function Holding() {
     value: "Market Value",
     unrealisedPL: "Unrealised P/L",
     realisedPL: "Realised P/L",
-    pL: "P/L",
+    pL: "All-time P/L",
   };
 
   const hideOnMobileColumns = ["ticker", "exchange", "avgCost", "realisedPL", "pL"];
+
+  const handleApply = () => {
+    if (!firstTransactionDate || !lastPriceDate || !lastFxDate) return;
+
+    const s = new Date(+startDateInput.slice(0, 4), +startDateInput.slice(4, 6) - 1, +startDateInput.slice(6, 8));
+    const e = new Date(+endDateInput.slice(0, 4), +endDateInput.slice(4, 6) - 1, +endDateInput.slice(6, 8));
+    const first = new Date(+firstTransactionDate.slice(0, 4), +firstTransactionDate.slice(4, 6) - 1, +firstTransactionDate.slice(6, 8));
+    const last = new Date(+lastPriceDate.slice(0, 4), +lastPriceDate.slice(4, 6) - 1, +lastPriceDate.slice(6, 8));
+    const maxEnd = lastPriceDate > lastFxDate ? new Date(+lastFxDate.slice(0, 4), +lastFxDate.slice(4, 6) - 1, +lastFxDate.slice(6, 8)) : last;
+    if (isNaN(s) || isNaN(e)) {
+      setInputError("Invalid date! Use YYYYMMDD.");
+      return;
+    }
+
+    const newStart = s < first ? first : s;
+    const newEnd = e > maxEnd ? maxEnd : e;
+    if (newStart > newEnd) {
+      setInputError("The start date must be earlier than the end date!");
+      return;
+    }
+    const newStartStr = `${newStart.getFullYear()}${String(
+      newStart.getMonth() + 1
+    ).padStart(2, "0")}${String(newStart.getDate()).padStart(2, "0")}`;
+    const newEndStr = `${newEnd.getFullYear()}${String(
+      newEnd.getMonth() + 1
+    ).padStart(2, "0")}${String(newEnd.getDate()).padStart(2, "0")}`;
+    setStartDateDisplay(newStartStr);
+    setStartDateInput(newStartStr);
+    setEndDateDisplay(newEndStr);
+    setEndDateInput(newEndStr);
+    setInputError("");
+  };
+
 
   const onSortClick = (key, directionOrRemove) => {
     setSortRules(prev => {
@@ -204,7 +237,7 @@ export default function Holding() {
   return (
     <>
       <div className="grid">
-        <div className="grid-item grid12" style={{ padding: "25px 0 0 0" }}></div>
+        <div className="grid-item grid12" style={{padding: "25px 0 0 0"}}></div>
       </div>
 
       <div className="grid">
@@ -219,64 +252,85 @@ export default function Holding() {
         </div>
       </div>
 
-      <div className="grid">
-        <div className="grid-item grid2"><label>Start Date</label></div>
-        <div className="grid-item grid2">
-          <input
-            type="text"
-            placeholder="YYYYMMDD"
-            value={startDateInput ?? ""}
-            onChange={(e) => setStartDateInput(e.target.value.replace(/\D/g, "").slice(0, 8))}
-          />
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleApply();
+        }}
+      >
+        <div className="grid">
+          <div className="grid-item grid2">
+            <label>Start Date</label>
+          </div>
+          <div className="grid-item grid2">
+            <input
+              type="text"
+              placeholder="YYYYMMDD"
+              value={startDateInput ?? ""}
+              onChange={(e) =>
+                setStartDateInput(e.target.value.replace(/\D/g, "").slice(0, 8))
+              }
+            />
+          </div>
+          <div className="grid-item grid1">
+            <button
+              type="button"
+              onClick={() => {
+                setStartDateInput(firstTransactionDate);
+                setInputError("");
+              }}
+            >
+              Earliest
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div className="grid">
-        <div className="grid-item grid2"><label>End Date</label></div>
-        <div className="grid-item grid2">
-          <input
-            type="text"
-            inputMode="numeric"
-            placeholder="YYYYMMDD"
-            value={endDateInput ?? ""}
-            onChange={(e) => setEndDateInput(e.target.value.replace(/\D/g, "").slice(0, 8))}
-          />
+        <div className="grid">
+          <div className="grid-item grid2">
+            <label>End Date</label>
+          </div>
+          <div className="grid-item grid2">
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="YYYYMMDD"
+              value={endDateInput ?? ""}
+              onChange={(e) =>
+                setEndDateInput(e.target.value.replace(/\D/g, "").slice(0, 8))
+              }
+            />
+          </div>
+          <div className="grid-item grid1">
+            <button
+              type="button"
+              onClick={() => {
+                setEndDateInput(
+                  lastPriceDate > lastFxDate ? lastFxDate : lastPriceDate
+                );
+                setInputError("");
+              }}
+            >
+              Latest
+            </button>
+          </div>
+
+          <div className="grid-item grid1">
+            <button type="submit">
+              Apply
+            </button>
+          </div>
+
+          <div className="grid-item grid6" style={{color: "red"}}>
+            {inputError}
+          </div>
         </div>
-        <div className="grid-item grid1">
-          <button onClick={() => {
-            if (!firstTransactionDate || !lastPriceDate || !lastFxDate) return;
-            const s = new Date(+startDateInput.slice(0, 4), +startDateInput.slice(4, 6) - 1, +startDateInput.slice(6, 8));
-            const e = new Date(+endDateInput.slice(0, 4), +endDateInput.slice(4, 6) - 1, +endDateInput.slice(6, 8));
-            const first = new Date(+firstTransactionDate.slice(0, 4), +firstTransactionDate.slice(4, 6) - 1, +firstTransactionDate.slice(6, 8));
-            const last = new Date(+lastPriceDate.slice(0, 4), +lastPriceDate.slice(4, 6) - 1, +lastPriceDate.slice(6, 8));
-            const maxEnd = lastPriceDate > lastFxDate ? new Date(+lastFxDate.slice(0, 4), +lastFxDate.slice(4, 6) - 1, +lastFxDate.slice(6, 8)) : last;
-            if (isNaN(s) || isNaN(e)) return setInputError("Invalid date! Use YYYYMMDD.");
-            const newStart = s < first ? first : s;
-            const newEnd = e > maxEnd ? maxEnd : e;
-            if (newStart > newEnd) return setInputError("The start date must be earlier than the end date!");
-            setStartDateDisplay(`${newStart.getFullYear()}${String(newStart.getMonth() + 1).padStart(2, "0")}${String(newStart.getDate()).padStart(2, "0")}`);
-            setEndDateDisplay(`${newEnd.getFullYear()}${String(newEnd.getMonth() + 1).padStart(2, "0")}${String(newEnd.getDate()).padStart(2, "0")}`);
-            setInputError("");
-          }}>
-            Apply
-          </button>
-        </div>
-        <div className="grid-item grid1">
-          <button onClick={() => {
-            setEndDateDisplay(lastPriceDate > lastFxDate ? lastFxDate : lastPriceDate);
-            setInputError("");
-          }}>
-            Latest
-          </button>
-        </div>
-        <div className="grid-item grid6" style={{ color: "red" }}>{inputError}</div>
-      </div>
+      </form>
 
       <div className="grid">
         <div className="grid-item grid2"><h2>Holding</h2></div>
         <div className="grid-item grid10">
           {(loadingTransactions || loadingPrices || loadingFxs) && (
-            <h3 style={{ marginLeft: '20px', color: 'red' }}>
+            <h3 style={{marginLeft: '20px', color: 'red'}}>
               {"Loading P/L data for tickers "}{aggregates.missingPLCurrencies?.join(", ")}
             </h3>
           )}
@@ -288,24 +342,30 @@ export default function Holding() {
           <div className="grid-item grid6">
             <div className="grid">
               <div className="grid-item grid3">
-                <button onClick={() => setShowTab(0)} style={{ backgroundColor: showTab === 0 ? "#08519c" : undefined, color: showTab === 0 ? "#f7fbff" : undefined }}>Profit - {basis === "Local" ? "USD" : basis}</button>
+                <button onClick={() => setShowTab(0)}
+                        style={{backgroundColor: showTab === 0 ? "#08519c" : undefined, color: showTab === 0 ? "#f7fbff" : undefined}}>Profit
+                  - {basis === "Local" ? "USD" : basis}</button>
               </div>
               <div className="grid-item grid3">
-                <button onClick={() => setShowTab(1)} style={{ backgroundColor: showTab === 1 ? "#08519c" : undefined, color: showTab === 1 ? "#f7fbff" : undefined }}>Value - Top 10</button>
+                <button onClick={() => setShowTab(1)}
+                        style={{backgroundColor: showTab === 1 ? "#08519c" : undefined, color: showTab === 1 ? "#f7fbff" : undefined}}>Value - Top 10
+                </button>
               </div>
               <div className="grid-item grid3">
-                <button onClick={() => setShowTab(2)} style={{ backgroundColor: showTab === 2 ? "#08519c" : undefined, color: showTab === 2 ? "#f7fbff" : undefined }}>Value - FX</button>
+                <button onClick={() => setShowTab(2)}
+                        style={{backgroundColor: showTab === 2 ? "#08519c" : undefined, color: showTab === 2 ? "#f7fbff" : undefined}}>Value - FX
+                </button>
               </div>
             </div>
 
             {showTab === 0 && (
               <>
-                <h4>Profit - {basis === "Local" ? "USD" : basis} {profit.toLocaleString("en-US", {
+                <h4>Profit ({startDateDisplay}-{endDateDisplay}) in {basis === "Local" ? "USD" : basis} = {profit.toLocaleString("en-US", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}</h4>
-                <div style={{ width: "100%", height: "200px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <LineChart data={cumulativePLArray} labelKey="date" valueKey="cumulativePLUSD" />
+                <div style={{width: "100%", height: "200px", display: "flex", alignItems: "center", justifyContent: "center"}}>
+                  <LineChart data={cumulativePLArray} labelKey="date" valueKey="cumulativePLUSD"/>
                 </div>
               </>
             )}
@@ -313,8 +373,8 @@ export default function Holding() {
             {showTab === 1 && (
               <>
                 <h4>Market Value by Stock - Top 10</h4>
-                <div style={{ width: "100%", height: "200px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <BarChart data={[...marketValueByTicker].sort((a, b) => b.percent - a.percent)} labelKey="ticker" valueKey="percent" />
+                <div style={{width: "100%", height: "200px", display: "flex", alignItems: "center", justifyContent: "center"}}>
+                  <BarChart data={[...marketValueByTicker].sort((a, b) => b.percent - a.percent)} labelKey="ticker" valueKey="percent"/>
                 </div>
               </>
             )}
@@ -322,15 +382,15 @@ export default function Holding() {
             {showTab === 2 && (
               <>
                 <h4>Market Value by Trading Currency</h4>
-                <div style={{ width: "100%", height: "200px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <PieChart data={[...marketValueByTradingCurrency].sort((a, b) => b.percent - a.percent)} labelKey="tradingCurrency" valueKey="marketValue" />
+                <div style={{width: "100%", height: "200px", display: "flex", alignItems: "center", justifyContent: "center"}}>
+                  <PieChart data={[...marketValueByTradingCurrency].sort((a, b) => b.percent - a.percent)} labelKey="tradingCurrency" valueKey="marketValue"/>
                 </div>
               </>
             )}
           </div>
 
           <div className="grid-item grid6">
-            <News />
+            <News/>
           </div>
         </div>
       )}
@@ -344,7 +404,7 @@ export default function Holding() {
             <th>Market Value</th>
             <th>Unrealised P/L</th>
             <th>Realised P/L</th>
-            <th>Total P/L</th>
+            <th>All-time P/L</th>
           </tr>
           </thead>
           <tbody>
@@ -367,20 +427,20 @@ export default function Holding() {
           Sorting priority: {sortRules.length === 0 ? "" : sortRules.map((rule, i) => `(${i + 1}) ${COLUMN_NAMES[rule.key]}`).join("; ")}
         </div>
         <div className="grid-item grid2">
-          <button onClick={() => setSortRules([])} style={{ backgroundColor: "#fb6a4a", color: "white" }}>Clear Sort</button>
+          <button onClick={() => setSortRules([])} style={{backgroundColor: "#fb6a4a", color: "white"}}>Clear Sort</button>
         </div>
         <div className="grid-item grid2">
-          <button onClick={() => setFilters({})} style={{ backgroundColor: "#969696", color: "white", marginRight: 8 }}>Clear Filter</button>
+          <button onClick={() => setFilters({})} style={{backgroundColor: "#969696", color: "white", marginRight: 8}}>Clear Filter</button>
         </div>
       </div>
 
       <div className="grid">
-        <div className="grid-item grid12" style={{ paddingTop: "10px", textAlign: "right" }}>
+        <div className="grid-item grid12" style={{paddingTop: "10px", textAlign: "right"}}>
           Value Date: {endDateDisplay}
         </div>
       </div>
 
-      <table border="1" cellPadding="8" style={{ borderCollapse: "collapse", width: "100%" }}>
+      <table border="1" cellPadding="8" style={{borderCollapse: "collapse", width: "100%"}}>
         <thead>
         <tr>
           {Object.keys(COLUMN_NAMES).map((key) => (
@@ -391,7 +451,7 @@ export default function Holding() {
         </tr>
         <tr>
           {Object.keys(COLUMN_NAMES).map((key) => {
-            const numericKeys = ["totalQuantity","avgCost","price","costBasis","value","unrealisedPL","realisedPL","pL"];
+            const numericKeys = ["totalQuantity", "avgCost", "price", "costBasis", "value", "unrealisedPL", "realisedPL", "pL"];
             if (numericKeys.includes(key)) return <th key={key} className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}></th>;
             const options = Array.from(new Set(holdings.map((h) => h[key]).filter(Boolean))).sort();
             return (
@@ -400,9 +460,9 @@ export default function Holding() {
                   value={filters[key] || "All"}
                   onChange={(e) => {
                     const value = e.target.value;
-                    setFilters((prev) => ({ ...prev, [key]: value === "All" ? undefined : value }));
+                    setFilters((prev) => ({...prev, [key]: value === "All" ? undefined : value}));
                   }}
-                  style={{ width: "100%" }}
+                  style={{width: "100%"}}
                 >
                   <option value="All">All</option>
                   {options.map((opt) => (
@@ -418,8 +478,9 @@ export default function Holding() {
         {sortedHoldings.map((h) => (
           <tr key={`${h.ticker}|${h.exchange}`}>
             {Object.keys(COLUMN_NAMES).map((key) => (
-              <td key={key} className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""} style={["totalQuantity","avgCost","price","costBasis","value","unrealisedPL","realisedPL","pL"].includes(key) ? getStyle(h[key]) : {}}>
-                {["totalQuantity","avgCost","price","costBasis","value","unrealisedPL","realisedPL","pL"].includes(key) ? formatNumber(h[key]) : h[key]}
+              <td key={key} className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
+                  style={["totalQuantity", "avgCost", "price", "costBasis", "value", "unrealisedPL", "realisedPL", "pL"].includes(key) ? getStyle(h[key]) : {}}>
+                {["totalQuantity", "avgCost", "price", "costBasis", "value", "unrealisedPL", "realisedPL", "pL"].includes(key) ? formatNumber(h[key]) : h[key]}
               </td>
             ))}
           </tr>

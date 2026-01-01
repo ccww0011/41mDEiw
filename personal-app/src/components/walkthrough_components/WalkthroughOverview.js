@@ -87,7 +87,7 @@ export default function WalkthroughOverview() {
     value: "Market Value",
     unrealisedPL: "Unrealised P/L",
     realisedPL: "Realised P/L",
-    pL: "P/L",
+    pL: "All-time P/L",
   };
 
   const hideOnMobileColumns = ["ticker", "exchange", "avgCost", "realisedPL", "pL"];
@@ -243,11 +243,16 @@ export default function WalkthroughOverview() {
             type="text"
             placeholder="YYYYMMDD"
             value={startDateInput ?? ""}
-            onChange={(e) => {
-              const val = e.target.value.replace(/\D/g, "").slice(0, 8);
-              setStartDateInput(val);
-            }}
+            onChange={(e) => setStartDateInput(e.target.value.replace(/\D/g, "").slice(0, 8))}
           />
+        </div>
+        <div className="grid-item grid1">
+          <button onClick={() => {
+            setStartDateInput(firstTransactionDate);
+            setInputError("");
+          }}>
+            Earliest
+          </button>
         </div>
       </div>
 
@@ -259,47 +264,41 @@ export default function WalkthroughOverview() {
             inputMode="numeric"
             placeholder="YYYYMMDD"
             value={endDateInput ?? ""}
-            onChange={(e) => {
-              const val = e.target.value.replace(/\D/g, "").slice(0, 8);
-              setEndDateInput(val);
-            }}
+            onChange={(e) => setEndDateInput(e.target.value.replace(/\D/g, "").slice(0, 8))}
           />
         </div>
         <div className="grid-item grid1">
-          <button
-            onClick={() => {
-              if (!firstTransactionDate || !lastPriceDate || !lastFxDate) return;
-              const s = new Date(+startDateInput.slice(0, 4), +startDateInput.slice(4, 6) - 1, +startDateInput.slice(6, 8));
-              const e = new Date(+endDateInput.slice(0, 4), +endDateInput.slice(4, 6) - 1, +endDateInput.slice(6, 8));
-              const first = new Date(+firstTransactionDate.slice(0, 4), +firstTransactionDate.slice(4, 6) - 1, +firstTransactionDate.slice(6, 8));
-              const last = new Date(+lastPriceDate.slice(0, 4), +lastPriceDate.slice(4, 6) - 1, +lastPriceDate.slice(6, 8));
-              const maxEnd = lastPriceDate > lastFxDate ? new Date(+lastFxDate.slice(0, 4), +lastFxDate.slice(4, 6) - 1, +lastFxDate.slice(6, 8)) : last;
-              if (isNaN(s) || isNaN(e)) return setInputError("Invalid date! Use YYYYMMDD.");
-              const newStart = s < first ? first : s;
-              const newEnd = e > maxEnd ? maxEnd : e;
-              if (newStart > newEnd) return setInputError("The start date must be earlier than the end date!");
-              setStartDateDisplay(`${newStart.getFullYear()}${String(newStart.getMonth() + 1).padStart(2, "0")}${String(newStart.getDate()).padStart(2, "0")}`);
-              setEndDateDisplay(`${newEnd.getFullYear()}${String(newEnd.getMonth() + 1).padStart(2, "0")}${String(newEnd.getDate()).padStart(2, "0")}`);
-              setInputError("");
-
-            }}
-          >
-            Apply
-          </button>
-        </div>
-        <div className="grid-item grid1">
-          <button
-            onClick={() => {
-              setEndDateDisplay(lastPriceDate > lastFxDate ? lastFxDate : lastPriceDate);
-              setInputError("");
-            }}
-          >
+          <button onClick={() => {
+            setEndDateInput(lastPriceDate > lastFxDate ? lastFxDate : lastPriceDate);
+            setInputError("");
+          }}>
             Latest
           </button>
         </div>
-        <div className="grid-item grid6" style={{color: "red"}}>
-          {inputError}
+        <div className="grid-item grid1">
+          <button onClick={() => {
+            if (!firstTransactionDate || !lastPriceDate || !lastFxDate) return;
+            const s = new Date(+startDateInput.slice(0, 4), +startDateInput.slice(4, 6) - 1, +startDateInput.slice(6, 8));
+            const e = new Date(+endDateInput.slice(0, 4), +endDateInput.slice(4, 6) - 1, +endDateInput.slice(6, 8));
+            const first = new Date(+firstTransactionDate.slice(0, 4), +firstTransactionDate.slice(4, 6) - 1, +firstTransactionDate.slice(6, 8));
+            const last = new Date(+lastPriceDate.slice(0, 4), +lastPriceDate.slice(4, 6) - 1, +lastPriceDate.slice(6, 8));
+            const maxEnd = lastPriceDate > lastFxDate ? new Date(+lastFxDate.slice(0, 4), +lastFxDate.slice(4, 6) - 1, +lastFxDate.slice(6, 8)) : last;
+            if (isNaN(s) || isNaN(e)) return setInputError("Invalid date! Use YYYYMMDD.");
+            const newStart = s < first ? first : s;
+            const newEnd = e > maxEnd ? maxEnd : e;
+            if (newStart > newEnd) return setInputError("The start date must be earlier than the end date!");
+            const newStartStr = `${newStart.getFullYear()}${String(newStart.getMonth() + 1).padStart(2, "0")}${String(newStart.getDate()).padStart(2, "0")}`;
+            const newEndStr = `${newEnd.getFullYear()}${String(newEnd.getMonth() + 1).padStart(2, "0")}${String(newEnd.getDate()).padStart(2, "0")}`;
+            setStartDateDisplay(newStartStr);
+            setStartDateInput(newStartStr);
+            setEndDateDisplay(newEndStr);
+            setEndDateInput(newEndStr);
+            setInputError("");
+          }}>
+            Apply
+          </button>
         </div>
+        <div className="grid-item grid6" style={{color: "red"}}>{inputError}</div>
       </div>
 
       <div className="grid">
@@ -363,7 +362,7 @@ export default function WalkthroughOverview() {
 
             {showTab === 0 && (
               <>
-                <h4>Profit - {basis === "Local" ? "USD" : basis} {profit.toLocaleString("en-US", {
+                <h4>Profit ({startDateDisplay}-{endDateDisplay}) in {basis === "Local" ? "USD" : basis} = {profit.toLocaleString("en-US", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}</h4>
@@ -426,7 +425,7 @@ export default function WalkthroughOverview() {
                 <th>Market Value</th>
                 <th>Unrealised P/L</th>
                 <th>Realised P/L</th>
-                <th>Total P/L</th>
+                <th>All-time P/L</th>
               </tr>
               </thead>
 
