@@ -237,7 +237,14 @@ export default function Holding() {
   return (
     <>
       <div className="grid">
-        <div className="grid-item grid12" style={{padding: "25px 0 0 0"}}></div>
+        <div className="grid-item grid2"><h2>Holding</h2></div>
+        <div className="grid-item grid10">
+          {(loadingTransactions || loadingPrices || loadingFxs) && (
+            <h3 style={{marginLeft: '20px', color: 'red'}}>
+              {"Loading P/L data for tickers "}{aggregates.missingPLCurrencies?.join(", ")}
+            </h3>
+          )}
+        </div>
       </div>
 
       <div className="grid">
@@ -327,14 +334,7 @@ export default function Holding() {
       </form>
 
       <div className="grid">
-        <div className="grid-item grid2"><h2>Holding</h2></div>
-        <div className="grid-item grid10">
-          {(loadingTransactions || loadingPrices || loadingFxs) && (
-            <h3 style={{marginLeft: '20px', color: 'red'}}>
-              {"Loading P/L data for tickers "}{aggregates.missingPLCurrencies?.join(", ")}
-            </h3>
-          )}
-        </div>
+        <div className="grid-item grid12" style={{padding: "10px 0 0 0"}}></div>
       </div>
 
       {(aggregates.missingPLCurrencies?.length === 0 || (!loadingTransactions && !loadingPrices && !loadingFxs)) && (
@@ -394,6 +394,10 @@ export default function Holding() {
           </div>
         </div>
       )}
+
+      <div className="grid">
+        <div className="grid-item grid12" style={{padding: "10px 0 0 0"}}></div>
+      </div>
 
       <div>
         <table>
