@@ -3,8 +3,12 @@
 import React, {useEffect, useRef, useState} from "react";
 import { postTransactionAI } from "@/hooks_protected/useTransactionAI";
 import styles from "./TransactionsAI.module.css";
+import {getTransactions} from "@/hooks_protected/useTransactionDatabase";
+import {useTransactions} from "@/context/TransactionContext";
 
 export default function TransactionAI() {
+  const {setTransactions} = useTransactions();
+
   const [userText, setUserText] = useState("");
   const [messages, setMessages] = useState([
     { from: "ai", text: "Welcome! Please enter a transaction instruction to get started." },
@@ -14,13 +18,13 @@ export default function TransactionAI() {
   const [incompleteTransactions, setIncompleteTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const chatWindowRef = useRef(null); // <-- add this ref
+  const chatWindowRef = useRef(null);
 
   useEffect(() => {
     if (chatWindowRef.current) {
       chatWindowRef.current.scrollTop = chatWindowRef.current.scrollHeight;
     }
-  }, [messages]); // <-- dependency on messages
+  }, [messages]);
 
   // Send message to AI
   const sendMessage = async () => {
@@ -31,15 +35,15 @@ export default function TransactionAI() {
     setLoading(true);
 
     // Call AI
-    await postTransactionAI(
+    const response = await postTransactionAI(
       {
         user_text: userText,
         prev_incomplete_transactions: incompleteTransactions
       },
       setMessages,
-      setIncompleteTransactions
+      setIncompleteTransactions,
+      setTransactions
     );
-
     setUserText("");
     setLoading(false);
   };
@@ -54,7 +58,7 @@ export default function TransactionAI() {
 
   return (
     <>
-      <h2>Change Transactions</h2>
+      <h2>Add Transactions</h2>
       <div className="grid">
         <div className="grid-item grid6">
           <div className={styles.chatWindow} ref={chatWindowRef}>
