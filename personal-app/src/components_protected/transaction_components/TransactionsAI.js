@@ -3,7 +3,6 @@
 import React, {useEffect, useRef, useState} from "react";
 import { postTransactionAI } from "@/hooks_protected/useTransactionAI";
 import styles from "./TransactionsAI.module.css";
-import {getTransactions} from "@/hooks_protected/useTransactionDatabase";
 import {useTransactions} from "@/context/TransactionContext";
 
 export default function TransactionAI() {
@@ -35,7 +34,7 @@ export default function TransactionAI() {
     setLoading(true);
 
     // Call AI
-    const response = await postTransactionAI(
+    await postTransactionAI(
       {
         user_text: userText,
         prev_incomplete_transactions: incompleteTransactions
