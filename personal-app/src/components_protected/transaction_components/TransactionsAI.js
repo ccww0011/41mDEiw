@@ -28,10 +28,8 @@ export default function TransactionAI() {
   const sendMessage = async () => {
     if (!userText.trim() || loading) return;
 
-
     setMessages((prev) => [...prev, { from: "user", text: userText }]);
     setLoading(true);
-
 
     await postTransactionAI(
       {
