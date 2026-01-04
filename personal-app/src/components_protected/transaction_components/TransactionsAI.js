@@ -25,15 +25,12 @@ export default function TransactionAI() {
     }
   }, [messages]);
 
-  // Send message to AI
   const sendMessage = async () => {
     if (!userText.trim() || loading) return;
 
-    // Add user's message
     setMessages((prev) => [...prev, { from: "user", text: userText }]);
     setLoading(true);
 
-    // Call AI
     await postTransactionAI(
       {
         user_text: userText,
