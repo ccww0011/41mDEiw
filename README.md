@@ -2,7 +2,7 @@ Note: Backend code is not included in this repo.
 
 A website for multi-currency portfolio analysis\
 <img width="300" height="250" alt="image" src="https://github.com/user-attachments/assets/604a3b5e-f687-4698-8893-5a16392c7c7a" />
-<img width="400" height="250" alt="image" src="https://github.com/user-attachments/assets/a13e680f-0689-4b45-88da-632a0755ef49" />
+<img width="500" height="250" alt="image" src="https://github.com/user-attachments/assets/a13e680f-0689-4b45-88da-632a0755ef49" />
 
 
 
