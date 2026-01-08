@@ -7,15 +7,28 @@ export default function Demo() {
   const projects = [
     {
       imageSrc: "/Personal.jpg",
-      title: 'This site - A Full-stack Application',
+      title: 'This site - Stock Analytics Site',
       description: 'A site for multi-currency portfolio analysis',
       features: [
-        'Implemented a contact function with Google reCAPTCHA which notifies owners once per day',
-        'Setup authentication with credentials and authorisation with cookies with AWS Cognito',
-        'Ran cron jobs that automatically updates market data in Amazon DynamoDB database daily',
-        'Used Serverless backend, NoSQL database, OAuth2 and httpOnly cookies',
+        'Authentication & authorisation -  OAuth2, httpOnly cookies, AWS Cognito',
+        'Extract data - Google Gemma3 Chatbot',
+        'Market data - AWS Scheduler, cron job',
+        'News - RSS news feed',
+        'Validate & load - Lambda, API Gateway',
+        'Store & transform data - DynamoDB, React JS',
+        'Security - Google reCAPTCHA',
+        'Contact email - AWS SNS'
       ],
       button: {route: "/demo", text: "Try it"}
+    },
+    {
+      imageSrc: "/Personal.jpg",
+      title: 'A little game',
+      description: 'Sudoku',
+      features: [
+        'Technical deep dive on backtracking algorithm'
+      ],
+      button: {route: "/sudoku", text: "Have fun"}
     },
     {
       imageSrc: "/EqualPay.jpg",
