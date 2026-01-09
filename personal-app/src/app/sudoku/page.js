@@ -279,6 +279,9 @@ export default function SudokuPage() {
                       <td
                         key={c}
                         className={`${styles.sudokuCell} ${subgridRight ? styles.subgridBorderRight : ""} ${subgridBottom ? styles.subgridBorderBottom : ""}`}
+                        onClick={() => {
+                          if (showHint) revealHint(r, c);
+                        }}
                       >
                         <div
                           style={{
@@ -310,7 +313,7 @@ export default function SudokuPage() {
       </div>
 
 
-        <div style={{ paddingTop: 10, textAlign: "center", color: "red" }}>
+      <div style={{paddingTop: 10, textAlign: "center", color: "red" }}>
         {msg}
       </div>
     </div>
