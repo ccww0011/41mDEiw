@@ -12,255 +12,290 @@ export default function SudokuPage() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [showHint, setShowHint] = useState(false);
+
   const [mMask, setMMask] = useState([]);
   const [nMask, setNMask] = useState([]);
   const [bMask, setBMask] = useState([]);
 
+  const [candidateFilter, setCandidateFilter] = useState(new Set());
+  const [usedHints, setUsedHints] = useState(0);
+
+  const LEN = gridSize * gridSize;
+  const hintLimit = gridSize; // pattern-based: 2/3/4 hints
+
   // Generate puzzle
   const generate = async () => {
     setLoading(true);
-    const [newPuzzle, newAnswer, newMMask, newNMask, newBMask] = await generateSudokuAsync(gridSize);
+
+    const [newPuzzle, newAnswer, newMMask, newNMask, newBMask] =
+      await generateSudokuAsync(gridSize);
+
     setPuzzle(newPuzzle);
     setAnswer(newAnswer);
-    setUserGrid(newPuzzle.map((row) => [...row]));
+    setUserGrid(newPuzzle.map(row => [...row]));
     setMMask(newMMask);
     setNMask(newNMask);
     setBMask(newBMask);
+
     setShowHint(false);
-    setLoading(false);
+    setCandidateFilter(new Set());
+    setUsedHints(0);
     setMsg("");
+
+    setLoading(false);
   };
 
   useEffect(() => {
     generate();
   }, [gridSize]);
 
-  // Compute candidates for a cell
+  // Compute candidates
   const getCandidates = (row, col) => {
-    if (puzzle[row][col] > 0) return []; // fixed cells have no candidates
+    if (
+      !puzzle[row] ||
+      !userGrid[row] ||
+      puzzle[row][col] === undefined
+    ) {
+      return [];
+    }
 
-    const LEN = gridSize * gridSize;
+    if (puzzle[row][col] > 0) return [];
+
     const FULL = (1 << (LEN + 1)) - 2;
-    const box = Math.floor(row / gridSize) * gridSize + Math.floor(col / gridSize);
+    const box =
+      Math.floor(row / gridSize) * gridSize +
+      Math.floor(col / gridSize);
 
     let usedMask = 0;
 
-// Include user's inputs in the mask
     for (let i = 0; i < LEN; i++) {
-      if (userGrid[row][i] > 0) usedMask |= 1 << userGrid[row][i]; // row
-      if (userGrid[i][col] > 0) usedMask |= 1 << userGrid[i][col]; // column
+      const rowVal = userGrid[row]?.[i] ?? 0;
+      const colVal = userGrid[i]?.[col] ?? 0;
+      if (rowVal > 0) usedMask |= 1 << rowVal;
+      if (colVal > 0) usedMask |= 1 << colVal;
     }
 
-    const boxStartRow = Math.floor(row / gridSize) * gridSize;
-    const boxStartCol = Math.floor(col / gridSize) * gridSize;
+    const br = Math.floor(row / gridSize) * gridSize;
+    const bc = Math.floor(col / gridSize) * gridSize;
+
     for (let r = 0; r < gridSize; r++) {
       for (let c = 0; c < gridSize; c++) {
-        const val = userGrid[boxStartRow + r][boxStartCol + c];
+        const val = userGrid[br + r]?.[bc + c] ?? 0;
         if (val > 0) usedMask |= 1 << val;
       }
     }
 
-    let free = FULL & ~(mMask[row] | nMask[col] | bMask[box] | usedMask);
-
+    const free = FULL & ~(mMask[row] | nMask[col] | bMask[box] | usedMask);
 
     const candidates = [];
-    while (free) {
-      const bit = free & -free;
-      free ^= bit;
+    let temp = free;
+    while (temp) {
+      const bit = temp & -temp;
+      temp ^= bit;
       candidates.push(Math.log2(bit) | 0);
     }
+
     return candidates;
   };
 
   // Input handling
   const handleInput = (row, col, value) => {
     const val = parseInt(value) || 0;
-    setUserGrid((prev) => {
-      const copy = prev.map((r) => [...r]);
+    setUserGrid(prev => {
+      const copy = prev.map(r => [...r]);
       copy[row][col] = val;
       return copy;
     });
   };
 
-  const handleKeyDown = (e, row, col) => {
-    const total = gridSize * gridSize;
-    if (e.key === "Tab") {
-      e.preventDefault();
-      let nextRow = row;
-      let nextCol = col;
-      const direction = e.shiftKey ? -1 : 1;
-
-      while (true) {
-        nextCol += direction;
-        if (nextCol >= total) {
-          nextCol = 0;
-          nextRow = (nextRow + 1) % total;
-        } else if (nextCol < 0) {
-          nextCol = total - 1;
-          nextRow = (nextRow - 1 + total) % total;
-        }
-
-        const nextInput = document.querySelector(
-          `input[data-row='${nextRow}'][data-col='${nextCol}']`
-        );
-        if (nextInput) {
-          nextInput.focus();
-          break;
-        }
-        if (nextRow === row && nextCol === col) break;
-      }
+  // Hint reveal
+  const revealHint = (row, col) => {
+    if (usedHints >= hintLimit) {
+      setMsg(`No hints left (${hintLimit})`);
+      return;
     }
+    if (puzzle[row][col] > 0) return;
+
+    setUserGrid(prev => {
+      const copy = prev.map(r => [...r]);
+      copy[row][col] = answer[row][col];
+      return copy;
+    });
+
+    setPuzzle(prev => {
+      const copy = prev.map(r => [...r]);
+      copy[row][col] = answer[row][col];
+      return copy;
+    });
+
+    setUsedHints(h => h + 1);
   };
 
+  // Submit
   const handleSubmit = () => {
     let correct = true;
-    for (let i = 0; i < puzzle.length; i++) {
-      for (let j = 0; j < puzzle.length; j++) {
+    for (let i = 0; i < LEN; i++) {
+      for (let j = 0; j < LEN; j++) {
         if (userGrid[i][j] !== answer[i][j]) correct = false;
       }
     }
-    setMsg(correct ? "Congratulations! Sudoku is correct!" : "Some cells are wrong.");
+    setMsg(correct ? "Congratulations!" : "Some cells are wrong.");
   };
 
   return (
     <div className="container">
+      {/* Controls */}
       <div className="grid">
-        <div className="grid-item grid2">
-          <h2>Sudoku</h2>
-        </div>
+        <div className="grid-item grid2"><h2>Sudoku</h2></div>
         <div className="grid-item grid2">
           <select
             value={gridSize}
-            onChange={(e) => setGridSize(parseInt(e.target.value))}
+            onChange={e => setGridSize(+e.target.value)}
             disabled={loading}
           >
-            <option value={2}>4x4</option>
-            <option value={3}>9x9</option>
-            <option value={4}>16x16</option>
+            <option value={2}>Easy 4x4</option>
+            <option value={3}>Hard 9x9</option>
+            <option value={4}>Extreme 16x16</option>
           </select>
         </div>
         <div className="grid-item grid2">
-          <button onClick={generate} disabled={loading}>
-            Generate New
-          </button>
+          <button onClick={generate} disabled={loading}>Generate</button>
         </div>
         <div className="grid-item grid2"></div>
         <div className="grid-item grid2">
-          <button onClick={() => setShowHint(!showHint)} disabled={loading}>
+          <button onClick={() => setShowHint(v => !v)} disabled={loading}>
             {showHint ? "Hide Hint" : "Show Hint"}
           </button>
         </div>
         <div className="grid-item grid2">
-          <button onClick={handleSubmit} disabled={loading}>
-            Submit
-          </button>
+          <button onClick={handleSubmit} disabled={loading}>Submit</button>
         </div>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "center", gap: "40px", marginTop: "20px" }}>
+      {/* Tables */}
+      <div className={styles.sudokuContainer}>
         {/* Main Sudoku Table */}
         <div className={styles.sudokuWrapper}>
           {loading ? (
             <div className={styles.sudokuLoading}>Loading Sudoku...</div>
           ) : (
-            <table className={styles.sudokuTable}>
-              <tbody>
-              {puzzle.map((row, rowIndex) => (
-                <tr key={rowIndex}>
-                  {row.map((cell, colIndex) => {
-                    const isFixed = cell > 0;
-                    const subgridRight =
-                      (colIndex + 1) % gridSize === 0 &&
-                      colIndex !== puzzle.length - 1;
-                    const subgridBottom =
-                      (rowIndex + 1) % gridSize === 0 &&
-                      rowIndex !== puzzle.length - 1;
-                    return (
-                      <td
-                        key={colIndex}
-                        className={`${styles.sudokuCell} ${
-                          isFixed ? styles.sudokuCellFixed : ""
-                        } ${subgridRight ? styles.subgridBorderRight : ""} ${
-                          subgridBottom ? styles.subgridBorderBottom : ""
-                        }`}
-                      >
-                        {isFixed ? (
-                          <span className={styles.sudokuNumber}>{cell}</span>
-                        ) : (
-                          <input
-                            type="number"
-                            min="1"
-                            max={gridSize * gridSize}
-                            value={userGrid[rowIndex][colIndex] || ""}
-                            onChange={(e) =>
-                              handleInput(rowIndex, colIndex, e.target.value)
-                            }
-                            onKeyDown={(e) =>
-                              handleKeyDown(e, rowIndex, colIndex)
-                            }
-                            data-row={rowIndex}
-                            data-col={colIndex}
-                            className={styles.sudokuInput}
-                          />
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-              </tbody>
-            </table>
+            <div className={styles.sudokuWrapper} style={{ flexDirection: "column", alignItems: "center" }}>
+              <div style={{ textAlign: "center", marginTop: 5 }}>
+                {showHint ? <p> Click on a cell in the right gird to review the answer on that cell. Hints left: {hintLimit - usedHints}</p> : <p>Enjoy!</p>}
+              </div>
+
+              <table className={styles.sudokuTable}>
+                <tbody>
+                {puzzle.map((row, r) => (
+                  <tr key={r}>
+                    {row.map((cell, c) => {
+                      const isFixed = cell > 0;
+                      const subgridRight =
+                        (c + 1) % gridSize === 0 && c !== puzzle.length - 1;
+                      const subgridBottom =
+                        (r + 1) % gridSize === 0 && r !== puzzle.length - 1;
+
+                      return (
+                        <td
+                          key={c}
+                          className={`${styles.sudokuCell} ${isFixed ? styles.sudokuCellFixed : ""} ${subgridRight ? styles.subgridBorderRight : ""} ${subgridBottom ? styles.subgridBorderBottom : ""}`}
+                        >
+                          {isFixed ? (
+                            <span>{cell}</span>
+                          ) : (
+                            <input
+                              type="number"
+                              min="1"
+                              max={LEN}
+                              value={userGrid[r][c] || ""}
+                              onChange={e => handleInput(r, c, e.target.value)}
+                              data-row={r}
+                              data-col={c}
+                              className={styles.sudokuInput}
+                            />
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
 
-        {/* Candidates Table */}
-        {showHint && (
-          <div className={styles.sudokuWrapper}>
+        {/* Candidates Section */}
+        {showHint && !loading && puzzle.length > 0 && userGrid.length > 0 && (
+          <div className={styles.sudokuWrapper} style={{ flexDirection: "column", alignItems: "center" }}>
+
+            {/* Candidate Filter Buttons */}
+            <div style={{ marginBottom: "8px", display: "flex", justifyContent: "center", flexWrap: "wrap", alignItems: "center" }}>
+              <button style={{ width: "50px" }} onClick={() => setCandidateFilter(new Set())}>
+                ALL
+              </button>
+              {Array.from({ length: gridSize * gridSize }, (_, i) => i + 1).map((n) => (
+                <button
+                  key={n}
+                  onClick={() =>
+                    setCandidateFilter((prev) => {
+                      const next = new Set(prev);
+                      next.has(n) ? next.delete(n) : next.add(n);
+                      return next;
+                    })
+                  }
+                  style={{
+                    width: "35px",
+                    backgroundColor: candidateFilter.has(n) ? "#ffd" : "",
+                  }}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+
+            {/* Candidate Grid Table */}
             <table className={styles.sudokuTable}>
               <tbody>
-              {puzzle.map((row, rowIndex) => (
-                <tr key={rowIndex}>
-                  {row.map((cell, colIndex) => {
-                    const candidates = userGrid[rowIndex][colIndex] === 0
-                      ? getCandidates(rowIndex, colIndex)
-                      : [];
-                    const subgridRight =
-                      (colIndex + 1) % gridSize === 0 &&
-                      colIndex !== puzzle.length - 1;
-                    const subgridBottom =
-                      (rowIndex + 1) % gridSize === 0 &&
-                      rowIndex !== puzzle.length - 1;
+              {puzzle.map((row, r) => (
+                <tr key={r}>
+                  {row.map((_, c) => {
+                    let candidates = userGrid[r][c] === 0 ? getCandidates(r, c) : [];
+                    if (candidateFilter.size) {
+                      candidates = candidates.filter((n) => candidateFilter.has(n));
+                    }
 
-                    // Split candidates into rows of 4 numbers
+                    // Split candidates into rows of 4
                     const rows = [];
                     for (let i = 0; i < candidates.length; i += 4) {
                       rows.push(candidates.slice(i, i + 4));
                     }
 
+                    // Subgrid borders like main table
+                    const subgridRight = (c + 1) % gridSize === 0 && c !== puzzle.length - 1;
+                    const subgridBottom = (r + 1) % gridSize === 0 && r !== puzzle.length - 1;
+
                     return (
                       <td
-                        key={colIndex}
-                        className={`${styles.sudokuCell} ${
-                          subgridRight ? styles.subgridBorderRight : ""
-                        } ${subgridBottom ? styles.subgridBorderBottom : ""}`}
+                        key={c}
+                        className={`${styles.sudokuCell} ${subgridRight ? styles.subgridBorderRight : ""} ${subgridBottom ? styles.subgridBorderBottom : ""}`}
                       >
                         <div
                           style={{
-                            margin: 0,
-                            border: 0,
-                            padding: 0,
-
                             display: "grid",
-                            gridTemplateColumns: "repeat(4, 1fr)",
+                            gridTemplateColumns: "repeat(4, 1fr)", // 4 numbers per row
                             fontSize: "12px",
                             color: "red",
-                            lineHeight: "1",
+                            lineHeight: 1,
                             textAlign: "center",
-                            gap: 0,
+                            gap: "0px",
+                            cursor: "pointer",
                           }}
                         >
-                          {rows.flat().map((num, idx) => (
-                            <span key={idx}>{num}</span>
+                          {rows.flat().map((n, idx) => (
+                            <span key={idx} onClick={() => revealHint(r, c)}>
+                        {n}
+                      </span>
                           ))}
                         </div>
                       </td>
@@ -274,8 +309,9 @@ export default function SudokuPage() {
         )}
       </div>
 
-      <div style={{ paddingTop: "10px", textAlign: "center", color: "red" }}>
-        <p>{msg}</p>
+
+        <div style={{ paddingTop: 10, textAlign: "center", color: "red" }}>
+        {msg}
       </div>
     </div>
   );

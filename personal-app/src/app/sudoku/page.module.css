@@ -1,10 +1,27 @@
-/* Wrapper to center table */
-.sudokuWrapper {
-    width: 100%;
+/* Layout container */
+.sudokuContainer {
     display: flex;
     justify-content: center;
+    align-items: flex-start;
+    gap: 40px;
     margin-top: 20px;
+    flex-wrap: wrap;
 }
+
+/* Wrapper around each table */
+.sudokuWrapper {
+    display: flex;
+    justify-content: center;
+}
+
+/* Stack only on narrow screens */
+@media (max-width: 768px) {
+    .sudokuContainer {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
 
 /* Sudoku table */
 .sudokuTable {
@@ -74,4 +91,9 @@
     font-weight: bold;
     text-align: center;
     padding: 20px;
+}
+
+.candidateCell {
+    min-width: 80px; /* adjust as needed */
+    padding: 4px;
 }

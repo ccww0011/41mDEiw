@@ -154,7 +154,7 @@ export function generateSudoku(N) {
   builder(grid, mMask, nMask, bMask, LEN, N, FULL);
   const answerGrid = grid.map(row => [...row]);
   remover(grid, mMask, nMask, bMask, LEN, N, FULL, NUM_REMOVALS);
-
+  console.log(answerGrid)
   return [grid, answerGrid, mMask, nMask, bMask];
 }
 
