@@ -182,7 +182,7 @@ export default function SudokuPage() {
         {/* Main Sudoku Table */}
         <div className={styles.sudokuWrapper}>
           {loading ? (
-            <div className={styles.sudokuLoading}>Loading Sudoku...</div>
+            <div className={styles.sudokuLoading}>Loading Sudoku... This may take a few seconds.</div>
           ) : (
             <div className={styles.sudokuWrapper} style={{ flexDirection: "column", alignItems: "center" }}>
               <div style={{ textAlign: "center", marginTop: 5 }}>

@@ -22,11 +22,12 @@ export default function Demo() {
       button: {route: "/demo", text: "Try it"}
     },
     {
-      imageSrc: "/Personal.jpg",
+      imageSrc: "/Sudoku.jpg",
       title: 'A little game',
       description: 'Sudoku',
       features: [
-        'Technical deep dive on backtracking algorithm'
+        'Technical deep dive on backtracking algorithm',
+        'Used a Web Worker thread to run the algorithm'
       ],
       button: {route: "/sudoku", text: "Have fun"}
     },
