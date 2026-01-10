@@ -3,7 +3,7 @@
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    gap: 40px;
+    gap: 20px;
     margin-top: 20px;
     flex-wrap: wrap;
 }
@@ -45,7 +45,7 @@
 
 /* Fixed/pre-filled cells */
 .sudokuCellFixed {
-    background-color: #f7fbff;
+    background-color: #efedf5;
     font-family: Helvetica, sans-serif;
     font-size: 16px;
     font-weight: bold;
@@ -63,7 +63,7 @@
 /* Prevent hover/focus background */
 .sudokuCell:hover,
 .sudokuCellFixed:hover {
-    background-color: #f7fbff;
+    background-color: #efedf5;
 }
 
 /* Input cells */
@@ -82,7 +82,7 @@
 }
 .sudokuInput:hover,
 .sudokuInput:focus {
-    background-color: #fff !important;
+    background-color: #fff;
 }
 
 /* Loading overlay */

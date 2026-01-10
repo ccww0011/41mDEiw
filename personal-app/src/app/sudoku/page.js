@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { generateSudokuAsync } from "@/hooks/useSudoku";
 import styles from "./page.module.css";
+
 
 export default function SudokuPage() {
   const [gridSize, setGridSize] = useState(3);
@@ -21,28 +21,31 @@ export default function SudokuPage() {
   const [usedHints, setUsedHints] = useState(0);
 
   const LEN = gridSize * gridSize;
-  const hintLimit = gridSize; // pattern-based: 2/3/4 hints
+  const hintLimit = gridSize - 1;
+  const [hintedCells, setHintedCells] = useState(new Set());
 
-  // Generate puzzle
-  const generate = async () => {
+
+  const generate = () => {
     setLoading(true);
+    const worker = new Worker("/workers/sudokuWorker.js", { type: "module" });
+    worker.postMessage({ gridSize });
+    worker.onmessage = e => {
+      const [newPuzzle, newAnswer, newMMask, newNMask, newBMask] = e.data;
+      setPuzzle(newPuzzle);
+      setAnswer(newAnswer);
+      setUserGrid(newPuzzle.map(row => [...row]));
+      setMMask(newMMask);
+      setNMask(newNMask);
+      setBMask(newBMask);
 
-    const [newPuzzle, newAnswer, newMMask, newNMask, newBMask] =
-      await generateSudokuAsync(gridSize);
+      setShowHint(false);
+      setCandidateFilter(new Set());
+      setUsedHints(0);
+      setMsg("");
 
-    setPuzzle(newPuzzle);
-    setAnswer(newAnswer);
-    setUserGrid(newPuzzle.map(row => [...row]));
-    setMMask(newMMask);
-    setNMask(newNMask);
-    setBMask(newBMask);
-
-    setShowHint(false);
-    setCandidateFilter(new Set());
-    setUsedHints(0);
-    setMsg("");
-
-    setLoading(false);
+      setLoading(false);
+      worker.terminate();
+    };
   };
 
   useEffect(() => {
@@ -128,8 +131,10 @@ export default function SudokuPage() {
       return copy;
     });
 
+    setHintedCells(prev => new Set(prev).add(`${row}-${col}`)); // add this
     setUsedHints(h => h + 1);
   };
+
 
   // Submit
   const handleSubmit = () => {
@@ -181,7 +186,7 @@ export default function SudokuPage() {
           ) : (
             <div className={styles.sudokuWrapper} style={{ flexDirection: "column", alignItems: "center" }}>
               <div style={{ textAlign: "center", marginTop: 5 }}>
-                {showHint ? <p> Click on a cell in the right gird to review the answer on that cell. Hints left: {hintLimit - usedHints}</p> : <p>Enjoy!</p>}
+                {showHint ? <p> Click on a cell in the right gird to reveal the answer on that cell. Hints left: {hintLimit - usedHints}</p> : <p>Enjoy!</p>}
               </div>
 
               <table className={styles.sudokuTable}>
@@ -199,6 +204,7 @@ export default function SudokuPage() {
                         <td
                           key={c}
                           className={`${styles.sudokuCell} ${isFixed ? styles.sudokuCellFixed : ""} ${subgridRight ? styles.subgridBorderRight : ""} ${subgridBottom ? styles.subgridBorderBottom : ""}`}
+                          style={{backgroundColor: hintedCells.has(`${r}-${c}`) ? "#fee6ce" : undefined}}
                         >
                           {isFixed ? (
                             <span>{cell}</span>
@@ -227,11 +233,11 @@ export default function SudokuPage() {
 
         {/* Candidates Section */}
         {showHint && !loading && puzzle.length > 0 && userGrid.length > 0 && (
-          <div className={styles.sudokuWrapper} style={{ flexDirection: "column", alignItems: "center" }}>
+          <div className={styles.sudokuWrapper} style={{flexDirection: "column", alignItems: "center"}}>
 
             {/* Candidate Filter Buttons */}
-            <div style={{ marginBottom: "8px", display: "flex", justifyContent: "center", flexWrap: "wrap", alignItems: "center" }}>
-              <button style={{ width: "50px" }} onClick={() => setCandidateFilter(new Set())}>
+            <div style={{marginBottom: "8px", display: "flex", justifyContent: "center", flexWrap: "wrap", alignItems: "center"}}>
+              <button style={{width: "50px"}} onClick={() => setCandidateFilter(new Set())}>
                 ALL
               </button>
               {Array.from({ length: gridSize * gridSize }, (_, i) => i + 1).map((n) => (
@@ -246,7 +252,8 @@ export default function SudokuPage() {
                   }
                   style={{
                     width: "35px",
-                    backgroundColor: candidateFilter.has(n) ? "#ffd" : "",
+                    backgroundColor: candidateFilter.has(n) ? "#08519c" : "",
+                    color: candidateFilter.has(n) ? "#f7fbff" : "",
                   }}
                 >
                   {n}
