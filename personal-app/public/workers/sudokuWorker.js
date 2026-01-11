@@ -158,9 +158,6 @@ self.onmessage = e => {
     const answerGrid = grid.map(row => [...row]);
     remover(grid, mMask, nMask, bMask, LEN, N, FULL, NUM_REMOVALS);
 
-    answerGrid.forEach((row) => console.log(row))
-
-
     return [grid, answerGrid, mMask, nMask, bMask];
   }
 

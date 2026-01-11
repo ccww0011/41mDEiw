@@ -9,28 +9,48 @@ export default function SudokuPage() {
   const [puzzle, setPuzzle] = useState([]);
   const [answer, setAnswer] = useState([]);
   const [userGrid, setUserGrid] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState("");
-  const [showHint, setShowHint] = useState(false);
 
   const [mMask, setMMask] = useState([]);
   const [nMask, setNMask] = useState([]);
   const [bMask, setBMask] = useState([]);
 
-  const [candidateFilter, setCandidateFilter] = useState(new Set());
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [showHint, setShowHint] = useState(false);
   const [usedHints, setUsedHints] = useState(0);
+
+  const [candidateFilter, setCandidateFilter] = useState(new Set());
 
   const LEN = gridSize * gridSize;
   const hintLimit = gridSize - 1;
   const [hintedCells, setHintedCells] = useState(new Set());
 
 
+  const workerRef = React.useRef(null);
+
+  // Auto-clear temporary messages (like "Some cells are wrong") after 3 seconds
+  useEffect(() => {
+    if (!msg) return;
+    const timer = setTimeout(() => setMsg(""), 3000); // 3 seconds
+    return () => clearTimeout(timer);
+  }, [msg]);
+
+
   const generate = () => {
     setLoading(true);
+
+    // terminate previous worker if exists
+    if (workerRef.current) {
+      workerRef.current.terminate();
+    }
+
     const worker = new Worker("/workers/sudokuWorker.js", { type: "module" });
+    workerRef.current = worker;
+
     worker.postMessage({ gridSize });
     worker.onmessage = e => {
       const [newPuzzle, newAnswer, newMMask, newNMask, newBMask] = e.data;
+
       setPuzzle(newPuzzle);
       setAnswer(newAnswer);
       setUserGrid(newPuzzle.map(row => [...row]));
@@ -41,12 +61,15 @@ export default function SudokuPage() {
       setShowHint(false);
       setCandidateFilter(new Set());
       setUsedHints(0);
+      setHintedCells(new Set());
       setMsg("");
 
       setLoading(false);
       worker.terminate();
+      workerRef.current = null;
     };
   };
+
 
   useEffect(() => {
     generate();
@@ -111,28 +134,71 @@ export default function SudokuPage() {
     });
   };
 
+  // Move focus to next cell with arrow keys
+  const handleKeyDown = (e, row, col) => {
+    const key = e.key;
+    let nr = row;
+    let nc = col;
+    const moveToCell = (r, c) => {
+      const td = document.querySelector(`td[data-row="${r}"][data-col="${c}"]`);
+      if (!td) return;
+
+      const input = td.querySelector("input");
+      if (input) input.focus();
+      else td.focus(); // fixed cell
+    };
+    switch (key) {
+      case "ArrowUp":
+        nr = row - 1 < 0 ? LEN - 1 : row - 1;
+        break;
+      case "ArrowDown":
+        nr = (row + 1) % LEN;
+        break;
+      case "ArrowLeft":
+        nc = col - 1 < 0 ? LEN - 1 : col - 1;
+        break;
+      case "ArrowRight":
+        nc = (col + 1) % LEN;
+        break;
+      default:
+        return;
+    }
+    e.preventDefault();
+    moveToCell(nr, nc);
+  };
+
   // Hint reveal
   const revealHint = (row, col) => {
-    if (usedHints >= hintLimit) {
-      setMsg(`No hints left (${hintLimit})`);
-      return;
-    }
-    if (puzzle[row][col] > 0) return;
+    const key = `${row}-${col}`;
 
-    setUserGrid(prev => {
-      const copy = prev.map(r => [...r]);
-      copy[row][col] = answer[row][col];
-      return copy;
+    setUsedHints(prevHints => {
+      if (hintedCells.has(key)) return prevHints;
+      if (prevHints >= hintLimit) {
+        setMsg(`No hints left (${hintLimit})`);
+        return hintLimit;
+      }
+
+      setUserGrid(prev => {
+        const copy = prev.map(r => [...r]);
+        copy[row][col] = answer[row][col];
+        return copy;
+      });
+
+      setPuzzle(prev => {
+        const copy = prev.map(r => [...r]);
+        copy[row][col] = answer[row][col];
+        return copy;
+      });
+
+      // Add to hinted cells safely
+      setHintedCells(prev => {
+        const next = new Set(prev);
+        next.add(key);
+        return next;
+      });
+
+      return prevHints + 1;
     });
-
-    setPuzzle(prev => {
-      const copy = prev.map(r => [...r]);
-      copy[row][col] = answer[row][col];
-      return copy;
-    });
-
-    setHintedCells(prev => new Set(prev).add(`${row}-${col}`)); // add this
-    setUsedHints(h => h + 1);
   };
 
 
@@ -146,6 +212,15 @@ export default function SudokuPage() {
     }
     setMsg(correct ? "Congratulations!" : "Some cells are wrong.");
   };
+
+  const topMessage = loading
+    ? "Loading Sudoku... This may take a few seconds."
+    : showHint
+      ? `Click on a cell in the right grid to reveal the answer on that cell. Hints left: ${hintLimit - usedHints}`
+      : msg
+        ? msg
+        : "Enjoy!";
+
 
   return (
     <div className="container">
@@ -177,137 +252,203 @@ export default function SudokuPage() {
         </div>
       </div>
 
-      {/* Tables */}
+      {/* Main Container: Filters + Grid & Message */}
       <div className={styles.sudokuContainer}>
-        {/* Main Sudoku Table */}
-        <div className={styles.sudokuWrapper}>
-          {loading ? (
-            <div className={styles.sudokuLoading}>Loading Sudoku... This may take a few seconds.</div>
-          ) : (
-            <div className={styles.sudokuWrapper} style={{ flexDirection: "column", alignItems: "center" }}>
-              <div style={{ textAlign: "center", marginTop: 5 }}>
-                {showHint ? <p> Click on a cell in the right gird to reveal the answer on that cell. Hints left: {hintLimit - usedHints}</p> : <p>Enjoy!</p>}
-              </div>
 
-              <table className={styles.sudokuTable}>
-                <tbody>
-                {puzzle.map((row, r) => (
-                  <tr key={r}>
-                    {row.map((cell, c) => {
-                      const isFixed = cell > 0;
-                      const subgridRight =
-                        (c + 1) % gridSize === 0 && c !== puzzle.length - 1;
-                      const subgridBottom =
-                        (r + 1) % gridSize === 0 && r !== puzzle.length - 1;
+        {/* Left Column: Vertical candidate buttons */}
+        {showHint && !loading && (
+          <div style={{ width: "50px", display: "flex", flexDirection: "column" }}>
 
-                      return (
-                        <td
-                          key={c}
-                          className={`${styles.sudokuCell} ${isFixed ? styles.sudokuCellFixed : ""} ${subgridRight ? styles.subgridBorderRight : ""} ${subgridBottom ? styles.subgridBorderBottom : ""}`}
-                          style={{backgroundColor: hintedCells.has(`${r}-${c}`) ? "#fee6ce" : undefined}}
-                        >
-                          {isFixed ? (
-                            <span>{cell}</span>
-                          ) : (
-                            <input
-                              type="number"
-                              min="1"
-                              max={LEN}
-                              value={userGrid[r][c] || ""}
-                              onChange={e => handleInput(r, c, e.target.value)}
-                              data-row={r}
-                              data-col={c}
-                              className={styles.sudokuInput}
-                            />
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+            {/* ALL button (first) */}
+            <button
+              onClick={() => setCandidateFilter(new Set())}
+              style={{
+                width: "100%",
+                height: "40px",
+                fontSize: "18px",
+                backgroundColor: candidateFilter.size === 0 ? "#d94801" : "#fdae6b",
+                color: candidateFilter.size === 0 ? "#fff" : "#4d2600",
+                border: "none",
+                cursor: "pointer",
+              }}
+              onMouseEnter={e => {
+                if (candidateFilter.size !== 0) {
+                  e.currentTarget.style.backgroundColor = "#d94801";
+                  e.currentTarget.style.color = "#fff";
+                }
+              }}
+              onMouseLeave={e => {
+                if (candidateFilter.size !== 0) {
+                  e.currentTarget.style.backgroundColor = "#fdae6b";
+                  e.currentTarget.style.color = "#4d2600";
+                }
+              }}
+            >
+              ALL
+            </button>
 
-        {/* Candidates Section */}
-        {showHint && !loading && puzzle.length > 0 && userGrid.length > 0 && (
-          <div className={styles.sudokuWrapper} style={{flexDirection: "column", alignItems: "center"}}>
-
-            {/* Candidate Filter Buttons */}
-            <div style={{marginBottom: "8px", display: "flex", justifyContent: "center", flexWrap: "wrap", alignItems: "center"}}>
-              <button style={{width: "50px"}} onClick={() => setCandidateFilter(new Set())}>
-                ALL
-              </button>
-              {Array.from({ length: gridSize * gridSize }, (_, i) => i + 1).map((n) => (
+            {/* Number buttons */}
+            {Array.from({ length: gridSize * gridSize }, (_, i) => i + 1).map((n) => {
+              const selected = candidateFilter.has(n);
+              return (
                 <button
                   key={n}
                   onClick={() =>
-                    setCandidateFilter((prev) => {
+                    setCandidateFilter(prev => {
                       const next = new Set(prev);
                       next.has(n) ? next.delete(n) : next.add(n);
                       return next;
                     })
                   }
                   style={{
-                    width: "35px",
-                    backgroundColor: candidateFilter.has(n) ? "#08519c" : "",
-                    color: candidateFilter.has(n) ? "#f7fbff" : "",
+                    width: "100%",
+                    height: "40px",
+                    fontSize: "18px",
+                    backgroundColor: selected ? "#d94801" : "#fdae6b",
+                    color: selected ? "#fff" : "#4d2600",
+                    border: "none",
+                    cursor: "pointer",
+                    transition: "background-color 0.2s, color 0.2s",
+                  }}
+                  onMouseEnter={e => {
+                    if (!selected) {
+                      e.currentTarget.style.backgroundColor = "#d94801";
+                      e.currentTarget.style.color = "#fff";
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!selected) {
+                      e.currentTarget.style.backgroundColor = "#fdae6b";
+                      e.currentTarget.style.color = "#4d2600";
+                    }
                   }}
                 >
                   {n}
                 </button>
-              ))}
-            </div>
+              );
+            })}
+          </div>
+        )}
 
-            {/* Candidate Grid Table */}
+        {/* Right Column: Message + Sudoku grid */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+
+          {/* Message line (unified) */}
+          <div
+            style={{
+              height: "40px",
+              minWidth: "400px",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              textAlign: "center",
+            }}
+          >
+            <h4>{topMessage}</h4>
+          </div>
+
+          {/* Sudoku grid */}
+          <div className={styles.sudokuWrapper} style={{ flexDirection: "column", alignItems: "center" }}>
             <table className={styles.sudokuTable}>
               <tbody>
-              {puzzle.map((row, r) => (
+              {(loading ? Array.from({ length: LEN }, () => Array.from({ length: LEN })) : puzzle).map((row, r) => (
                 <tr key={r}>
-                  {row.map((_, c) => {
-                    let candidates = userGrid[r][c] === 0 ? getCandidates(r, c) : [];
-                    if (candidateFilter.size) {
-                      candidates = candidates.filter((n) => candidateFilter.has(n));
-                    }
-
-                    // Split candidates into rows of 4
-                    const rows = [];
-                    for (let i = 0; i < candidates.length; i += 4) {
-                      rows.push(candidates.slice(i, i + 4));
-                    }
-
-                    // Subgrid borders like main table
-                    const subgridRight = (c + 1) % gridSize === 0 && c !== puzzle.length - 1;
-                    const subgridBottom = (r + 1) % gridSize === 0 && r !== puzzle.length - 1;
+                  {row.map((cell, c) => {
+                    const isFixed = !loading && cell > 0;
+                    const subgridRight = (c + 1) % gridSize === 0 && c !== (loading ? LEN : puzzle.length) - 1;
+                    const subgridBottom = (r + 1) % gridSize === 0 && r !== (loading ? LEN : puzzle.length) - 1;
 
                     return (
                       <td
                         key={c}
-                        className={`${styles.sudokuCell} ${subgridRight ? styles.subgridBorderRight : ""} ${subgridBottom ? styles.subgridBorderBottom : ""}`}
-                        onClick={() => {
-                          if (showHint) revealHint(r, c);
+                        className={`${styles.sudokuCell} ${isFixed ? styles.sudokuCellFixed : ""} ${subgridRight ? styles.subgridBorderRight : ""} ${subgridBottom ? styles.subgridBorderBottom : ""}`}
+                        style={{
+                          position: "relative",
+                          backgroundColor: !loading && hintedCells.has(`${r}-${c}`) ? "#fee6ce" : undefined,
                         }}
+                        data-row={r}
+                        data-col={c}
+                        tabIndex={0}
+                        onKeyDown={e => handleKeyDown(e, r, c)} // Arrow keys
                       >
-                        <div
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns: "repeat(4, 1fr)", // 4 numbers per row
-                            fontSize: "12px",
-                            color: "red",
-                            lineHeight: 1,
-                            textAlign: "center",
-                            gap: "0px",
-                            cursor: "pointer",
-                          }}
+                        {!loading ? (
+                          isFixed ? (
+                            <span style={{display: "flex", justifyContent: "center", alignItems: "center", height: "100%"}}>{cell}</span>
+                          ) : (
+                            <>
+                              <input
+                                type="number"
+                                min="1"
+                                max={LEN}
+                                value={userGrid[r][c] || ""}
+                                onChange={e => handleInput(r, c, e.target.value)}
+                                data-row={r}
+                                data-col={c}
+                                className={styles.sudokuInput}
+                                tabIndex={0}
+                              />
+
+                              {showHint && userGrid[r][c] === 0 && (
+                                <div
+                                  className={styles.candidatesOverlay}
+                                  style={{
+                                    gridTemplateColumns: `repeat(4, 1fr)`,
+                                  }}
+                                >
+                                  {getCandidates(r, c)
+                                    .filter(n => candidateFilter.size === 0 || candidateFilter.has(n))
+                                    .map((n, idx) => (
+                                      <span key={idx}>{n}</span>
+                                    ))}
+                                </div>
+                              )}
+                            </>
+                          )
+                        ) : (
+                          <span>&nbsp;</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* NEW: Hint candidate grid */}
+        {showHint && !loading && (
+          <div className={styles.hintGridWrapper}>
+            <table className={styles.hintSudokuTable}>
+              <tbody>
+              {puzzle.map((row, r) => (
+                <tr key={r}>
+                  {row.map((cell, c) => {
+                    const disabled =
+                      cell > 0 ||
+                      userGrid[r][c] > 0 ||
+                      getCandidates(r, c).length === 0;
+
+                    const subgridRight =
+                      (c + 1) % gridSize === 0 && c !== puzzle.length - 1;
+                    const subgridBottom =
+                      (r + 1) % gridSize === 0 && r !== puzzle.length - 1;
+
+                    return (
+                      <td
+                        key={c}
+                        className={`${styles.hintSudokuCell}
+                  ${subgridRight ? styles.subgridBorderRight : ""}
+                  ${subgridBottom ? styles.subgridBorderBottom : ""}`}
+                      >
+                        <button
+                          className={styles.hintCellButton}
+                          disabled={disabled}
+                          onClick={() => revealHint(r, c)}
                         >
-                          {rows.flat().map((n, idx) => (
-                            <span key={idx} onClick={() => revealHint(r, c)}>
-                        {n}
-                      </span>
-                          ))}
-                        </div>
+                          ?
+                        </button>
                       </td>
                     );
                   })}
@@ -317,11 +458,6 @@ export default function SudokuPage() {
             </table>
           </div>
         )}
-      </div>
-
-
-      <div style={{paddingTop: 10, textAlign: "center", color: "red" }}>
-        {msg}
       </div>
     </div>
   );
