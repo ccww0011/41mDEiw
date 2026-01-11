@@ -213,13 +213,7 @@ export default function SudokuPage() {
     setMsg(correct ? "Congratulations!" : "Some cells are wrong.");
   };
 
-  const topMessage = loading
-    ? "Loading Sudoku... This may take a few seconds."
-    : showHint
-      ? `Click on a cell in the right grid to reveal the answer on that cell. Hints left: ${hintLimit - usedHints}`
-      : msg
-        ? msg
-        : "Enjoy!";
+  const topMessage = msg || (loading ? "Loading Sudoku... This may take a few seconds." : "Enjoy!");
 
 
   return (
@@ -420,6 +414,18 @@ export default function SudokuPage() {
         {/* NEW: Hint candidate grid */}
         {showHint && !loading && (
           <div className={styles.hintGridWrapper}>
+            <div
+              style={{
+                height: "40px",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                textAlign: "center",
+              }}
+            >
+              <h4>Click to reveal answer.</h4>
+            </div>
+
             <table className={styles.hintSudokuTable}>
               <tbody>
               {puzzle.map((row, r) => (
@@ -456,6 +462,18 @@ export default function SudokuPage() {
               ))}
               </tbody>
             </table>
+
+            <div
+              style={{
+                height: "40px",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                textAlign: "center",
+              }}
+            >
+              <h4>Hints left: {hintLimit - usedHints}</h4>
+            </div>
           </div>
         )}
       </div>
