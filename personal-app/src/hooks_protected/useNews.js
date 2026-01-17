@@ -1,5 +1,13 @@
 import {logout} from "@/hooks_protected/useAuth";
 
+const ENTITIES = {
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#39;": "'",
+};
+
 export async function useNews() {
   try {
     let url = process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/api/news";
@@ -15,7 +23,12 @@ export async function useNews() {
       if (contentType && contentType.includes('text/html')) {
         return {message: "Unauthorised.", status: 'Unauthorised'};
       } else {
-        return {data: items, message: items.message, status: 'Success'};
+        console.log(items);
+        const decodedItems = items.map(item => ({
+          ...item,
+          title: item.title.replace(/&amp;|&lt;|&gt;|&quot;|&#39;/g, m => ENTITIES[m])
+        }));
+        return {data: decodedItems, message: items.message, status: 'Success'};
       }
     } else if (response.status === 401 || response.status === 403) {
       logout();

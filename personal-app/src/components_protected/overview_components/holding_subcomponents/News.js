@@ -12,7 +12,7 @@ export function News() {
     try {
       const result = await useNews();
       if (result.status === "Success") {
-        setNewsData(result.data.slice(0, 10));
+        setNewsData(result.data.slice(0, 12));
       } else if (result.status === "Unauthorised") {
         setError("Error loading news. Please try again.");
         setNewsData([]);
