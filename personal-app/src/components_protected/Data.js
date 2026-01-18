@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import TransactionsAll from "@/components_protected/transaction_components/TransactionsAll";
+import Transactions from "@/components_protected/data_components/Transactions";
+import Dividends from "@/components_protected/data_components/Dividends";
 
-export default function Transaction() {
+export default function Data() {
 
 
-  const [showTab, setShowTab] = useState("All");
-  const tabs = ["All"];
+  const [showTab, setShowTab] = useState("Transactions");
+  const tabs = ["Transactions", "Dividends"];
 
 
   return (
@@ -29,7 +30,8 @@ export default function Transaction() {
         ))}
       </div>
 
-      {showTab === 'All' && <TransactionsAll/>}
+      {showTab === 'Transactions' && <Transactions/>}
+      {showTab === 'Dividends' && <Dividends/>}
     </>
   );
 }

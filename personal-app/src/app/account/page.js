@@ -1,61 +1,43 @@
 "use client"
 
 import ProtectedLayout from "@/app/protected-layout";
-import {useState} from "react";
+import React, {useState} from "react";
 import Market from "@/components_protected/Market";
 import Overview from "@/components_protected/Overview";
-import Transaction from "@/components_protected/Transaction";
+import Data from "@/components_protected/Data";
 
 export default function LoginPage() {
   // WalkthroughOverview, WalkthroughMarket, WalkthroughTransaction
-  const [showTab, setShowTab] = useState("WalkthroughOverview");
+  const [showTab, setShowTab] = useState("Overview");
+  const tabs = ["Overview", "Market", "Data"];
 
   return (
     <ProtectedLayout>
       <div className="container">
         <div className="grid">
-          <div className="grid-item grid12" style={{padding: "20px 0 0 0"}}></div>
-          <div className="grid-item grid2">
-            <button
-              type="button"
-              onClick={() => setShowTab("WalkthroughOverview")}
-              style={{
-                backgroundColor: showTab === "WalkthroughOverview" ? "#08519c" : undefined,
-                color: showTab === "WalkthroughOverview" ? "#f7fbff" : undefined
-              }}
-            >
-              Overview
-            </button>
-          </div>
-          <div className="grid-item grid2">
-            <button
-              type="button"
-              onClick={() => setShowTab("WalkthroughMarket")}
-              style={{
-                backgroundColor: showTab === "WalkthroughMarket" ? "#08519c" : undefined,
-                color: showTab === "WalkthroughMarket" ? "#f7fbff" : undefined
-              }}
-            >
-              Market
-            </button>
-          </div>
-          <div className="grid-item grid2">
-            <button
-              type="button"
-              onClick={() => setShowTab("WalkthroughTransaction")}
-              style={{
-                backgroundColor: showTab === "WalkthroughTransaction" ? "#08519c" : undefined,
-                color: showTab === "WalkthroughTransaction" ? "#f7fbff" : undefined
-              }}
-            >
-              Transaction
-            </button>
-          </div>
+          <div className="grid-item grid12" style={{padding: "10px 0 0 0"}}></div>
         </div>
 
-        {showTab === "WalkthroughOverview" && <Overview/>}
-        {showTab === "WalkthroughMarket" && <Market/>}
-        {showTab === "WalkthroughTransaction" && <Transaction/>}
+        <div className="grid">
+          {tabs.map((tab) => (
+            <div key={tab} className="grid-item grid2">
+              <button
+                type="button"
+                onClick={() => setShowTab(tab)}
+                style={{
+                  backgroundColor: showTab === tab ? "#08519c" : undefined,
+                  color: showTab === tab ? "#f7fbff" : undefined
+                }}
+              >
+                {tab}
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {showTab === "Overview" && <Overview/>}
+        {showTab === "Market" && <Market/>}
+        {showTab === "Data" && <Data/>}
       </div>
     </ProtectedLayout>
   );

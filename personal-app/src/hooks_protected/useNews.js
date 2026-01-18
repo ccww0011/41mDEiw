@@ -23,7 +23,6 @@ export async function useNews() {
       if (contentType && contentType.includes('text/html')) {
         return {message: "Unauthorised.", status: 'Unauthorised'};
       } else {
-        console.log(items);
         const decodedItems = items.map(item => ({
           ...item,
           title: item.title.replace(/&amp;|&lt;|&gt;|&quot;|&#39;/g, m => ENTITIES[m])

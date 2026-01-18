@@ -6,6 +6,7 @@ import { useFxs } from "@/context/FxContext";
 import { usePrices } from "@/context/PriceContext";
 import { getFxs } from "@/hooks_protected/useFxDatabase";
 import { getPrices } from "@/hooks_protected/usePriceDatabase";
+import {useDividends} from "@/context/DividendContext";
 
 const d0 = new Date();
 d0.setDate(d0.getDate() - 1);
@@ -24,6 +25,7 @@ export function ValuationProvider({ children }) {
   const { prices, lastPriceDate, setPrices, setLoadingPrices } = usePrices();
   const { fxs, lastFxDate, setFxs, setLoadingFxs } = useFxs();
   const { transactions, firstTransactionDate } = useTransactions();
+  const { dividends } = useDividends();
 
   const [basis, setBasis] = useState("Local");
   const [startDateDisplay, setStartDateDisplay] = useState(yesterdayStrStart);
@@ -59,6 +61,12 @@ export function ValuationProvider({ children }) {
         const year = tx.tradeDate.slice(0, 4);
         const prev = requests.get(tx.currencyPrimary);
         if (!prev || year < prev) requests.set(tx.currencyPrimary, year);
+      });
+      dividends.forEach(div => {
+        if (div.currencyPrimary === "USD") return;
+        const year = div.exDate.slice(0, 4);
+        const prev = requests.get(div.currencyPrimary);
+        if (!prev || year < prev) requests.set(div.currencyPrimary, year);
       });
 
       if (basis !== "Local") requests.set(basis, firstTransactionDate.slice(0, 4));

@@ -1,23 +1,22 @@
 import React, {useCallback, useState} from "react";
-import {putTransactions} from "@/hooks_protected/useTransactionDatabase";
 import {useDropzone} from "react-dropzone";
 import Image from "next/image";
 import {useRouter} from "next/navigation";
-import {useTransactions} from "@/context/TransactionContext";
+import {useDividends} from "@/context/DividendContext";
+import {putDividends} from "@/hooks_protected/useDividendDatabase";
 
 const REQUIRED_HEADERS = [
-  'TradeDate',
+  'ReportDate',
+  'ExDate',
+  'PayDate',
   'ClientAccountID',
   'AssetClass',
   'UnderlyingSymbol',
   'Description',
   'ListingExchange',
   'CurrencyPrimary',
-  'Quantity',
-  'Proceeds',
-  'Commission',
-  'NetCash',
-  'TradeID',
+  'NetAmount',
+  'ActionID',
 ];
 
 function parseCSV(text) {
@@ -66,10 +65,10 @@ function parseLine(line) {
 }
 
 
-export default function TransactionsUpload() {
+export default function DividendsUpload() {
 
   const router = useRouter();
-  const {setTransactions} = useTransactions();
+  const {setDividends} = useDividends();
 
   const [status, setStatus] = useState('Idle');
   const [message, setMessage] = useState('');
@@ -97,22 +96,28 @@ export default function TransactionsUpload() {
           return;
         }
 
-        const transformedData = data.map(row => {
-          const netCash = row['netCash']
-          if (netCash != null && netCash !== 0) {
-            const {proceeds, commission, ...rest} = row;
-            return {...rest};
-          }
-          const proceeds_ = parseFloat(row['proceeds']) || 0;
-          const commission_ = parseFloat(row['commission']) || 0;
-          const {proceeds, commission, ...rest} = row;
-          return {
-            ...rest,
-            netCash: (proceeds_ + commission_).toString()
-          };
-        });
+        const transformedData = Object.values(
+          data
+            .map(row => {
+              let netAmount = Number(row.netAmount || 0);
+              if (Math.abs(netAmount) < 1e-10) netAmount = 0;
+              return { ...row, netAmount };
+            })
+            .filter(row => row.netAmount > 0 && row.reportDate < row.payDate) // your condition
+            .reduce((acc, row) => {
+              const actionID = row.actionID;
+              if (!acc[actionID]) {
+                acc[actionID] = { ...row, netAmount: 0 };
+              }
+              acc[actionID].netAmount += row.netAmount;
+              return acc;
+            }, {})
+        ).map(({ reportDate, ...rest }) => ({
+          ...rest,
+          netAmount: rest.netAmount.toString(), // string, no rounding
+        }));
 
-        const result = await putTransactions({ rows: transformedData }, setTransactions);
+        const result = await putDividends({ rows: transformedData }, setDividends);
         if (result.status === 'Unauthorised') {
           router.push('/logout');
           return;
@@ -127,7 +132,7 @@ export default function TransactionsUpload() {
     };
 
     reader.readAsText(file);
-  }, [router, setTransactions]);
+  }, [router, setDividends]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -140,13 +145,13 @@ export default function TransactionsUpload() {
       <p>Required headers: {REQUIRED_HEADERS.join(', ')}</p>
       <h4>Sample:</h4>
       <Image
-        alt="Upload Sample"
-        src="/UploadSample.jpg"
+        alt="Upload Dividend Sample"
+        src="/UploadDividendSample.jpg"
         width={400}
         height={100}
         style={{height: '100%', width: 'auto'}}
       />
-      <p>Note: ClientAccountID and TradeID should be unique.</p>
+      <p>Note: ClientAccountID and ActionID should be unique.</p>
 
       <div
         {...getRootProps()}

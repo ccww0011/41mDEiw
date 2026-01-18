@@ -9,12 +9,14 @@ import {usePrices} from "@/context/PriceContext";
 import {usePL, useValuation} from "@/hooks/useValuation";
 import LineChart from "@/components_protected/overview_components/holding_subcomponents/LineChart";
 import {News} from "@/components_protected/overview_components/holding_subcomponents/News";
+import {useDividends} from "@/context/DividendContext";
 
 export default function Holding() {
   const {currencies, transactions, loadingTransactions, firstTransactionDate} = useTransactions();
   const {prices, setPrices, loadingPrices, setLoadingPrices, lastPriceDate} = usePrices();
   const {fxs, setFxs, loadingFxs, setLoadingFxs, lastFxDate} = useFxs();
   const {basis, setBasis, startDateDisplay, endDateDisplay, setStartDateDisplay, setEndDateDisplay} = useValuationContext();
+  const {dividends} = useDividends();
 
   const [showTab, setShowTab] = useState(0);
   const [startDateInput, setStartDateInput] = useState('')
@@ -25,8 +27,8 @@ export default function Holding() {
   const [filters, setFilters] = useState({});
 
   const {holdings, aggregates, marketValueByTicker, marketValueByTradingCurrency}
-    = useValuation(transactions, prices, fxs, setFxs, setLoadingFxs, basis, endDateDisplay);
-  const { cumulativePLByDate } = usePL(transactions, prices, setPrices, setLoadingPrices, fxs, basis, startDateDisplay, endDateDisplay);
+    = useValuation(transactions, prices, fxs, setFxs, setLoadingFxs, basis, endDateDisplay, dividends);
+  const { cumulativePLByDate } = usePL(transactions, prices, setPrices, setLoadingPrices, fxs, basis, startDateDisplay, endDateDisplay, dividends);
   const cumulativePLArray = Object.entries(cumulativePLByDate).map(
     ([date, cumulativePLUSD]) => ({ date, cumulativePLUSD })
   );

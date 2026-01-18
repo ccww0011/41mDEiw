@@ -1,7 +1,7 @@
 import React, {useMemo, useState} from "react";
 import {useTransactions} from "@/context/TransactionContext";
-import TransactionsUpload from "@/components_protected/transaction_components/TransactionsUpload";
-import TransactionsAI from "@/components_protected/transaction_components/TransactionsAI";
+import TransactionsUpload from "@/components_protected/data_components/transactions_subcomponents/TransactionsUpload";
+import TransactionsAI from "@/components_protected/data_components/transactions_subcomponents/TransactionsAI";
 
 const RENDERED_HEADERS = [
   'tradeDate',
@@ -39,7 +39,7 @@ const HIDE_ON_MOBILE_COLUMNS = [
 const NUMERIC_KEYS = ['quantity', 'netCash'];
 
 
-export default function TransactionsAll() {
+export default function Transactions() {
   const {transactions} = useTransactions();
 
   const [showTab, setShowTab] = useState("AI");
@@ -47,7 +47,7 @@ export default function TransactionsAll() {
 
   // Multi-sort & filters
   const [filters, setFilters] = useState({});
-  const [sortRules, setSortRules] = useState([{ key: 'tradeID', direction: 'asc' }]);
+  const [sortRules, setSortRules] = useState([{ key: 'tradeID', direction: 'desc' }]);
 
   const sortedTransactions = useMemo(() => {
     if (!Array.isArray(transactions)) return [];
@@ -179,8 +179,9 @@ export default function TransactionsAll() {
           ))}
         </div>
 
-        {showTab === 'Upload' && <TransactionsUpload/>}
         {showTab === "AI" && <TransactionsAI/>}
+        {showTab === 'Upload' && <TransactionsUpload/>}
+
         <div className="grid">
           <div className="grid-item grid12" style={{padding: "10px 0 0 0"}}></div>
         </div>

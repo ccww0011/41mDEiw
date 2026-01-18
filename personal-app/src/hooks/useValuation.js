@@ -43,7 +43,7 @@ const EMPTY_RESULT = {
   marketValueByTradingCurrency: []
 };
 
-export function useValuation(transactions, prices, fxs, setFxs, setLoadingFxs, basis, endDate = yesterdayStr) {
+export function useValuation(transactions, prices, fxs, setFxs, setLoadingFxs, basis, endDate = yesterdayStr,  dividends=[]) {
   return useMemo(() => {
     if (!transactions?.length || !prices || !fxs) return EMPTY_RESULT;
     const translatedTransactions = transactions
@@ -95,6 +95,38 @@ export function useValuation(transactions, prices, fxs, setFxs, setLoadingFxs, b
       }
     });
 
+    // add dividends to holdingsMap
+    dividends.forEach(div => {
+      let netAmount = Number(div.netAmount || 0);
+      if (Math.abs(netAmount) < 1e-10 || netAmount <= 0) return; // only positive Po
+      const fx = getFxRate(fxs, div.currencyPrimary, div.exDate, basis);
+      const netCashBasis = fx == null ? 0 : netAmount * fx;
+
+      const key = `${div.ticker}|${div.listingExchange}`;
+      if (!holdingsMap[key]) {
+        holdingsMap[key] = {
+          ticker: div.ticker,
+          description: div.description,
+          exchange: div.listingExchange,
+          tradingCurrency: div.currencyPrimary,
+          totalQuantity: 0,
+          costBasis: 0,
+          realisedPL: 0,
+          costBasisUSD: 0,
+          realisedPLUSD: 0
+        };
+      }
+
+      const h = holdingsMap[key];
+      h.realisedPL += netCashBasis;
+
+      // USD side
+      const fxUSD = getFxRate(fxs, div.currencyPrimary, div.exDate, "USD");
+      const netCashUSD = fxUSD == null ? 0 : netAmount * fxUSD;
+      h.realisedPLUSD += netCashUSD;
+    });
+
+
     const holdings = Object.values(holdingsMap).map(h => {
       const priceLocal = getPrice(prices, h.ticker, endDate);
       const fxPrice = getFxRate(fxs, h.tradingCurrency, endDate, basis);
@@ -141,8 +173,7 @@ export function useValuation(transactions, prices, fxs, setFxs, setLoadingFxs, b
   }, [transactions, prices, fxs, basis, endDate]);
 }
 
-
-export function usePL(transactions, prices, setPrices, setLoadingPrices, fxs, basis, startDate, endDate) {
+export function usePL(transactions, prices, setPrices, setLoadingPrices, fxs, basis, startDate, endDate,  dividends=[]) {
   return useMemo(() => {
     if (!transactions?.length || !prices || !fxs || !startDate || !endDate) {
       return { cumulativePLByDate: {} };
@@ -157,7 +188,6 @@ export function usePL(transactions, prices, setPrices, setLoadingPrices, fxs, ba
       .filter(tx => tx.assetClass === "STK")
       .sort((a, b) => parseInt(a.tradeDate) - parseInt(b.tradeDate));
 
-    /* build date range */
     const dates = [];
     let d = new Date(
       Number(startDate.slice(0, 4)),
@@ -214,18 +244,42 @@ export function usePL(transactions, prices, setPrices, setLoadingPrices, fxs, ba
         txIndex++;
       }
 
+      // handle dividends on this date
+      for (const div of dividends) {
+        if (div.exDate === date && parseFloat(div.netAmount) > 0) {
+          const fx = getFxRate(fxs, div.currencyPrimary, date, basis);
+          if (fx != null) {
+            const divAmount = parseFloat(div.netAmount) * fx;
+            const key = `${div.ticker}|${div.listingExchange}`;
+            if (!holdingsMap[key]) {
+              holdingsMap[key] = {
+                ticker: div.ticker,
+                exchange: div.listingExchange,
+                tradingCurrency: div.currencyPrimary,
+                totalQuantity: 0,
+                costBasisBasis: 0,
+                realisedPLBasis: 0
+              };
+            }
+            holdingsMap[key].realisedPLBasis += divAmount;
+          }
+        }
+      }
+
       let cumulativePL = 0;
       for (const h of Object.values(holdingsMap)) {
-        if (h.totalQuantity === 0) continue;
+        if (h.totalQuantity === 0 && h.costBasisBasis === 0) continue;
         const price = getPrice(prices, h.ticker, date);
         const fx = getFxRate(fxs, h.tradingCurrency, date, basis);
-        if (price == null || fx == null) continue;
-
-        const val = price * fx * h.totalQuantity;
+        let val = 0;
+        if (h.totalQuantity !== 0 && price != null && fx != null) {
+          val = price * fx * h.totalQuantity;
+        }
         cumulativePL += val + h.costBasisBasis + h.realisedPLBasis;
       }
       cumulativePLByDate[date] = cumulativePL;
     }
+
     return { cumulativePLByDate };
-  }, [transactions, prices, fxs, basis, startDate, endDate]);
+  }, [transactions, prices, fxs, basis, startDate, endDate, dividends]);
 }
