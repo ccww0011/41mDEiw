@@ -39,6 +39,8 @@ export default function FX() {
         return [formatDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)), formatDate(new Date())];
       case "YTD":
         return [formatDate(new Date(new Date().getFullYear(), 0, 1)), formatDate(new Date())];
+      case "1Y":
+        return [formatDate(new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())), formatDate(now)];
       default:
         return [null, null];
     }
@@ -139,6 +141,7 @@ export default function FX() {
             <option value="Last7Days">Last 7 Days</option>
             <option value="MTD">Month to Date</option>
             <option value="YTD">Year to Date</option>
+            <option value="1Y">1 Year</option>
           </select>
         </div>
 

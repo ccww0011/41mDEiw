@@ -44,6 +44,8 @@ export default function Stock() {
         return [formatDate(new Date(now.getFullYear(), now.getMonth(), 1)), formatDate(now)];
       case "YTD":
         return [formatDate(new Date(now.getFullYear(), 0, 1)), formatDate(now)];
+      case "1Y":
+        return [formatDate(new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())), formatDate(now)];
       default:
         return [null, null];
     }
@@ -107,6 +109,7 @@ export default function Stock() {
             <option value="Last7Days">Last 7 Days</option>
             <option value="MTD">Month to Date</option>
             <option value="YTD">Year to Date</option>
+            <option value="1Y">1 Year</option>
           </select>
         </div>
 
