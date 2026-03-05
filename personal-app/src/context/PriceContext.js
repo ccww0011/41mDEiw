@@ -28,7 +28,7 @@ export function PriceProvider({ children }) {
     return latest;
   }, [prices]);
 
-  // console.log(prices)
+  console.log(prices)
 
   const value = useMemo(
     () => ({

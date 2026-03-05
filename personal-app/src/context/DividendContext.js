@@ -32,7 +32,7 @@ export function DividendProvider({ children }) {
     [dividends, loadingDividends]
   );
 
-  console.log(dividends);
+  // console.log(dividends);
 
   return (
     <DividendContext.Provider value={value}>
