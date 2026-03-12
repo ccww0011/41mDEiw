@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { postContactUs } from "@/hooks/useContact";
+import { postContactUs } from "@/utils/useContact";
 import { useAuth } from "@/context/AuthContext";
 import { useRecaptcha } from "@/hooks/useRecaptcha";
 
@@ -101,9 +101,8 @@ export default function ContactUs() {
                   required
                   style={{resize: 'vertical'}}
                 />
+                {msg && <p style={{color: 'red'}}>{msg}</p>}
               </div>
-
-              {msg && <p style={{color: 'red'}}>{msg}</p>}
 
               <div className="grid-item grid10" style={{padding: '5px 0'}}></div>
 

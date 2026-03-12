@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import { getTransactions } from "@/hooks_protected/useTransactionDatabase";
+import { getTransactions } from "@/utils_protected/transactionApi";
 
 const TransactionContext = createContext(null);
 

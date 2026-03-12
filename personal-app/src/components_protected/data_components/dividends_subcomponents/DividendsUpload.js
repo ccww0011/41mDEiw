@@ -3,7 +3,7 @@ import {useDropzone} from "react-dropzone";
 import Image from "next/image";
 import {useRouter} from "next/navigation";
 import {useDividends} from "@/context/DividendContext";
-import {putDividends} from "@/hooks_protected/useDividendDatabase";
+import {putDividends} from "@/utils_protected/dividendApi";
 
 const REQUIRED_HEADERS = [
   'ReportDate',

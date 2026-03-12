@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNews } from "@/hooks_protected/useNews";
+import { useNews } from "@/utils_protected/newsApi";
 
 export function News() {
   const [newsData, setNewsData] = useState([]);

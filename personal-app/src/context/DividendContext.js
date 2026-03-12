@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import { getDividends } from "@/hooks_protected/useDividendDatabase";
+import { getDividends } from "@/utils_protected/dividendApi";
 
 const DividendContext = createContext(null);
 

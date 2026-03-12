@@ -1,5 +1,5 @@
 import React, {useCallback, useState} from "react";
-import {putTransactions} from "@/hooks_protected/useTransactionDatabase";
+import {putTransactions} from "@/utils_protected/transactionApi";
 import {useDropzone} from "react-dropzone";
 import Image from "next/image";
 import {useRouter} from "next/navigation";

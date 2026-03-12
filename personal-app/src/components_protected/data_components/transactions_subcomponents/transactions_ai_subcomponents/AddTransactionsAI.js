@@ -2,7 +2,7 @@
 
 import React, {useEffect, useRef, useState} from "react";
 import styles from "./AddTransactionsAI.module.css";
-import {postTransactionAI} from "@/hooks_protected/useTransactionAI";
+import {postTransactionAI} from "@/utils_protected/transactionAIApi";
 import {useTransactions} from "@/context/TransactionContext";
 
 export default function AddTransactionsAI() {

@@ -1,7 +1,7 @@
 'use client';
 
-import { logout } from "@/hooks_protected/useAuth";
-import {getTransactions} from "@/hooks_protected/useTransactionDatabase";
+import { logout } from "@/utils_protected/authApi";
+import {getTransactions} from "@/utils_protected/transactionApi";
 
 export async function transactionAI(method, body, setMessages, setIncompleteTransactions, setTransactions) {
   try {

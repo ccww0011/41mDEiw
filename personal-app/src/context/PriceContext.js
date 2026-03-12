@@ -13,6 +13,8 @@ export function usePrices() {
 export function PriceProvider({ children }) {
   const [prices, setPrices] = useState({});
   const [loadingPrices, setLoadingPrices] = useState(true);
+  const [corporateActions, setCorporateActions] = useState({});
+  const [loadingCorporateActions, setLoadingCorporateActions] = useState(true);
 
   // Compute last price date across all items
   const lastPriceDate = useMemo(() => {
@@ -28,7 +30,19 @@ export function PriceProvider({ children }) {
     return latest;
   }, [prices]);
 
-  console.log(prices)
+  // Compute last corporate-action date across all items
+  const lastCorporateActionDate = useMemo(() => {
+    let latest = null;
+
+    for (const actionMap of Object.values(corporateActions)) {
+      for (const date of Object.keys(actionMap)) {
+        if (latest === null || date > latest) {
+          latest = date;
+        }
+      }
+    }
+    return latest;
+  }, [corporateActions]);
 
   const value = useMemo(
     () => ({
@@ -37,8 +51,20 @@ export function PriceProvider({ children }) {
       loadingPrices,
       setLoadingPrices,
       lastPriceDate,
+      corporateActions,
+      setCorporateActions,
+      loadingCorporateActions,
+      setLoadingCorporateActions,
+      lastCorporateActionDate,
     }),
-    [prices, loadingPrices, lastPriceDate]
+    [
+      prices,
+      loadingPrices,
+      lastPriceDate,
+      corporateActions,
+      loadingCorporateActions,
+      lastCorporateActionDate,
+    ]
   );
 
   return <PriceContext.Provider value={value}>{children}</PriceContext.Provider>;

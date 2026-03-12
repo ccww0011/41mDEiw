@@ -1,33 +1,26 @@
-import {logout} from "@/hooks_protected/useAuth";
+'use client';
 
-const ENTITIES = {
-  "&amp;": "&",
-  "&lt;": "<",
-  "&gt;": ">",
-  "&quot;": '"',
-  "&#39;": "'",
-};
+import {logout} from "@/utils_protected/authApi";
 
-export async function useNews() {
+async function dividendApi(method, body = null, setDividends) {
   try {
-    let url = process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/api/news";
     let content = {
-      method: "GET",
+      method: method,
       headers: { 'content-type': 'application/json' },
       credentials: "include",
-    };
-    const response = await fetch(url, content);
+    }
+    if (method !== "GET") {
+      content.body = JSON.stringify(body);
+    }
+    const response = await fetch(process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/api/dividend", content);
     const items = await response.json();
     if (response.ok) {
       const contentType = response.headers.get('Content-Type');
       if (contentType && contentType.includes('text/html')) {
         return {message: "Unauthorised.", status: 'Unauthorised'};
       } else {
-        const decodedItems = items.map(item => ({
-          ...item,
-          title: item.title.replace(/&amp;|&lt;|&gt;|&quot;|&#39;/g, m => ENTITIES[m])
-        }));
-        return {data: decodedItems, message: items.message, status: 'Success'};
+        setDividends(items.data);
+        return {message: items.message, status: 'Success'};
       }
     } else if (response.status === 401 || response.status === 403) {
       logout();
@@ -38,4 +31,12 @@ export async function useNews() {
   } catch (error) {
     return {message: error.message, status: 'Error'};
   }
+}
+
+export async function getDividends(setDividends) {
+  return await dividendApi('GET', null, setDividends);
+}
+
+export async function putDividends(body, setDividends) {
+  return await dividendApi('PUT', body, setDividends);
 }

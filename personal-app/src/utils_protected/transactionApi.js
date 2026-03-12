@@ -1,8 +1,8 @@
 'use client';
 
-import {logout} from "@/hooks_protected/useAuth";
+import {logout} from "@/utils_protected/authApi";
 
-async function dividendApi(method, body = null, setDividends) {
+async function transactionApi(method, body = null, setTransactions) {
   try {
     let content = {
       method: method,
@@ -12,14 +12,14 @@ async function dividendApi(method, body = null, setDividends) {
     if (method !== "GET") {
       content.body = JSON.stringify(body);
     }
-    const response = await fetch(process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/api/dividend", content);
+    const response = await fetch(process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/api/transaction", content);
     const items = await response.json();
     if (response.ok) {
       const contentType = response.headers.get('Content-Type');
       if (contentType && contentType.includes('text/html')) {
         return {message: "Unauthorised.", status: 'Unauthorised'};
       } else {
-        setDividends(items.data);
+        setTransactions(items.data);
         return {message: items.message, status: 'Success'};
       }
     } else if (response.status === 401 || response.status === 403) {
@@ -33,10 +33,10 @@ async function dividendApi(method, body = null, setDividends) {
   }
 }
 
-export async function getDividends(setDividends) {
-  return await dividendApi('GET', null, setDividends);
+export async function getTransactions(setTransactions) {
+  return await transactionApi('GET', null, setTransactions);
 }
 
-export async function putDividends(body, setDividends) {
-  return await dividendApi('PUT', body, setDividends);
+export async function putTransactions(body, setTransactions) {
+  return await transactionApi('PUT', body, setTransactions);
 }

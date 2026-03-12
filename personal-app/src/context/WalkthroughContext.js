@@ -1,6 +1,6 @@
 import {createContext, useContext, useState, useMemo, useEffect} from 'react';
-import {getWalkthroughFxs} from "@/hooks/useWalkthroughFx";
-import {getWalkthroughPrices} from "@/hooks/useWalkthroughPrice";
+import {getWalkthroughFxs} from "@/utils/useWalkthroughFx";
+import {getWalkthroughPrices} from "@/utils/useWalkthroughPrice";
 
 const WalkthroughContext = createContext(null);
 

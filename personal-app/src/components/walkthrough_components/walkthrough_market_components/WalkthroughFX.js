@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import WalkthroughTable from "@/components/walkthrough_components/walkthrough_market_components/walkthrough_market_subcomponents/WalkthroughTable";
 import WalkthroughGraph from "@/components/walkthrough_components/walkthrough_market_components/walkthrough_market_subcomponents/WalkthroughGraph";
 import {useWalkthroughContext} from "@/context/WalkthroughContext";
-import {getWalkthroughFxs} from "@/hooks/useWalkthroughFx";
+import {getWalkthroughFxs} from "@/utils/useWalkthroughFx";
 
 export default function WalkthroughFX() {
 

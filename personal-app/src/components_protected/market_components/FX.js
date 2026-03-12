@@ -6,7 +6,7 @@ import Graph from "@/components_protected/market_components/market_subcomponents
 import { useTransactions } from "@/context/TransactionContext";
 import { useFxs } from "@/context/FxContext";
 import { useValuationContext } from "@/context/ValuationContext";
-import { getFxs } from "@/hooks_protected/useFxDatabase";
+import { getFxs } from "@/utils_protected/fxApi";
 
 export default function FX() {
   const { fxs, setFxs, loadingFxs, setLoadingFxs } = useFxs();

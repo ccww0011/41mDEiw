@@ -4,8 +4,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useTransactions } from "@/context/TransactionContext";
 import { useFxs } from "@/context/FxContext";
 import { usePrices } from "@/context/PriceContext";
-import { getFxs } from "@/hooks_protected/useFxDatabase";
-import { getPrices } from "@/hooks_protected/usePriceDatabase";
+import { getFxs } from "@/utils_protected/fxApi";
+import { getPrices } from "@/utils_protected/priceApi";
 import {useDividends} from "@/context/DividendContext";
 
 const d0 = new Date();

@@ -5,10 +5,19 @@ import Table from "@/components_protected/market_components/market_subcomponents
 import Graph from "@/components_protected/market_components/market_subcomponents/Graph";
 import { useTransactions } from "@/context/TransactionContext";
 import { usePrices } from "@/context/PriceContext";
-import { getPrices } from "@/hooks_protected/usePriceDatabase";
+import { getPrices } from "@/utils_protected/priceApi";
+import { getCorporateActions } from "@/utils_protected/corporateActionApi";
 
 export default function Stock() {
-  const { prices, setPrices, loadingPrices, setLoadingPrices } = usePrices();
+  const {
+    prices,
+    setPrices,
+    loadingPrices,
+    setLoadingPrices,
+    corporateActions,
+    setCorporateActions,
+    setLoadingCorporateActions,
+  } = usePrices();
   const { tickers, tickerMap } = useTransactions();
 
   const [selectedTicker, setSelectedTicker] = useState("");
@@ -68,6 +77,12 @@ export default function Stock() {
         setPrices,
         setLoadingPrices
       );
+      await getCorporateActions(
+        [{ ticker: selectedTicker, startDate: start, endDate: end }],
+        corporateActions,
+        setCorporateActions,
+        setLoadingCorporateActions
+      );
     };
 
     fetchPrices();
@@ -123,6 +138,12 @@ export default function Stock() {
                 prices,
                 setPrices,
                 setLoadingPrices
+              );
+              await getCorporateActions(
+                [{ ticker: selectedTicker, startDate, endDate }],
+                corporateActions,
+                setCorporateActions,
+                setLoadingCorporateActions
               );
             }}
           >
