@@ -25,5 +25,11 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "tailwindcss": "^4"
-  }
+  },
+  "description": "",
+  "main": "server.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
 }
