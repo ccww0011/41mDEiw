@@ -5,8 +5,8 @@ import { logout } from "@/utils_protected/authApi";
 async function corporateActionApi(method, data, setCorporateActions) {
   try {
     let url = process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/api/corporate-action";
-    const content = {
-      method,
+    let content = {
+      method: method,
       headers: { "content-type": "application/json" },
       credentials: "include",
     };
@@ -25,30 +25,31 @@ async function corporateActionApi(method, data, setCorporateActions) {
       const contentType = response.headers.get("Content-Type");
       if (contentType && contentType.includes("text/html")) {
         return { message: "Unauthorised.", status: "Unauthorised" };
-      }
+      } else {
+        // Merge incoming data with existing corporate actions
+        setCorporateActions((prevCorporateActions) => {
+          const newCorporateActions = items?.data ?? {};
 
-      setCorporateActions((prevCorporateActions) => {
-        const newCorporateActions = items?.data ?? {};
-
-        if (!prevCorporateActions || typeof prevCorporateActions !== "object") {
-          return newCorporateActions;
-        }
-
-        const merged = { ...prevCorporateActions };
-        for (const ticker in newCorporateActions) {
-          if (merged[ticker]) {
-            merged[ticker] = {
-              ...merged[ticker],
-              ...newCorporateActions[ticker],
-            };
-          } else {
-            merged[ticker] = newCorporateActions[ticker];
+          if (!prevCorporateActions || typeof prevCorporateActions !== "object") {
+            return newCorporateActions;
           }
-        }
-        return merged;
-      });
 
-      return { message: items.message, status: "Success" };
+          const merged = { ...prevCorporateActions };
+          for (const ticker in newCorporateActions) {
+            if (merged[ticker]) {
+              merged[ticker] = {
+                ...merged[ticker],
+                ...newCorporateActions[ticker],
+              };
+            } else {
+              merged[ticker] = newCorporateActions[ticker];
+            }
+          }
+          return merged;
+        });
+
+        return { message: items.message, status: "Success" };
+      }
     } else if (response.status === 401 || response.status === 403) {
       logout();
       return { message: "Unauthorised.", status: "Unauthorised" };
@@ -120,7 +121,7 @@ export async function getCorporateActions(items, corporateActions, setCorporateA
 
   setLoadingCorporateActions(true);
   try {
-    await corporateActionApi("POST", { items: JSON.stringify(requests) }, setCorporateActions);
+    await corporateActionApi("POST", { items: JSON.stringify(requests) , method: "GET" }, setCorporateActions);
   } finally {
     setLoadingCorporateActions(false);
   }

@@ -3,12 +3,13 @@
 import React, { useState } from 'react';
 import Transactions from "@/components_protected/data_components/Transactions";
 import Dividends from "@/components_protected/data_components/Dividends";
+import CorporateActions from "@/components_protected/data_components/CorporateActions";
 
 export default function Data() {
 
 
   const [showTab, setShowTab] = useState("Transactions");
-  const tabs = ["Transactions", "Dividends"];
+  const tabs = ["Transactions", "Dividends", "Corporate Actions"];
 
 
   return (
@@ -32,6 +33,7 @@ export default function Data() {
 
       {showTab === 'Transactions' && <Transactions/>}
       {showTab === 'Dividends' && <Dividends/>}
+      {showTab === 'Corporate Actions' && <CorporateActions/>}
     </>
   );
 }

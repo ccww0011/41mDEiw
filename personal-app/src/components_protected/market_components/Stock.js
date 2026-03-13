@@ -6,7 +6,6 @@ import Graph from "@/components_protected/market_components/market_subcomponents
 import { useTransactions } from "@/context/TransactionContext";
 import { usePrices } from "@/context/PriceContext";
 import { getPrices } from "@/utils_protected/priceApi";
-import { getCorporateActions } from "@/utils_protected/corporateActionApi";
 
 export default function Stock() {
   const {
@@ -14,9 +13,6 @@ export default function Stock() {
     setPrices,
     loadingPrices,
     setLoadingPrices,
-    corporateActions,
-    setCorporateActions,
-    setLoadingCorporateActions,
   } = usePrices();
   const { tickers, tickerMap } = useTransactions();
 
@@ -77,12 +73,6 @@ export default function Stock() {
         setPrices,
         setLoadingPrices
       );
-      await getCorporateActions(
-        [{ ticker: selectedTicker, startDate: start, endDate: end }],
-        corporateActions,
-        setCorporateActions,
-        setLoadingCorporateActions
-      );
     };
 
     fetchPrices();
@@ -138,12 +128,6 @@ export default function Stock() {
                 prices,
                 setPrices,
                 setLoadingPrices
-              );
-              await getCorporateActions(
-                [{ ticker: selectedTicker, startDate, endDate }],
-                corporateActions,
-                setCorporateActions,
-                setLoadingCorporateActions
               );
             }}
           >

@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import WalkthroughTable from "@/components/walkthrough_components/walkthrough_market_components/walkthrough_market_subcomponents/WalkthroughTable";
 import WalkthroughGraph from "@/components/walkthrough_components/walkthrough_market_components/walkthrough_market_subcomponents/WalkthroughGraph";
-import {getWalkthroughPrices} from "@/utils/useWalkthroughPrice";
+import {getWalkthroughPrices} from "@/utils/walkthroughPriceApi";
 import {useWalkthroughContext} from "@/context/WalkthroughContext";
 
 export default function WalkthroughStock() {

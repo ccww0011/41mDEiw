@@ -6,6 +6,7 @@ import { useFxs } from "@/context/FxContext";
 import { usePrices } from "@/context/PriceContext";
 import { getFxs } from "@/utils_protected/fxApi";
 import { getPrices } from "@/utils_protected/priceApi";
+import { getCorporateActions } from "@/utils_protected/corporateActionApi";
 import {useDividends} from "@/context/DividendContext";
 
 const d0 = new Date();
@@ -22,7 +23,15 @@ export function useValuationContext() {
 }
 
 export function ValuationProvider({ children }) {
-  const { prices, lastPriceDate, setPrices, setLoadingPrices } = usePrices();
+  const {
+    prices,
+    lastPriceDate,
+    setPrices,
+    setLoadingPrices,
+    corporateActions,
+    setCorporateActions,
+    setLoadingCorporateActions,
+  } = usePrices();
   const { fxs, lastFxDate, setFxs, setLoadingFxs } = useFxs();
   const { transactions, firstTransactionDate } = useTransactions();
   const { dividends } = useDividends();
@@ -121,6 +130,32 @@ export function ValuationProvider({ children }) {
     };
 
     fetchPrices();
+  }, [transactions, startDateDisplay, endDateDisplay]);
+
+  // Fetch missing Corporate Actions
+  useEffect(() => {
+    if (!transactions?.length || !startDateDisplay || !endDateDisplay) return;
+
+    const fetchCorporateActions = async () => {
+      const requests = new Map();
+      transactions.forEach(tx => {
+        if (tx.assetClass !== "STK") return;
+        const year = tx.tradeDate.slice(0, 4);
+        const prev = requests.get(tx.ticker);
+        if (!prev || year < prev) requests.set(tx.ticker, year);
+      });
+      const items = Array.from(requests.entries())
+        .map(([ticker, minYear]) => {
+          const startDate = `${minYear}0101`;
+          return startDate <= endDateDisplay ? { ticker, startDate, endDate: endDateDisplay } : null;
+        })
+        .filter(Boolean);
+      if (items.length) {
+        await getCorporateActions(items, corporateActions, setCorporateActions, setLoadingCorporateActions);
+      }
+    };
+
+    fetchCorporateActions();
   }, [transactions, startDateDisplay, endDateDisplay]);
 
 
