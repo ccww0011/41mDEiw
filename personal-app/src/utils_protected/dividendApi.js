@@ -40,3 +40,7 @@ export async function getDividends(setDividends) {
 export async function putDividends(body, setDividends) {
   return await dividendApi('PUT', body, setDividends);
 }
+
+export async function deleteDividends(body, setDividends) {
+  return await dividendApi('DELETE', body, setDividends);
+}

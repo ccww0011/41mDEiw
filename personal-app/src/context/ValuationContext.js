@@ -6,7 +6,6 @@ import { useFxs } from "@/context/FxContext";
 import { usePrices } from "@/context/PriceContext";
 import { getFxs } from "@/utils_protected/fxApi";
 import { getPrices } from "@/utils_protected/priceApi";
-import { getCorporateActions } from "@/utils_protected/corporateActionApi";
 import {useDividends} from "@/context/DividendContext";
 
 const d0 = new Date();
@@ -126,36 +125,20 @@ export function ValuationProvider({ children }) {
           }
         })
         .filter(Boolean);
-      if (items.length) await getPrices(items, prices, setPrices, setLoadingPrices);
-    };
-
-    fetchPrices();
-  }, [transactions, startDateDisplay, endDateDisplay]);
-
-  // Fetch missing Corporate Actions
-  useEffect(() => {
-    if (!transactions?.length || !startDateDisplay || !endDateDisplay) return;
-
-    const fetchCorporateActions = async () => {
-      const requests = new Map();
-      transactions.forEach(tx => {
-        if (tx.assetClass !== "STK") return;
-        const year = tx.tradeDate.slice(0, 4);
-        const prev = requests.get(tx.ticker);
-        if (!prev || year < prev) requests.set(tx.ticker, year);
-      });
-      const items = Array.from(requests.entries())
-        .map(([ticker, minYear]) => {
-          const startDate = `${minYear}0101`;
-          return startDate <= endDateDisplay ? { ticker, startDate, endDate: endDateDisplay } : null;
-        })
-        .filter(Boolean);
       if (items.length) {
-        await getCorporateActions(items, corporateActions, setCorporateActions, setLoadingCorporateActions);
+        await getPrices(
+          items,
+          prices,
+          setPrices,
+          setLoadingPrices,
+          corporateActions,
+          setCorporateActions,
+          setLoadingCorporateActions
+        );
       }
     };
 
-    fetchCorporateActions();
+    fetchPrices();
   }, [transactions, startDateDisplay, endDateDisplay]);
 
 

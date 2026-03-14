@@ -19,6 +19,24 @@ const REQUIRED_HEADERS = [
   'ActionID',
 ];
 
+const DATE_FIELDS = ['reportDate', 'exDate', 'payDate'];
+const NUMERIC_FIELDS = ['netAmount'];
+const DATE_REGEX = /^\d{8}$/;
+
+function isValidYYYYMMDD(value) {
+  if (!DATE_REGEX.test(value)) return false;
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(4, 6));
+  const day = Number(value.slice(6, 8));
+  if (month < 1 || month > 12) return false;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() + 1 === month &&
+    date.getUTCDate() === day
+  );
+}
+
 function parseCSV(text) {
   const lines = text.split(/\r?\n/).filter(Boolean);
   const headers = parseLine(lines[0]);
@@ -64,6 +82,37 @@ function parseLine(line) {
   return result.map(cell => cell.trim());
 }
 
+function validateRows(rows) {
+  const errors = [];
+  rows.forEach((row, idx) => {
+    DATE_FIELDS.forEach((field) => {
+      const value = row[field];
+      if (!value || !isValidYYYYMMDD(value)) {
+        errors.push(`Row ${idx + 1}: invalid ${field} (expected YYYYMMDD)`);
+      }
+    });
+    NUMERIC_FIELDS.forEach((field) => {
+      const value = row[field];
+      if (value !== undefined && value !== null && value !== "" && isNaN(Number(value))) {
+        errors.push(`Row ${idx + 1}: ${field} must be numeric`);
+      }
+    });
+    if (row.underlyingSymbol && !/^[A-Z]+$/.test(row.underlyingSymbol)) {
+      errors.push(`Row ${idx + 1}: underlyingSymbol must be uppercase letters only`);
+    }
+    if (!row.actionID) errors.push(`Row ${idx + 1}: missing actionID`);
+  });
+  return errors;
+}
+
+function normalizeRows(rows) {
+  return rows.map(row => {
+    if (!row || typeof row !== "object") return row;
+    const underlyingSymbol = row.underlyingSymbol ? row.underlyingSymbol.toUpperCase() : row.underlyingSymbol;
+    return { ...row, underlyingSymbol };
+  });
+}
+
 
 export default function DividendsUpload() {
 
@@ -96,8 +145,16 @@ export default function DividendsUpload() {
           return;
         }
 
+        const normalizedData = normalizeRows(data);
+        const validationErrors = validateRows(normalizedData);
+        if (validationErrors.length > 0) {
+          setStatus('Error');
+          setMessage(validationErrors.slice(0, 5).join('; '));
+          return;
+        }
+
         const transformedData = Object.values(
-          data
+          normalizedData
             .map(row => {
               let netAmount = Number(row.netAmount || 0);
               if (Math.abs(netAmount) < 1e-10) netAmount = 0;
@@ -117,7 +174,7 @@ export default function DividendsUpload() {
           netAmount: rest.netAmount.toString(), // string, no rounding
         }));
 
-        const result = await putDividends({ rows: transformedData }, setDividends);
+        const result = await putDividends({ items: JSON.stringify(transformedData) }, setDividends);
         if (result.status === 'Unauthorised') {
           router.push('/logout');
           return;

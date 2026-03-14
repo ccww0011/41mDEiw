@@ -1,6 +1,7 @@
 'use client';
 
 import {logout} from "@/utils_protected/authApi";
+import { getCorporateActions } from "@/utils_protected/corporateActionApi";
 
 async function priceApi(method, data, setPrices) {
   try {
@@ -65,7 +66,15 @@ async function priceApi(method, data, setPrices) {
 }
 
 // item = {ticker, startDate, endDate}
-export async function getPrices(items, prices, setPrices, setLoadingPrices) {
+export async function getPrices(
+  items,
+  prices,
+  setPrices,
+  setLoadingPrices,
+  corporateActions,
+  setCorporateActions,
+  setLoadingCorporateActions
+) {
   const d0 = new Date();
   d0.setDate(d0.getDate() - 1);
   const yesterdayStr = d0.getFullYear().toString() + String(d0.getMonth() + 1).padStart(2, '0') + String(d0.getDate()).padStart(2, '0');
@@ -103,6 +112,9 @@ export async function getPrices(items, prices, setPrices, setLoadingPrices) {
   setLoadingPrices(true);
   try {
     await priceApi('POST', { items: JSON.stringify(requests) }, setPrices);
+    if (corporateActions && setCorporateActions && setLoadingCorporateActions) {
+      await getCorporateActions(requests, corporateActions, setCorporateActions, setLoadingCorporateActions);
+    }
   } finally {
     setLoadingPrices(false);
   }

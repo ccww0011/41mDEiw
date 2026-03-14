@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import { getTransactions } from "@/utils_protected/transactionApi";
+import { getTransactions, putTransactions, deleteTransactions } from "@/utils_protected/transactionApi";
 
 const TransactionContext = createContext(null);
 
@@ -21,6 +21,24 @@ export function TransactionProvider({ children }) {
     };
     fetchData();
   }, []);
+
+  const putTransactionsWrapped = async (body) => {
+    setLoadingTransactions(true);
+    try {
+      return await putTransactions(body, setTransactions);
+    } finally {
+      setLoadingTransactions(false);
+    }
+  };
+
+  const deleteTransactionsWrapped = async (body) => {
+    setLoadingTransactions(true);
+    try {
+      return await deleteTransactions(body, setTransactions);
+    } finally {
+      setLoadingTransactions(false);
+    }
+  };
 
   const firstTransactionDate = useMemo(() => {
     if (transactions.length === 0) return null;
@@ -79,6 +97,8 @@ export function TransactionProvider({ children }) {
       currencyMap,
       loadingTransactions,
       setLoadingTransactions,
+      putTransactions: putTransactionsWrapped,
+      deleteTransactions: deleteTransactionsWrapped,
     }),
     [transactions, firstTransactionDate, tickers, tickerMap, currencies, currencyMap, loadingTransactions]
   );

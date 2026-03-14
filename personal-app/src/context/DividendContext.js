@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import { getDividends } from "@/utils_protected/dividendApi";
+import { getDividends, putDividends, deleteDividends } from "@/utils_protected/dividendApi";
 
 const DividendContext = createContext(null);
 
@@ -22,12 +22,32 @@ export function DividendProvider({ children }) {
     fetchData();
   }, []);
 
+  const putDividendsWrapped = async (body) => {
+    setLoadingDividends(true);
+    try {
+      return await putDividends(body, setDividends);
+    } finally {
+      setLoadingDividends(false);
+    }
+  };
+
+  const deleteDividendsWrapped = async (body) => {
+    setLoadingDividends(true);
+    try {
+      return await deleteDividends(body, setDividends);
+    } finally {
+      setLoadingDividends(false);
+    }
+  };
+
   const value = useMemo(
     () => ({
       dividends,
       setDividends,
       loadingDividends,
       setLoadingDividends,
+      putDividends: putDividendsWrapped,
+      deleteDividends: deleteDividendsWrapped,
     }),
     [dividends, loadingDividends]
   );

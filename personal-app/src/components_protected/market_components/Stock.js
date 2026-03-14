@@ -13,6 +13,9 @@ export default function Stock() {
     setPrices,
     loadingPrices,
     setLoadingPrices,
+    corporateActions,
+    setCorporateActions,
+    setLoadingCorporateActions,
   } = usePrices();
   const { tickers, tickerMap } = useTransactions();
 
@@ -71,7 +74,10 @@ export default function Stock() {
         [{ ticker: selectedTicker, startDate: start, endDate: end }],
         prices,
         setPrices,
-        setLoadingPrices
+        setLoadingPrices,
+        corporateActions,
+        setCorporateActions,
+        setLoadingCorporateActions
       );
     };
 
@@ -127,7 +133,10 @@ export default function Stock() {
                 [{ ticker: selectedTicker, startDate, endDate }],
                 prices,
                 setPrices,
-                setLoadingPrices
+                setLoadingPrices,
+                corporateActions,
+                setCorporateActions,
+                setLoadingCorporateActions
               );
             }}
           >

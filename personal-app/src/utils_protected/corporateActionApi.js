@@ -63,8 +63,6 @@ async function corporateActionApi(method, data, setCorporateActions) {
 
 // item = {ticker, startDate, endDate}
 export async function getCorporateActions(items, corporateActions, setCorporateActions, setLoadingCorporateActions) {
-  if (items?.length === 0 || corporateActions == null) return;
-
   const d0 = new Date();
   d0.setDate(d0.getDate() - 1);
   const yesterdayStr =
@@ -121,7 +119,7 @@ export async function getCorporateActions(items, corporateActions, setCorporateA
 
   setLoadingCorporateActions(true);
   try {
-    await corporateActionApi("POST", { items: JSON.stringify(requests) , method: "GET" }, setCorporateActions);
+    await corporateActionApi("POST", { items: JSON.stringify(requests) }, setCorporateActions);
   } finally {
     setLoadingCorporateActions(false);
   }

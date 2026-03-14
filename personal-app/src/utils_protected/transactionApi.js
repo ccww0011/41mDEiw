@@ -40,3 +40,7 @@ export async function getTransactions(setTransactions) {
 export async function putTransactions(body, setTransactions) {
   return await transactionApi('PUT', body, setTransactions);
 }
+
+export async function deleteTransactions(body, setTransactions) {
+  return await transactionApi('DELETE', body, setTransactions);
+}

@@ -36,10 +36,28 @@ const HIDE_ON_MOBILE_COLUMNS = [
 ];
 
 const NUMERIC_KEYS = ['netAmount'];
+const DATE_KEYS = ['exDate', 'payDate'];
+const DATE_REGEX = /^\d{8}$/;
+const ASSET_CLASS_OPTIONS = ['STK', 'CASH'];
+const EXCHANGE_OPTIONS = ['SBF', 'AEB', 'IBIS', 'LSE', 'TSX', 'ASX', 'SWX', 'MI', 'SGX', 'NSE', 'SSE', 'SZSE', 'HKEX', 'NYSE', 'NASDAQ', 'EBS'];
+
+const isValidYYYYMMDD = (value) => {
+  if (!DATE_REGEX.test(value)) return false;
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(4, 6));
+  const day = Number(value.slice(6, 8));
+  if (month < 1 || month > 12) return false;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() + 1 === month &&
+    date.getUTCDate() === day
+  );
+};
 
 
 export default function Dividends() {
-  const {dividends} = useDividends();
+  const {dividends, putDividends, deleteDividends, loadingDividends} = useDividends();
 
   const [showTab, setShowTab] = useState("Upload");
   const tabs = ["Upload"];
@@ -47,6 +65,10 @@ export default function Dividends() {
   // Multi-sort & filters
   const [filters, setFilters] = useState({});
   const [sortRules, setSortRules] = useState([{ key: 'actionID', direction: 'desc' }]);
+  const [editingActionID, setEditingActionID] = useState(null);
+  const [draft, setDraft] = useState({});
+  const [addingNew, setAddingNew] = useState(false);
+  const [newDraft, setNewDraft] = useState({});
 
   const sortedDividends = useMemo(() => {
     if (!Array.isArray(dividends)) return [];
@@ -151,6 +173,41 @@ export default function Dividends() {
     color: num < 0 ? "red" : "black"
   });
 
+  const actionLinkStyle = {
+    color: "#08519c",
+    textDecoration: "underline",
+    cursor: "pointer",
+    marginRight: 4
+  };
+
+  const stripTicker = (row) => {
+    if (!row || typeof row !== "object") return row;
+    const { ticker, ...rest } = row;
+    return rest;
+  };
+
+  const validateRow = (row) => {
+    const errors = [];
+    DATE_KEYS.forEach((field) => {
+      const value = row[field];
+      if (!value || !isValidYYYYMMDD(value)) {
+        errors.push(`Invalid ${field} (YYYYMMDD)`);
+      }
+    });
+    NUMERIC_KEYS.forEach((field) => {
+      const value = row[field];
+      if (value !== undefined && value !== null && value !== "" && isNaN(Number(value))) {
+        errors.push(`${field} must be numeric`);
+      }
+    });
+    if (row.underlyingSymbol && !/^[A-Z]+$/.test(row.underlyingSymbol)) {
+      errors.push("underlyingSymbol must be uppercase letters only");
+    }
+    if (!row.actionID) errors.push("actionID is required");
+    return errors;
+  };
+
+
   return (
     <>
       <div>
@@ -208,6 +265,7 @@ export default function Dividends() {
                 {COLUMN_NAMES[header]}
               </th>
             ))}
+            <th style={{verticalAlign: 'bottom'}}>Actions</th>
           </tr>
 
           {/* Filter row */}
@@ -241,10 +299,104 @@ export default function Dividends() {
                 </th>
               );
             })}
+            <th style={{verticalAlign: 'bottom'}}>
+              <span
+                style={{ ...actionLinkStyle, color: "#f7fbff" }}
+                onClick={() => {
+                  if (loadingDividends) return;
+                  setAddingNew(true);
+                  setNewDraft({});
+                }}
+              >
+                Add
+              </span>
+            </th>
           </tr>
           </thead>
 
           <tbody>
+          {addingNew && (
+            <tr>
+              {RENDERED_HEADERS.map(header => (
+                <td
+                  key={header}
+                  className={HIDE_ON_MOBILE_COLUMNS.includes(header) ? 'hide-on-mobile' : ''}
+                  style={NUMERIC_KEYS.includes(header) ? getStyle(newDraft[header]) : {}}
+                >
+                  {header === "assetClass" ? (
+                    <select
+                      value={newDraft[header] ?? ""}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setNewDraft(prev => ({ ...prev, [header]: value }));
+                      }}
+                      style={{ width: "100%" }}
+                    >
+                      <option value=""></option>
+                      {ASSET_CLASS_OPTIONS.map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  ) : header === "listingExchange" ? (
+                    <select
+                      value={newDraft[header] ?? ""}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setNewDraft(prev => ({ ...prev, [header]: value }));
+                      }}
+                      style={{ width: "100%" }}
+                    >
+                      <option value=""></option>
+                      {EXCHANGE_OPTIONS.map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type={NUMERIC_KEYS.includes(header) ? "number" : "text"}
+                      value={newDraft[header] ?? ""}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const value = header === "underlyingSymbol" ? raw.toUpperCase() : raw;
+                        setNewDraft(prev => ({ ...prev, [header]: value }));
+                      }}
+                      style={{ width: "100%" }}
+                    />
+                  )}
+                </td>
+              ))}
+              <td>
+                <span
+                  style={actionLinkStyle}
+                  onClick={async () => {
+                    if (loadingDividends) return;
+                    const errors = validateRow(newDraft);
+                    if (errors.length) {
+                      window.alert(errors.join("; "));
+                      return;
+                    }
+                    const result = await putDividends({ items: JSON.stringify([stripTicker(newDraft)]) });
+                    if (result?.status === 'Success') {
+                      setAddingNew(false);
+                      setNewDraft({});
+                    }
+                  }}
+                >
+                  Save
+                </span>
+                <span
+                  style={actionLinkStyle}
+                  onClick={() => {
+                    if (loadingDividends) return;
+                    setAddingNew(false);
+                    setNewDraft({});
+                  }}
+                >
+                  Cancel
+                </span>
+              </td>
+            </tr>
+          )}
           {sortedDividends.map((tx, idx) => (
             <tr key={idx}>
               {RENDERED_HEADERS.map(header => (
@@ -253,9 +405,109 @@ export default function Dividends() {
                   className={HIDE_ON_MOBILE_COLUMNS.includes(header) ? 'hide-on-mobile' : ''}
                   style={NUMERIC_KEYS.includes(header) ? getStyle(tx[header]) : {}}
                 >
-                  {NUMERIC_KEYS.includes(header) ? formatNumber(tx[header]) : tx[header] || '-'}
+                  {editingActionID === tx.actionID ? (
+                    header === "assetClass" ? (
+                      <select
+                        value={draft[header] ?? ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setDraft(prev => ({ ...prev, [header]: value }));
+                        }}
+                        style={{ width: "100%" }}
+                      >
+                        <option value=""></option>
+                        {ASSET_CLASS_OPTIONS.map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    ) : header === "listingExchange" ? (
+                      <select
+                        value={draft[header] ?? ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setDraft(prev => ({ ...prev, [header]: value }));
+                        }}
+                        style={{ width: "100%" }}
+                      >
+                        <option value=""></option>
+                        {EXCHANGE_OPTIONS.map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type={NUMERIC_KEYS.includes(header) ? "number" : "text"}
+                        value={draft[header] ?? ""}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          const value = header === "underlyingSymbol" ? raw.toUpperCase() : raw;
+                          setDraft(prev => ({ ...prev, [header]: value }));
+                        }}
+                        style={{ width: "100%" }}
+                      />
+                    )
+                  ) : (
+                    NUMERIC_KEYS.includes(header) ? formatNumber(tx[header]) : tx[header] || '-'
+                  )}
                 </td>
               ))}
+              <td>
+                {editingActionID === tx.actionID ? (
+                  <>
+                    <span
+                      style={actionLinkStyle}
+                      onClick={async () => {
+                        if (loadingDividends) return;
+                        const errors = validateRow(draft);
+                        if (errors.length) {
+                          window.alert(errors.join("; "));
+                          return;
+                        }
+                        const result = await putDividends({ items: JSON.stringify([stripTicker(draft)]) });
+                        if (result?.status === 'Success') {
+                          setEditingActionID(null);
+                          setDraft({});
+                        }
+                      }}
+                    >
+                      Save
+                    </span>
+                    <span
+                      style={actionLinkStyle}
+                      onClick={() => {
+                        if (loadingDividends) return;
+                        setEditingActionID(null);
+                        setDraft({});
+                      }}
+                    >
+                      Cancel
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span
+                      style={actionLinkStyle}
+                      onClick={() => {
+                        if (loadingDividends) return;
+                        setEditingActionID(tx.actionID);
+                        setDraft({ ...tx });
+                      }}
+                    >
+                      Edit
+                    </span>
+                    <span
+                      style={{ ...actionLinkStyle, color: "#fb6a4a" }}
+                      onClick={async () => {
+                        if (loadingDividends) return;
+                        if (!window.confirm("Delete this dividend?")) return;
+                        await deleteDividends({ items: JSON.stringify([tx.actionID]) });
+                      }}
+                    >
+                      Delete
+                    </span>
+                  </>
+                )}
+              </td>
             </tr>
           ))}
           </tbody>

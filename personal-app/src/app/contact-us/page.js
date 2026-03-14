@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { postContactUs } from "@/utils/useContact";
+import { postContactUs } from "@/utils/contactApi";
 import { useAuth } from "@/context/AuthContext";
 import { useRecaptcha } from "@/hooks/useRecaptcha";
 
