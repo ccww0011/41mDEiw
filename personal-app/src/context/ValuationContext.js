@@ -1,12 +1,13 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useTransactions } from "@/context/TransactionContext";
 import { useFxs } from "@/context/FxContext";
 import { usePrices } from "@/context/PriceContext";
 import { getFxs } from "@/utils_protected/fxApi";
 import { getPrices } from "@/utils_protected/priceApi";
 import {useDividends} from "@/context/DividendContext";
+import { useUserSettings } from "@/context/UserSettingsContext";
 
 const d0 = new Date();
 d0.setDate(d0.getDate() - 1);
@@ -34,6 +35,7 @@ export function ValuationProvider({ children }) {
   const { fxs, lastFxDate, setFxs, setLoadingFxs } = useFxs();
   const { transactions, firstTransactionDate } = useTransactions();
   const { dividends } = useDividends();
+  const { userSettings, putUserSettings } = useUserSettings();
 
   const [basis, setBasis] = useState("Local");
   const [startDateDisplay, setStartDateDisplay] = useState(yesterdayStrStart);
@@ -45,6 +47,24 @@ export function ValuationProvider({ children }) {
     const yearStart = `${endDateDisplay.slice(0, 4)}0101`;
     if (startDateDisplay == null) setStartDateDisplay(firstTransactionDate < yearStart ? yearStart : firstTransactionDate);
   }, [firstTransactionDate, endDateDisplay]);
+
+  // Initialize basis from user settings (default Local)
+  useEffect(() => {
+    const serverBasis = userSettings?.basis;
+    if (serverBasis) {
+      setBasis(serverBasis);
+    } else if (userSettings && !serverBasis) {
+      setBasis("Local");
+    }
+  }, [userSettings]);
+
+  // Sync basis to user settings
+  useEffect(() => {
+    if (!userSettings) return;
+    if (userSettings.basis === basis) return;
+    const next = { ...userSettings, basis };
+    putUserSettings({ items: JSON.stringify(next) });
+  }, [basis, userSettings, putUserSettings]);
 
   // Update end date based on last available price or FX
   useEffect(() => {
@@ -141,6 +161,58 @@ export function ValuationProvider({ children }) {
     fetchPrices();
   }, [transactions, startDateDisplay, endDateDisplay]);
 
+  const appliedCorporateActions = useMemo(() => {
+    const rows = [];
+    const appliedMap = userSettings?.corporate_actions_applied ?? {};
+    const appliedSet = new Set(Object.keys(appliedMap));
+    const unappliedSet = new Set(userSettings?.corporate_actions_unapplied ?? []);
+
+    Object.entries(corporateActions || {}).forEach(([ticker, actions]) => {
+      if (!actions || typeof actions !== "object") return;
+      Object.entries(actions).forEach(([actionDate, details]) => {
+        const type = details?.type ?? "UNKNOWN";
+        const actionKey = `${ticker}#${type}#${actionDate}`;
+        const ratioVal = details?.ratio ?? details?.factor ?? "";
+        const ratioNum = Number(ratioVal);
+        const hasPositiveRatio = !isNaN(ratioNum) && ratioNum > 0;
+        if (unappliedSet.has(actionKey)) return;
+        const overrides = appliedMap[actionKey] ?? {};
+        if (appliedSet.has(actionKey) || hasPositiveRatio) {
+          rows.push({
+            ticker,
+            actionDate,
+            type,
+            summary: overrides.summary ?? details?.summary ?? "",
+            child_ticker: overrides.child_ticker ?? details?.child_ticker ?? "",
+            ratio: overrides.ratio ?? ratioVal,
+            actionKey,
+          });
+        }
+      });
+    });
+
+    const added = userSettings?.corporate_actions_added ?? {};
+    Object.entries(added).forEach(([ticker, actions]) => {
+      if (!actions || typeof actions !== "object") return;
+      Object.entries(actions).forEach(([actionDate, details]) => {
+        const type = details?.type ?? "UNKNOWN";
+        const actionKey = `${ticker}#${type}#${actionDate}`;
+        const overrides = appliedMap[actionKey] ?? {};
+        rows.push({
+          ticker,
+          actionDate,
+          type,
+          summary: overrides.summary ?? details?.summary ?? "",
+          child_ticker: overrides.child_ticker ?? details?.child_ticker ?? "",
+          ratio: overrides.ratio ?? details?.ratio ?? details?.factor ?? "",
+          actionKey,
+        });
+      });
+    });
+
+    return rows;
+  }, [corporateActions, userSettings]);
+
 
   return (
     <ValuationContext.Provider
@@ -151,6 +223,7 @@ export function ValuationProvider({ children }) {
         setStartDateDisplay,
         endDateDisplay,
         setEndDateDisplay,
+        appliedCorporateActions,
       }}
     >
       {children}
