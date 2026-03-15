@@ -475,8 +475,6 @@ export default function CorporateActions() {
     const addedMap = userSettings?.corporate_actions_added ?? {};
     const isAdded = !!(addedMap?.[row.ticker]?.[row.actionDate]);
     const nextAdded = { ...addedMap };
-    const existingDb = corporateActions?.[row.ticker]?.[row.actionDate];
-    const existingDbType = existingDb?.type ?? "UNKNOWN";
     if (isAdded) {
       nextAdded[row.ticker] = { ...(nextAdded[row.ticker] ?? {}) };
       delete nextAdded[row.ticker][row.actionDate];
