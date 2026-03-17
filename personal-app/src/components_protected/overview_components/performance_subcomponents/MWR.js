@@ -266,7 +266,7 @@ export default function MWR() {
     description: "Description",
     exchange: "Exchange",
     tradingCurrency: "Trading Currency",
-    ytd: `${endDateDisplay ? endDateDisplay.slice(0, 4) : ""}YTD`
+    ytd: `YTD ${endDateDisplay ? endDateDisplay.slice(0, 4) : ""}`
   };
   monthLabels.forEach((m) => {
     COLUMN_NAMES[m] = m.slice(4, 6);
