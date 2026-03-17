@@ -2,11 +2,8 @@
 
 import React, { useMemo, useState } from "react";
 import { useTransactions } from "@/context/TransactionContext";
-import { useFxs } from "@/context/FxContext";
 import { usePrices } from "@/context/PriceContext";
 import { useValuationContext } from "@/context/ValuationContext";
-import { useUserSettings } from "@/context/UserSettingsContext";
-import { useDividends } from "@/context/DividendContext";
 
 export default function Summary() {
   const { tickerMap: txTickerMap } = useTransactions();

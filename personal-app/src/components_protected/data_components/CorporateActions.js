@@ -569,9 +569,8 @@ export default function CorporateActions() {
     const nextAdded = { ...addedMask };
     const ticker = row?.ticker ?? editingKey.split("#")[0] ?? "";
     const actionDate = row?.actionDate ?? editingKey.split("#")[2] ?? "";
-    const type = row?.type ?? editingKey.split("#")[1] ?? "UNKNOWN";
+    const type = row?.type ?? editingKey.split("#")[1] ?? "";
     const existingDb = corporateActions?.[ticker]?.[actionDate];
-    const existingDbType = existingDb?.type ?? "UNKNOWN";
     if (ticker && actionDate) {
       if (!nextAdded[ticker]) nextAdded[ticker] = {};
       nextAdded[ticker][actionDate] = {
