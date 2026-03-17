@@ -5,26 +5,13 @@ import { useTransactions } from "@/context/TransactionContext";
 import { useFxs } from "@/context/FxContext";
 import { usePrices } from "@/context/PriceContext";
 import { useValuationContext } from "@/context/ValuationContext";
-import { useValuation } from "@/hooks/useValuation";
+import { useUserSettings } from "@/context/UserSettingsContext";
 import { useDividends } from "@/context/DividendContext";
 
 export default function Summary() {
-  const { transactions } = useTransactions();
-  const { prices } = usePrices();
-  const { fxs, setFxs, setLoadingFxs } = useFxs();
-  const { basis, endDateDisplay } = useValuationContext();
-  const { dividends } = useDividends();
-
-  const { holdings } = useValuation(
-    transactions,
-    prices,
-    fxs,
-    setFxs,
-    setLoadingFxs,
-    basis,
-    endDateDisplay,
-    dividends
-  );
+  const { tickerMap: txTickerMap } = useTransactions();
+  const { tickerMap: priceTickerMap } = usePrices();
+  const { endDateDisplay, holdings } = useValuationContext();
 
   const [sortRules, setSortRules] = useState([]);
   const [filters, setFilters] = useState({});
@@ -57,13 +44,19 @@ export default function Summary() {
   const sortedHoldings = useMemo(() => {
     let array = [...holdings];
 
-    array = array.map(h => ({
-      ...h,
-      pL:
-        h.unrealisedPL !== null && h.realisedPL !== null
-          ? h.unrealisedPL + h.realisedPL
-          : null
-    }));
+    array = array.map(h => {
+      const meta = txTickerMap?.[h.ticker] ?? priceTickerMap?.[h.ticker] ?? {};
+      return {
+        ...h,
+        description: meta.description ?? h.description ?? "",
+        exchange: meta.exchange ?? h.exchange ?? "",
+        tradingCurrency: meta.tradingCurrency ?? h.tradingCurrency ?? "",
+        pL:
+          h.unrealisedPL !== null && h.realisedPL !== null
+            ? h.unrealisedPL + h.realisedPL
+            : null
+      };
+    });
 
     Object.entries(filters).forEach(([key, value]) => {
       if (value && value !== "All") {

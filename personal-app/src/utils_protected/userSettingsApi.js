@@ -28,16 +28,7 @@ async function userSettingsApi(method, body = null, setUserSettings) {
       if (contentType && contentType.includes("text/html")) {
         return { message: "Unauthorised.", status: "Unauthorised" };
       } else {
-        setUserSettings((prev) => {
-          const next = items.data ?? {};
-          if (!prev || typeof prev !== "object") return next;
-          if (!next || typeof next !== "object") return prev;
-          const merged = { ...prev, ...next };
-          if (next.basis == null || next.basis === "") {
-            merged.basis = prev.basis;
-          }
-          return merged;
-        });
+        setUserSettings(items.data ?? {});
         return { message: items.message, status: "Success" };
       }
     } else if (response.status === 401 || response.status === 403) {

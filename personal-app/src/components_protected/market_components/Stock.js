@@ -13,11 +13,15 @@ export default function Stock() {
     setPrices,
     loadingPrices,
     setLoadingPrices,
+    setTickerMap,
+    tickerMap: priceTickerMap,
     corporateActions,
     setCorporateActions,
     setLoadingCorporateActions,
   } = usePrices();
-  const { tickers, tickerMap } = useTransactions();
+  const { tickerMap } = useTransactions();
+
+  const priceTickers = useMemo(() => Object.keys(priceTickerMap || {}).sort(), [priceTickerMap]);
 
   const [selectedTicker, setSelectedTicker] = useState("");
   const [range, setRange] = useState("YTD");
@@ -26,10 +30,10 @@ export default function Stock() {
 
   // Default ticker
   useEffect(() => {
-    if (tickers?.length && !selectedTicker) {
-      setSelectedTicker(tickers[0]);
+    if (priceTickers?.length && !selectedTicker) {
+      setSelectedTicker(priceTickers[0]);
     }
-  }, [tickers, selectedTicker]);
+  }, [priceTickers, selectedTicker]);
 
   // ---------- Date helpers ----------
   const formatDate = (date) =>
@@ -75,6 +79,7 @@ export default function Stock() {
         prices,
         setPrices,
         setLoadingPrices,
+        setTickerMap,
         corporateActions,
         setCorporateActions,
         setLoadingCorporateActions
@@ -104,12 +109,14 @@ export default function Stock() {
 
       <div className="grid">
         <div className="grid-item grid3">
-          {selectedTicker ? tickerMap[selectedTicker] || "No description" : "—"}
+          {selectedTicker
+            ? (priceTickerMap[selectedTicker]?.description || tickerMap[selectedTicker]?.description || "No description")
+            : "—"}
         </div>
 
         <div className="grid-item grid2">
           <select value={selectedTicker} onChange={(e) => setSelectedTicker(e.target.value)}>
-            {tickers.map((t) => (
+            {priceTickers.map((t) => (
               <option key={t} value={t}>{t}</option>
             ))}
           </select>
@@ -134,6 +141,7 @@ export default function Stock() {
                 prices,
                 setPrices,
                 setLoadingPrices,
+                setTickerMap,
                 corporateActions,
                 setCorporateActions,
                 setLoadingCorporateActions

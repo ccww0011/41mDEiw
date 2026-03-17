@@ -8,6 +8,7 @@ import { getFxs } from "@/utils_protected/fxApi";
 import { getPrices } from "@/utils_protected/priceApi";
 import {useDividends} from "@/context/DividendContext";
 import { useUserSettings } from "@/context/UserSettingsContext";
+import { useValuation as useProtectedValuation, usePL as useProtectedPL } from "@/hooks_protected/useValuation";
 
 const d0 = new Date();
 d0.setDate(d0.getDate() - 1);
@@ -28,6 +29,8 @@ export function ValuationProvider({ children }) {
     lastPriceDate,
     setPrices,
     setLoadingPrices,
+    setTickerMap,
+    tickerMap: priceTickerMap,
     corporateActions,
     setCorporateActions,
     setLoadingCorporateActions,
@@ -35,9 +38,8 @@ export function ValuationProvider({ children }) {
   const { fxs, lastFxDate, setFxs, setLoadingFxs } = useFxs();
   const { transactions, firstTransactionDate } = useTransactions();
   const { dividends } = useDividends();
-  const { userSettings, putUserSettings } = useUserSettings();
+  const { basis, userCorporateActionsMask } = useUserSettings();
 
-  const [basis, setBasis] = useState("Local");
   const [startDateDisplay, setStartDateDisplay] = useState(yesterdayStrStart);
   const [endDateDisplay, setEndDateDisplay] = useState(yesterdayStr);
 
@@ -48,23 +50,9 @@ export function ValuationProvider({ children }) {
     if (startDateDisplay == null) setStartDateDisplay(firstTransactionDate < yearStart ? yearStart : firstTransactionDate);
   }, [firstTransactionDate, endDateDisplay]);
 
-  // Initialize basis from user settings (default Local)
-  useEffect(() => {
-    const serverBasis = userSettings?.basis;
-    if (serverBasis) {
-      setBasis(serverBasis);
-    } else if (userSettings && !serverBasis) {
-      setBasis("Local");
-    }
-  }, [userSettings]);
-
-  // Sync basis to user settings
-  useEffect(() => {
-    if (!userSettings) return;
-    if (userSettings.basis === basis) return;
-    const next = { ...userSettings, basis };
-    putUserSettings({ items: JSON.stringify(next) });
-  }, [basis, userSettings, putUserSettings]);
+  const appliedMap = userCorporateActionsMask?.applied ?? {};
+  const excludedList = userCorporateActionsMask?.excluded ?? [];
+  const addedMap = userCorporateActionsMask?.added ?? {};
 
   // Update end date based on last available price or FX
   useEffect(() => {
@@ -111,61 +99,10 @@ export function ValuationProvider({ children }) {
     fetchFxs();
   }, [transactions, basis, firstTransactionDate, endDateDisplay]);
 
-  // Fetch missing Prices
-  useEffect(() => {
-    if (!transactions?.length || !startDateDisplay || !endDateDisplay) return;
-    let startDateRequest = new Date(
-      Number(startDateDisplay.slice(0, 4)),
-      Number(startDateDisplay.slice(4, 6)) - 1,
-      Number(startDateDisplay.slice(6, 8))
-    )
-    startDateRequest.setDate(startDateRequest.getDate() - 1);
-    const startDateYYYYMMDD =
-      startDateRequest.getFullYear().toString() +
-      String(startDateRequest.getMonth() + 1).padStart(2, "0") +
-      String(startDateRequest.getDate()).padStart(2, "0");
-
-    const fetchPrices = async () => {
-      const requests = new Map();
-      transactions.forEach(tx => {
-        if (tx.assetClass !== "STK") return;
-        const year = tx.tradeDate.slice(0, 4);
-        const prev = requests.get(tx.ticker);
-        if (!prev || year < prev) requests.set(tx.ticker, year);
-      });
-      const items = Array.from(requests.entries())
-        .map(([ticker, minYear]) => {
-          const startDate = `${minYear}0101`;
-          if (startDate < startDateYYYYMMDD) {
-            return { ticker, startDate: startDateYYYYMMDD, endDate: endDateDisplay };
-          } else if (startDate <= endDateDisplay) {
-            return { ticker, startDate, endDate: endDateDisplay };
-          } else {
-            return null;
-          }
-        })
-        .filter(Boolean);
-      if (items.length) {
-        await getPrices(
-          items,
-          prices,
-          setPrices,
-          setLoadingPrices,
-          corporateActions,
-          setCorporateActions,
-          setLoadingCorporateActions
-        );
-      }
-    };
-
-    fetchPrices();
-  }, [transactions, startDateDisplay, endDateDisplay]);
-
   const appliedCorporateActions = useMemo(() => {
     const rows = [];
-    const appliedMap = userSettings?.corporate_actions_applied ?? {};
     const appliedSet = new Set(Object.keys(appliedMap));
-    const unappliedSet = new Set(userSettings?.corporate_actions_unapplied ?? []);
+    const excludedSet = new Set(excludedList);
 
     Object.entries(corporateActions || {}).forEach(([ticker, actions]) => {
       if (!actions || typeof actions !== "object") return;
@@ -175,7 +112,7 @@ export function ValuationProvider({ children }) {
         const ratioVal = details?.ratio ?? details?.factor ?? "";
         const ratioNum = Number(ratioVal);
         const hasPositiveRatio = !isNaN(ratioNum) && ratioNum > 0;
-        if (unappliedSet.has(actionKey)) return;
+        if (excludedSet.has(actionKey)) return;
         const overrides = appliedMap[actionKey] ?? {};
         if (appliedSet.has(actionKey) || hasPositiveRatio) {
           rows.push({
@@ -191,8 +128,7 @@ export function ValuationProvider({ children }) {
       });
     });
 
-    const added = userSettings?.corporate_actions_added ?? {};
-    Object.entries(added).forEach(([ticker, actions]) => {
+    Object.entries(addedMap).forEach(([ticker, actions]) => {
       if (!actions || typeof actions !== "object") return;
       Object.entries(actions).forEach(([actionDate, details]) => {
         const type = details?.type ?? "UNKNOWN";
@@ -211,19 +147,149 @@ export function ValuationProvider({ children }) {
     });
 
     return rows;
-  }, [corporateActions, userSettings]);
+  }, [corporateActions, appliedMap, excludedList, addedMap]);
 
+  // Fetch missing Prices (transactions + spin-offs)
+  useEffect(() => {
+    if (!startDateDisplay || !endDateDisplay) return;
+    let startDateRequest = new Date(
+      Number(startDateDisplay.slice(0, 4)),
+      Number(startDateDisplay.slice(4, 6)) - 1,
+      Number(startDateDisplay.slice(6, 8))
+    )
+    startDateRequest.setDate(startDateRequest.getDate() - 1);
+    const startDateYYYYMMDD =
+      startDateRequest.getFullYear().toString() +
+      String(startDateRequest.getMonth() + 1).padStart(2, "0") +
+      String(startDateRequest.getDate()).padStart(2, "0");
+
+    const fetchPrices = async () => {
+      const requests = new Map();
+      const forceMetaYears = new Map();
+
+      transactions?.forEach(tx => {
+        if (tx.assetClass !== "STK") return;
+        const year = tx.tradeDate.slice(0, 4);
+        const prev = requests.get(tx.ticker);
+        if (!prev || year < prev) requests.set(tx.ticker, year);
+        const meta = priceTickerMap?.[tx.ticker];
+        const needsMeta = !meta || !meta.description || !meta.exchange || !meta.tradingCurrency;
+        if (needsMeta) {
+          const prevMeta = forceMetaYears.get(tx.ticker);
+          if (!prevMeta || year < prevMeta) forceMetaYears.set(tx.ticker, year);
+        }
+      });
+
+      appliedCorporateActions
+        .filter(a => a.type === "SPIN_OFF" && a.child_ticker)
+        .forEach(a => {
+          const year = a.actionDate?.slice(0, 4);
+          if (!year) return;
+          const prev = requests.get(a.child_ticker);
+          if (!prev || year < prev) requests.set(a.child_ticker, year);
+          const meta = priceTickerMap?.[a.child_ticker];
+          const needsMeta = !meta || !meta.description || !meta.exchange || !meta.tradingCurrency;
+          if (needsMeta) {
+            const prevMeta = forceMetaYears.get(a.child_ticker);
+            if (!prevMeta || year < prevMeta) forceMetaYears.set(a.child_ticker, year);
+          }
+        });
+
+      const mergedYears = new Map(requests);
+      forceMetaYears.forEach((year, ticker) => {
+        const prev = mergedYears.get(ticker);
+        if (!prev || year < prev) mergedYears.set(ticker, year);
+      });
+
+      const items = Array.from(mergedYears.entries())
+        .map(([ticker, minYear]) => {
+          const startDate = `${minYear}0101`;
+          if (startDate < startDateYYYYMMDD) {
+            return { ticker, startDate: startDateYYYYMMDD, endDate: endDateDisplay };
+          } else if (startDate <= endDateDisplay) {
+            return { ticker, startDate, endDate: endDateDisplay };
+          } else {
+            return null;
+          }
+        })
+        .filter(Boolean);
+      if (items.length) {
+        await getPrices(
+          items,
+          prices,
+          setPrices,
+          setLoadingPrices,
+          setTickerMap,
+          corporateActions,
+          setCorporateActions,
+          setLoadingCorporateActions
+        );
+      }
+    };
+
+    fetchPrices();
+  }, [transactions, appliedCorporateActions, startDateDisplay, endDateDisplay, priceTickerMap]);
+
+  const {
+    cumulativeHoldingsByTickerByDate,
+    cumulativeCostBasisByTickerByDate,
+    cumulativeMarketValueByTickerByDate,
+    cumulativeRealisedPLByTickerByDate,
+    cumulativeUnrealisedPLByTickerByDate,
+    cumulativeDividendByTickerByDate,
+    transactionByTickerByDate,
+    holdings,
+    aggregates,
+    marketValueByTicker,
+    marketValueByTradingCurrency,
+  } = useProtectedValuation(
+    transactions,
+    prices,
+    priceTickerMap,
+    fxs,
+    setFxs,
+    setLoadingFxs,
+    basis,
+    endDateDisplay,
+    dividends,
+    appliedCorporateActions
+  );
+
+  const { cumulativePLByDate } = useProtectedPL(
+    transactions,
+    prices,
+    setPrices,
+    setLoadingPrices,
+    fxs,
+    basis,
+    startDateDisplay,
+    endDateDisplay,
+    dividends,
+    appliedCorporateActions
+  );
+  console.log(cumulativeMarketValueByTickerByDate)
+  console.log(cumulativeCostBasisByTickerByDate)
 
   return (
     <ValuationContext.Provider
       value={{
-        basis,
-        setBasis,
         startDateDisplay,
         setStartDateDisplay,
         endDateDisplay,
         setEndDateDisplay,
         appliedCorporateActions,
+        holdings,
+        aggregates,
+        marketValueByTicker,
+        marketValueByTradingCurrency,
+        cumulativePLByDate,
+        cumulativeHoldingsByTickerByDate,
+        cumulativeCostBasisByTickerByDate,
+        cumulativeMarketValueByTickerByDate,
+        cumulativeRealisedPLByTickerByDate,
+        cumulativeUnrealisedPLByTickerByDate,
+        cumulativeDividendByTickerByDate,
+        transactionByTickerByDate,
       }}
     >
       {children}

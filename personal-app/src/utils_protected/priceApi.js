@@ -3,7 +3,7 @@
 import {logout} from "@/utils_protected/authApi";
 import { getCorporateActions } from "@/utils_protected/corporateActionApi";
 
-async function priceApi(method, data, setPrices) {
+async function priceApi(method, data, setPrices, setTickerMap) {
   try {
     let url = process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/api/price";
     let content = {
@@ -52,6 +52,20 @@ async function priceApi(method, data, setPrices) {
           return merged;
         });
 
+        if (items.meta && setTickerMap) {
+          setTickerMap(prevMap => {
+            const merged = { ...(prevMap || {}) };
+            Object.entries(items.meta).forEach(([ticker, meta]) => {
+              merged[ticker] = {
+                description: (meta?.description ?? merged[ticker]?.description ?? "").toUpperCase(),
+                exchange: (meta?.exchange ?? merged[ticker]?.exchange ?? "").toUpperCase(),
+                tradingCurrency: (meta?.tradingCurrency ?? merged[ticker]?.tradingCurrency ?? "").toUpperCase(),
+              };
+            });
+            return merged;
+          });
+        }
+
         return {message: items.message, status: 'Success'};
       }
     } else if (response.status === 401 || response.status === 403) {
@@ -71,6 +85,7 @@ export async function getPrices(
   prices,
   setPrices,
   setLoadingPrices,
+  setTickerMap,
   corporateActions,
   setCorporateActions,
   setLoadingCorporateActions
@@ -111,7 +126,7 @@ export async function getPrices(
   }
   setLoadingPrices(true);
   try {
-    await priceApi('POST', { items: JSON.stringify(requests) }, setPrices);
+    await priceApi('POST', { items: JSON.stringify(requests) }, setPrices, setTickerMap);
     if (corporateActions && setCorporateActions && setLoadingCorporateActions) {
       await getCorporateActions(requests, corporateActions, setCorporateActions, setLoadingCorporateActions);
     }
@@ -123,5 +138,5 @@ export async function getPrices(
 
 export async function putPrices(ticker, startDate, endDate, prices, setPrices) {
   const data = [];
-  return await priceApi('PUT', data, setPrices);
+  return await priceApi('PUT', data, setPrices, null);
 }

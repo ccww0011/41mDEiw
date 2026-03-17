@@ -339,10 +339,13 @@ function CorporateActionsTable({
 
 export default function CorporateActions() {
   const { corporateActions, loadingCorporateActions } = usePrices();
-  const { userSettings, putUserSettings } = useUserSettings();
+  const { userCorporateActionsMask, setUserCorporateActionsMask } = useUserSettings();
   const [addingRow, setAddingRow] = useState(null);
   const [editingKey, setEditingKey] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
+  const appliedMask = userCorporateActionsMask?.applied ?? {};
+  const excludedMask = userCorporateActionsMask?.excluded ?? [];
+  const addedMask = userCorporateActionsMask?.added ?? {};
 
   const rows = useMemo(() => {
     const output = [];
@@ -369,10 +372,9 @@ export default function CorporateActions() {
   }, [corporateActions]);
 
   const appliedRows = useMemo(() => {
-    const appliedMap = userSettings?.corporate_actions_applied ?? {};
-    const appliedSet = new Set(Object.keys(appliedMap));
-    const unappliedSet = new Set(userSettings?.corporate_actions_unapplied ?? []);
-    const added = userSettings?.corporate_actions_added ?? {};
+    const appliedSet = new Set(Object.keys(appliedMask));
+    const excludedSet = new Set(excludedMask);
+    const added = addedMask;
     const addedKeySet = new Set(
       Object.entries(added).flatMap(([ticker, actions]) => {
         if (!actions || typeof actions !== "object") return [];
@@ -387,13 +389,13 @@ export default function CorporateActions() {
       .filter((row) => {
         const ratioNum = Number(row.ratio);
         const hasPositiveRatio = !isNaN(ratioNum) && ratioNum > 0;
-        if (unappliedSet.has(row.actionKey)) return false;
+        if (excludedSet.has(row.actionKey)) return false;
         if (addedKeySet.has(row.actionKey)) return false;
         if (appliedSet.has(row.actionKey)) return true;
         return hasPositiveRatio;
       })
       .map((row) => {
-        const overrides = appliedMap[row.actionKey] ?? {};
+        const overrides = appliedMask[row.actionKey] ?? {};
         return {
           ...row,
           summary: overrides.summary ?? row.summary ?? "",
@@ -420,38 +422,30 @@ export default function CorporateActions() {
     });
 
     return [...baseApplied, ...addedRows];
-  }, [rows, userSettings]);
+  }, [rows, appliedMask, excludedMask, addedMask]);
 
   const suggestionRows = useMemo(() => {
-    const appliedSet = new Set(Object.keys(userSettings?.corporate_actions_applied ?? {}));
-    const unappliedSet = new Set(userSettings?.corporate_actions_unapplied ?? []);
+    const appliedSet = new Set(Object.keys(appliedMask));
+    const excludedSet = new Set(excludedMask);
     return rows.filter((row) => {
       const ratioNum = Number(row.ratio);
-      const hasPositiveRatio = !isNaN(ratioNum) && ratioNum > 0;
+      const isZeroRatio = !isNaN(ratioNum) && ratioNum === 0;
       if (appliedSet.has(row.actionKey)) return false;
-      if (unappliedSet.has(row.actionKey)) return true;
-      return !hasPositiveRatio;
+      if (excludedSet.has(row.actionKey)) return true;
+      return isZeroRatio;
     });
-  }, [rows, userSettings]);
+  }, [rows, appliedMask, excludedMask]);
 
   const handleApply = async (row) => {
     const key = row.actionKey;
-    const addedMap = userSettings?.corporate_actions_added ?? {};
-    const isAdded = !!(addedMap?.[row.ticker]?.[row.actionDate]);
-    if (isAdded) {
-      window?.alert?.("Corporate action already exists in added list for this key.");
+    const prevExcluded = excludedMask;
+    if (prevExcluded.includes(key)) {
+      await setUserCorporateActionsMask({
+        excluded: prevExcluded.filter((k) => k !== key),
+      });
       return;
     }
-    const prevUnapplied = userSettings?.corporate_actions_unapplied ?? [];
-    if (prevUnapplied.includes(key)) {
-      const nextSettings = {
-        ...(userSettings ?? {}),
-        corporate_actions_unapplied: prevUnapplied.filter((k) => k !== key),
-      };
-      await putUserSettings({ items: JSON.stringify(nextSettings) });
-      return;
-    }
-    const nextApplied = { ...(userSettings?.corporate_actions_applied ?? {}) };
+    const nextApplied = { ...appliedMask };
     if (!nextApplied[key]) {
       nextApplied[key] = {
         summary: row.summary ?? "",
@@ -459,39 +453,34 @@ export default function CorporateActions() {
         ratio: row.ratio ?? "",
       };
     }
-    const nextSettings = {
-      ...(userSettings ?? {}),
-      corporate_actions_applied: nextApplied,
-      corporate_actions_added: userSettings?.corporate_actions_added ?? {},
-    };
-    await putUserSettings({ items: JSON.stringify(nextSettings) });
+    await setUserCorporateActionsMask({
+      applied: nextApplied,
+    });
   };
 
   const handleUnapply = async (row) => {
     const key = row.actionKey;
-    const nextApplied = { ...(userSettings?.corporate_actions_applied ?? {}) };
-    const wasApplied = Object.prototype.hasOwnProperty.call(nextApplied, key);
+    const nextApplied = { ...appliedMask };
     delete nextApplied[key];
-    const addedMap = userSettings?.corporate_actions_added ?? {};
-    const isAdded = !!(addedMap?.[row.ticker]?.[row.actionDate]);
-    const nextAdded = { ...addedMap };
+    const prevExcluded = excludedMask;
+    const wasApplied = Object.prototype.hasOwnProperty.call(appliedMask ?? {}, key);
+    const nextAdded = { ...addedMask };
+    const isAdded = !!(nextAdded?.[row.ticker]?.[row.actionDate]);
     if (isAdded) {
       nextAdded[row.ticker] = { ...(nextAdded[row.ticker] ?? {}) };
       delete nextAdded[row.ticker][row.actionDate];
       if (Object.keys(nextAdded[row.ticker]).length === 0) delete nextAdded[row.ticker];
     }
-    let nextUnapplied = wasApplied
-      ? (userSettings?.corporate_actions_unapplied ?? [])
+    const nextExcluded = wasApplied
+      ? prevExcluded
       : isAdded
-        ? (userSettings?.corporate_actions_unapplied ?? [])
-        : Array.from(new Set([...(userSettings?.corporate_actions_unapplied ?? []), key]));
-    const nextSettings = {
-      ...(userSettings ?? {}),
-      corporate_actions_applied: nextApplied,
-      corporate_actions_unapplied: nextUnapplied,
-      corporate_actions_added: nextAdded,
-    };
-    await putUserSettings({ items: JSON.stringify(nextSettings) });
+        ? prevExcluded
+        : Array.from(new Set([...(prevExcluded ?? []), key]));
+    await setUserCorporateActionsMask({
+      applied: nextApplied,
+      excluded: nextExcluded,
+      added: nextAdded,
+    });
   };
 
   const handleAddStart = () => {
@@ -514,7 +503,7 @@ export default function CorporateActions() {
     const ticker = addingRow.ticker;
     const actionDate = addingRow.actionDate;
     const type = addingRow.type || "UNKNOWN";
-    const nextAdded = { ...(userSettings?.corporate_actions_added ?? {}) };
+    const nextAdded = { ...addedMask };
     const existingAdded = nextAdded?.[ticker]?.[actionDate];
     const existingAddedType = existingAdded?.type ?? "UNKNOWN";
     const hasAddedDuplicate = !!existingAdded && existingAddedType === type;
@@ -533,7 +522,7 @@ export default function CorporateActions() {
       ratio: addingRow.ratio,
     };
     const actionKey = `${ticker}#${type}#${actionDate}`;
-    const nextApplied = { ...(userSettings?.corporate_actions_applied ?? {}) };
+    const nextApplied = { ...appliedMask };
     if (!nextApplied[actionKey]) {
       nextApplied[actionKey] = {
         summary: addingRow.summary ?? "",
@@ -541,17 +530,15 @@ export default function CorporateActions() {
         ratio: addingRow.ratio ?? "",
       };
     }
-    const nextUnappliedBase = (userSettings?.corporate_actions_unapplied ?? []).filter((k) => k !== actionKey);
-    const nextUnapplied = hasDbDuplicate
-      ? Array.from(new Set([...nextUnappliedBase, actionKey]))
-      : nextUnappliedBase;
-    const nextSettings = {
-      ...(userSettings ?? {}),
-      corporate_actions_applied: nextApplied,
-      corporate_actions_unapplied: nextUnapplied,
-      corporate_actions_added: nextAdded,
-    };
-    await putUserSettings({ items: JSON.stringify(nextSettings) });
+    const nextExcludedBase = (excludedMask ?? []).filter((k) => k !== actionKey);
+    const nextExcluded = hasDbDuplicate
+      ? Array.from(new Set([...nextExcludedBase, actionKey]))
+      : nextExcludedBase;
+    await setUserCorporateActionsMask({
+      applied: nextApplied,
+      excluded: nextExcluded,
+      added: nextAdded,
+    });
     setAddingRow(null);
   };
 
@@ -577,15 +564,14 @@ export default function CorporateActions() {
 
   const handleEditSave = async (row) => {
     if (!editingKey) return;
-    const nextApplied = { ...(userSettings?.corporate_actions_applied ?? {}) };
+    const nextApplied = { ...appliedMask };
     delete nextApplied[editingKey];
-    const nextAdded = { ...(userSettings?.corporate_actions_added ?? {}) };
+    const nextAdded = { ...addedMask };
     const ticker = row?.ticker ?? editingKey.split("#")[0] ?? "";
     const actionDate = row?.actionDate ?? editingKey.split("#")[2] ?? "";
     const type = row?.type ?? editingKey.split("#")[1] ?? "UNKNOWN";
     const existingDb = corporateActions?.[ticker]?.[actionDate];
     const existingDbType = existingDb?.type ?? "UNKNOWN";
-    const hasDbDuplicate = !!existingDb && existingDbType === type;
     if (ticker && actionDate) {
       if (!nextAdded[ticker]) nextAdded[ticker] = {};
       nextAdded[ticker][actionDate] = {
@@ -595,17 +581,15 @@ export default function CorporateActions() {
         ratio: editDraft?.ratio ?? "",
       };
     }
-    const nextUnappliedBase = userSettings?.corporate_actions_unapplied ?? [];
-    const nextUnapplied = hasDbDuplicate
-      ? Array.from(new Set([...nextUnappliedBase, editingKey]))
-      : nextUnappliedBase;
-    const nextSettings = {
-      ...(userSettings ?? {}),
-      corporate_actions_applied: nextApplied,
-      corporate_actions_unapplied: nextUnapplied,
-      corporate_actions_added: nextAdded,
-    };
-    await putUserSettings({ items: JSON.stringify(nextSettings) });
+    const wasApplied = Object.prototype.hasOwnProperty.call(appliedMask ?? {}, editingKey);
+    const nextExcluded = wasApplied
+      ? (excludedMask ?? [])
+      : Array.from(new Set([...(excludedMask ?? []), editingKey]));
+    await setUserCorporateActionsMask({
+      applied: nextApplied,
+      excluded: nextExcluded,
+      added: nextAdded,
+    });
     setEditingKey(null);
     setEditDraft(null);
   };

@@ -1,15 +1,21 @@
-import React, {useState} from "react";
+import React, {useState, useMemo} from "react";
 import Summary from "@/components_protected/overview_components/performance_subcomponents/Summary";
 import TWR from "@/components_protected/overview_components/performance_subcomponents/TWR";
 import MWR from "@/components_protected/overview_components/performance_subcomponents/MWR";
 import {useTransactions} from "@/context/TransactionContext";
-import {useValuationContext} from "@/context/ValuationContext";
+import { useUserSettings } from "@/context/UserSettingsContext";
 
 export default function Performance() {
   // Summary, TWR, MWR
   const [showTab, setShowTab] = useState("Summary");
-  const {basis, setBasis} = useValuationContext();
+  const { basis, setBasis } = useUserSettings();
   const {currencies} = useTransactions();
+
+  const basisOptions = useMemo(() => {
+    const opts = new Set(["Local", ...(currencies || [])]);
+    if (basis) opts.add(basis);
+    return Array.from(opts);
+  }, [basis, currencies]);
 
   return (
     <>
@@ -60,11 +66,10 @@ export default function Performance() {
         </div>
         <div className="grid-item grid2">
           <select
-            value={basis}
+            value={basis || "Local"}
             onChange={(e) => setBasis(e.target.value)}
           >
-            <option key="Local" value="Local">Local</option>
-            {currencies.map(currency => (
+            {basisOptions.map(currency => (
               <option key={currency} value={currency}>
                 {currency}
               </option>

@@ -6,26 +6,33 @@ import BarChart from "@/components/BarChart";
 import {useValuationContext} from "@/context/ValuationContext";
 import {useFxs} from "@/context/FxContext";
 import {usePrices} from "@/context/PriceContext";
-import {usePL, useValuation} from "@/hooks/useValuation";
+ 
 import LineChart from "@/components_protected/overview_components/holding_subcomponents/LineChart";
 import {News} from "@/components_protected/overview_components/holding_subcomponents/News";
-import {useDividends} from "@/context/DividendContext";
+import { useUserSettings } from "@/context/UserSettingsContext";
 
 export default function Holding() {
-  const {currencies, transactions, loadingTransactions, firstTransactionDate} = useTransactions();
-  const {prices, setPrices, loadingPrices, setLoadingPrices, lastPriceDate} = usePrices();
-  const {fxs, setFxs, loadingFxs, setLoadingFxs, lastFxDate} = useFxs();
-  const {basis, setBasis, startDateDisplay, endDateDisplay, setStartDateDisplay, setEndDateDisplay} = useValuationContext();
-  const {dividends} = useDividends();
+  const {currencies, loadingTransactions, firstTransactionDate} = useTransactions();
+  const { loadingPrices, lastPriceDate} = usePrices();
+  const {loadingFxs, lastFxDate} = useFxs();
+  const {
+    startDateDisplay,
+    endDateDisplay,
+    setStartDateDisplay,
+    setEndDateDisplay,
+    aggregates,
+    marketValueByTicker,
+    marketValueByTradingCurrency,
+    cumulativePLByDate,
+  } = useValuationContext();
+  const { basis, setBasis } = useUserSettings();
 
   const [showTab, setShowTab] = useState(0);
   const [startDateInput, setStartDateInput] = useState('')
   const [endDateInput, setEndDateInput] = useState('')
   const [inputError, setInputError] = useState('')
 
-  const {aggregates, marketValueByTicker, marketValueByTradingCurrency}
-    = useValuation(transactions, prices, fxs, setFxs, setLoadingFxs, basis, endDateDisplay, dividends);
-  const { cumulativePLByDate } = usePL(transactions, prices, setPrices, setLoadingPrices, fxs, basis, startDateDisplay, endDateDisplay, dividends);
+ 
   const cumulativePLArray = Object.entries(cumulativePLByDate).map(
     ([date, cumulativePLUSD]) => ({ date, cumulativePLUSD })
   );
@@ -105,6 +112,12 @@ export default function Holding() {
   });
 
 
+  const basisOptions = useMemo(() => {
+    const opts = new Set(["Local", ...(currencies || [])]);
+    if (basis) opts.add(basis);
+    return Array.from(opts);
+  }, [basis, currencies]);
+
   return (
     <>
       <div className="grid">
@@ -121,9 +134,8 @@ export default function Holding() {
       <div className="grid">
         <div className="grid-item grid2"><label>Basis Currency</label></div>
         <div className="grid-item grid2">
-          <select value={basis} onChange={(e) => setBasis(e.target.value)}>
-            <option key="Local" value="Local">Local</option>
-            {currencies.map((currency) => (
+          <select value={basis || "Local"} onChange={(e) => setBasis(e.target.value)}>
+            {basisOptions.map((currency) => (
               <option key={currency} value={currency}>{currency}</option>
             ))}
           </select>

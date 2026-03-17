@@ -5,13 +5,13 @@ import Table from "@/components_protected/market_components/market_subcomponents
 import Graph from "@/components_protected/market_components/market_subcomponents/Graph";
 import { useTransactions } from "@/context/TransactionContext";
 import { useFxs } from "@/context/FxContext";
-import { useValuationContext } from "@/context/ValuationContext";
+import { useUserSettings } from "@/context/UserSettingsContext";
 import { getFxs } from "@/utils_protected/fxApi";
 
 export default function FX() {
   const { fxs, setFxs, loadingFxs, setLoadingFxs } = useFxs();
   const { currencies } = useTransactions();
-  const { basis } = useValuationContext();
+  const { basis } = useUserSettings();
 
   const [c1, setC1] = useState("");
   const [c2, setC2] = useState("USD");

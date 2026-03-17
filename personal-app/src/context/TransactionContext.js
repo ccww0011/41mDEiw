@@ -59,7 +59,22 @@ export function TransactionProvider({ children }) {
     for (const tx of transactions) {
       if (tx.ticker != null) {
         tickerSet.add(tx.ticker);
-        tickerObj[tx.ticker] = tx.description ?? "";
+        if (!tickerObj[tx.ticker]) {
+          tickerObj[tx.ticker] = {
+            description: "",
+            exchange: "",
+            tradingCurrency: ""
+          };
+        }
+        if (tx.description && !tickerObj[tx.ticker].description) {
+          tickerObj[tx.ticker].description = tx.description;
+        }
+        if (tx.listingExchange && !tickerObj[tx.ticker].exchange) {
+          tickerObj[tx.ticker].exchange = tx.listingExchange;
+        }
+        if (tx.currencyPrimary && !tickerObj[tx.ticker].tradingCurrency) {
+          tickerObj[tx.ticker].tradingCurrency = tx.currencyPrimary;
+        }
       }
     }
 
