@@ -21,6 +21,8 @@ export default function Holding() {
     setStartDateDisplay,
     setEndDateDisplay,
     aggregates,
+    allTimeAggregates,
+    latestValuationDate,
     marketValueByTicker,
     marketValueByTradingCurrency,
     cumulativePLByDate,
@@ -33,28 +35,38 @@ export default function Holding() {
   const [inputError, setInputError] = useState('')
 
  
-  const cumulativePLArray = Object.entries(cumulativePLByDate).map(
-    ([date, cumulativePLUSD]) => ({ date, cumulativePLUSD })
-  );
-
-  const profit = useMemo(() => {
-    // compute (startDateDisplay - 1 day)
-    const year = Number(startDateDisplay.slice(0, 4));
-    const month = Number(startDateDisplay.slice(4, 6)) - 1;
-    const day = Number(startDateDisplay.slice(6, 8));
-
+  const getPrevDateStr = (yyyymmdd) => {
+    if (!yyyymmdd || yyyymmdd.length !== 8) return null;
+    const year = Number(yyyymmdd.slice(0, 4));
+    const month = Number(yyyymmdd.slice(4, 6)) - 1;
+    const day = Number(yyyymmdd.slice(6, 8));
     const date = new Date(year, month, day);
+    if (Number.isNaN(date.getTime())) return null;
     date.setDate(date.getDate() - 1);
-
-    const prevStartDate =
+    return (
       date.getFullYear().toString() +
       String(date.getMonth() + 1).padStart(2, "0") +
-      String(date.getDate()).padStart(2, "0");
-    const endValue = cumulativePLByDate[endDateDisplay] ?? 0;
-    const startValue = cumulativePLByDate[prevStartDate] ?? 0;
+      String(date.getDate()).padStart(2, "0")
+    );
+  };
 
+  const cumulativePLArray = useMemo(() => {
+    if (!cumulativePLByDate || !startDateDisplay) return [];
+    const prevStartDate = getPrevDateStr(startDateDisplay);
+    const base = prevStartDate ? (cumulativePLByDate[prevStartDate] ?? 0) : 0;
+    return Object.entries(cumulativePLByDate)
+      .filter(([d]) => d >= startDateDisplay && d <= endDateDisplay)
+      .map(([d, v]) => ({ date: d, cumulativePLUSD: (v ?? 0) - base }));
+  }, [cumulativePLByDate, startDateDisplay, endDateDisplay]);
+
+  const profit = useMemo(() => {
+    if (!startDateDisplay || !endDateDisplay) return 0;
+    const prevStartDate = getPrevDateStr(startDateDisplay);
+    const endValue = cumulativePLByDate[endDateDisplay] ?? 0;
+    const startValue = prevStartDate ? (cumulativePLByDate[prevStartDate] ?? 0) : 0;
     return endValue - startValue;
   }, [cumulativePLByDate, startDateDisplay, endDateDisplay]);
+
 
   useEffect(() => {
     if (endDateDisplay !== "") {
@@ -282,6 +294,15 @@ export default function Holding() {
         <div className="grid-item grid12" style={{padding: "10px 0 0 0"}}></div>
       </div>
 
+      <div className="grid">
+        <div className="grid-item grid10">
+          <h3>Aggregates</h3>
+        </div>
+        <div className="grid-item grid2" style={{ paddingTop: "10px", textAlign: "right" }}>
+          Value Date: {latestValuationDate}
+        </div>
+      </div>
+
       <div>
         <table>
           <thead>
@@ -295,7 +316,7 @@ export default function Holding() {
           </tr>
           </thead>
           <tbody>
-          {Object.entries(aggregates.aggMap).map(([tradingCurrency, agg]) => (
+          {Object.entries((allTimeAggregates || aggregates).aggMap || {}).map(([tradingCurrency, agg]) => (
             <tr key={tradingCurrency}>
               <td>{tradingCurrency}</td>
               <td style={getStyle(agg.costBasis)}>{formatNumber(agg.costBasis)}</td>

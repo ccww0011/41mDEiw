@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo, useRef } from 'react';
 import { useTransactions } from "@/context/TransactionContext";
 import { useFxs } from "@/context/FxContext";
 import { usePrices } from "@/context/PriceContext";
@@ -42,6 +42,13 @@ export function ValuationProvider({ children }) {
 
   const [startDateDisplay, setStartDateDisplay] = useState(yesterdayStrStart);
   const [endDateDisplay, setEndDateDisplay] = useState(yesterdayStr);
+  const latestValuationDate = useMemo(() => {
+    if (!lastPriceDate && !lastFxDate) return null;
+    if (!lastPriceDate) return lastFxDate;
+    if (!lastFxDate) return lastPriceDate;
+    return lastPriceDate > lastFxDate ? lastPriceDate : lastFxDate;
+  }, [lastPriceDate, lastFxDate]);
+  const attemptedChildPriceRef = useRef(new Set());
 
   // Update start date based on first transaction and endDate
   useEffect(() => {
@@ -165,19 +172,13 @@ export function ValuationProvider({ children }) {
 
     const fetchPrices = async () => {
       const requests = new Map();
-      const forceMetaYears = new Map();
+      const requestedChildTickers = [];
 
       transactions?.forEach(tx => {
         if (tx.assetClass !== "STK") return;
         const year = tx.tradeDate.slice(0, 4);
         const prev = requests.get(tx.ticker);
         if (!prev || year < prev) requests.set(tx.ticker, year);
-        const meta = priceTickerMap?.[tx.ticker];
-        const needsMeta = !meta || !meta.description || !meta.exchange || !meta.tradingCurrency;
-        if (needsMeta) {
-          const prevMeta = forceMetaYears.get(tx.ticker);
-          if (!prevMeta || year < prevMeta) forceMetaYears.set(tx.ticker, year);
-        }
       });
 
       appliedCorporateActions
@@ -185,23 +186,13 @@ export function ValuationProvider({ children }) {
         .forEach(a => {
           const year = a.actionDate?.slice(0, 4);
           if (!year) return;
+          if (attemptedChildPriceRef.current.has(a.child_ticker)) return;
           const prev = requests.get(a.child_ticker);
           if (!prev || year < prev) requests.set(a.child_ticker, year);
-          const meta = priceTickerMap?.[a.child_ticker];
-          const needsMeta = !meta || !meta.description || !meta.exchange || !meta.tradingCurrency;
-          if (needsMeta) {
-            const prevMeta = forceMetaYears.get(a.child_ticker);
-            if (!prevMeta || year < prevMeta) forceMetaYears.set(a.child_ticker, year);
-          }
+          requestedChildTickers.push(a.child_ticker);
         });
 
-      const mergedYears = new Map(requests);
-      forceMetaYears.forEach((year, ticker) => {
-        const prev = mergedYears.get(ticker);
-        if (!prev || year < prev) mergedYears.set(ticker, year);
-      });
-
-      const items = Array.from(mergedYears.entries())
+      const items = Array.from(requests.entries())
         .map(([ticker, minYear]) => {
           const startDate = `${minYear}0101`;
           if (startDate < startDateYYYYMMDD) {
@@ -224,11 +215,12 @@ export function ValuationProvider({ children }) {
           setCorporateActions,
           setLoadingCorporateActions
         );
+        requestedChildTickers.forEach(t => attemptedChildPriceRef.current.add(t));
       }
     };
 
     fetchPrices();
-  }, [transactions, appliedCorporateActions, startDateDisplay, endDateDisplay, priceTickerMap]);
+  }, [transactions, appliedCorporateActions, startDateDisplay, endDateDisplay]);
 
   const {
     cumulativeHoldingsByTickerByDate,
@@ -255,9 +247,26 @@ export function ValuationProvider({ children }) {
     appliedCorporateActions
   );
 
+  const {
+    holdings: allTimeHoldings,
+    aggregates: allTimeAggregates,
+  } = useProtectedValuation(
+    transactions,
+    prices,
+    priceTickerMap,
+    fxs,
+    setFxs,
+    setLoadingFxs,
+    basis,
+    latestValuationDate,
+    dividends,
+    appliedCorporateActions
+  );
+
   const { cumulativePLByDate } = useProtectedPL(
     transactions,
     prices,
+    priceTickerMap,
     setPrices,
     setLoadingPrices,
     fxs,
@@ -267,8 +276,6 @@ export function ValuationProvider({ children }) {
     dividends,
     appliedCorporateActions
   );
-  console.log(cumulativeMarketValueByTickerByDate)
-  console.log(cumulativeCostBasisByTickerByDate)
 
   return (
     <ValuationContext.Provider
@@ -278,9 +285,12 @@ export function ValuationProvider({ children }) {
         endDateDisplay,
         setEndDateDisplay,
         appliedCorporateActions,
-        holdings,
-        aggregates,
-        marketValueByTicker,
+      holdings,
+      aggregates,
+      allTimeHoldings,
+      allTimeAggregates,
+      latestValuationDate,
+      marketValueByTicker,
         marketValueByTradingCurrency,
         cumulativePLByDate,
         cumulativeHoldingsByTickerByDate,

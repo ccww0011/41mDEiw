@@ -8,7 +8,7 @@ import { useValuationContext } from "@/context/ValuationContext";
 export default function Summary() {
   const { tickerMap: txTickerMap } = useTransactions();
   const { tickerMap: priceTickerMap } = usePrices();
-  const { endDateDisplay, holdings } = useValuationContext();
+  const { latestValuationDate, allTimeHoldings = [] } = useValuationContext();
 
   const [sortRules, setSortRules] = useState([]);
   const [filters, setFilters] = useState({});
@@ -39,7 +39,7 @@ export default function Summary() {
   };
 
   const sortedHoldings = useMemo(() => {
-    let array = [...holdings];
+    let array = [...allTimeHoldings];
 
     array = array.map(h => {
       const meta = txTickerMap?.[h.ticker] ?? priceTickerMap?.[h.ticker] ?? {};
@@ -86,7 +86,7 @@ export default function Summary() {
     }
 
     return array;
-  }, [holdings, sortRules, filters]);
+  }, [allTimeHoldings, sortRules, filters]);
 
   const formatNumber = (num) =>
     num === null || num === undefined
@@ -170,7 +170,7 @@ export default function Summary() {
 
       <div className="grid">
         <div className="grid-item grid12" style={{paddingTop: "10px", textAlign: "right"}}>
-          Value Date: {endDateDisplay}
+          Value Date: {latestValuationDate}
         </div>
       </div>
 
@@ -187,7 +187,7 @@ export default function Summary() {
           {Object.keys(COLUMN_NAMES).map((key) => {
             const numericKeys = ["totalQuantity", "avgCost", "price", "costBasis", "value", "unrealisedPL", "realisedPL", "pL"];
             if (numericKeys.includes(key)) return <th key={key} className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}></th>;
-            const options = Array.from(new Set(holdings.map((h) => h[key]).filter(Boolean))).sort();
+            const options = Array.from(new Set(allTimeHoldings.map((h) => h[key]).filter(Boolean))).sort();
             return (
               <th key={key} className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}>
                 <select

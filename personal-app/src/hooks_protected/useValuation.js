@@ -385,10 +385,6 @@ export function useValuation(
       }
     }
 
-    if (cumulativeCostBasisByTickerByDate["ULVR.L"]) {
-      console.log("ULVR.L cost basis by date:", cumulativeCostBasisByTickerByDate["ULVR.L"]);
-    }
-
     const holdings = Object.values(holdingsMap).map(h => {
       const priceLocal = getPrice(prices, h.ticker, endDate);
       const fxPrice = getFxRate(fxs, h.tradingCurrency, endDate, basis);
@@ -456,7 +452,7 @@ export function useValuation(
   }, [transactions, prices, priceTickerMap, fxs, basis, endDate, dividends, appliedCorporateActions]);
 }
 
-export function usePL(transactions, prices, setPrices, setLoadingPrices, fxs, basis, startDate, endDate, dividends = [], appliedCorporateActions = []) {
+export function usePL(transactions, prices, priceTickerMap, setPrices, setLoadingPrices, fxs, basis, startDate, endDate, dividends = [], appliedCorporateActions = []) {
   return useMemo(() => {
     if (!transactions?.length || !prices || !fxs || !startDate || !endDate) {
       return { cumulativePLByDate: {} };
@@ -471,19 +467,37 @@ export function usePL(transactions, prices, setPrices, setLoadingPrices, fxs, ba
       .filter(tx => tx.assetClass === "STK")
       .sort((a, b) => parseInt(a.tradeDate) - parseInt(b.tradeDate));
 
-    const dates = buildDateList(startDate, endDate);
+    const startDateObj = new Date(
+      Number(startDate.slice(0, 4)),
+      Number(startDate.slice(4, 6)) - 1,
+      Number(startDate.slice(6, 8))
+    );
+    startDateObj.setDate(startDateObj.getDate() - 1);
+    const startDateMinusOne = `${startDateObj.getFullYear()}${String(
+      startDateObj.getMonth() + 1
+    ).padStart(2, "0")}${String(startDateObj.getDate()).padStart(2, "0")}`;
+
+    const dates = buildDateList(startDateMinusOne, endDate);
 
     const splitsByDate = new Map();
+    const spinOffsByDate = new Map();
     (appliedCorporateActions || []).forEach(action => {
       const type = action?.type;
-      if (type !== "STOCK_SPLIT" && type !== "REVERSE_SPLIT") return;
       const ratioNum = parseFloat(action?.ratio);
-      if (!ratioNum || isNaN(ratioNum)) return;
       const actionDate = action?.actionDate;
       const ticker = action?.ticker;
-      if (!actionDate || !ticker) return;
-      if (!splitsByDate.has(actionDate)) splitsByDate.set(actionDate, []);
-      splitsByDate.get(actionDate).push({ ticker, ratio: ratioNum });
+      if (!ratioNum || isNaN(ratioNum) || !actionDate || !ticker) return;
+      if (type === "STOCK_SPLIT" || type === "REVERSE_SPLIT") {
+        if (!splitsByDate.has(actionDate)) splitsByDate.set(actionDate, []);
+        splitsByDate.get(actionDate).push({ ticker, ratio: ratioNum });
+        return;
+      }
+      if (type === "SPIN_OFF") {
+        const childTicker = action?.child_ticker;
+        if (!childTicker) return;
+        if (!spinOffsByDate.has(actionDate)) spinOffsByDate.set(actionDate, []);
+        spinOffsByDate.get(actionDate).push({ ticker, childTicker, ratio: ratioNum });
+      }
     });
 
     const holdingsMap = {};
@@ -531,6 +545,62 @@ export function usePL(transactions, prices, setPrices, setLoadingPrices, fxs, ba
           h.costBasisBasis += net;
         }
         txIndex++;
+      }
+
+      const spinOffsToday = spinOffsByDate.get(date);
+      if (spinOffsToday?.length) {
+        spinOffsToday.forEach(({ ticker, childTicker, ratio }) => {
+          Object.values(holdingsMap).forEach(h => {
+            if (h.ticker !== ticker) return;
+            if (h.totalQuantity === 0) return;
+
+            const childQty = h.totalQuantity * ratio;
+            if (childQty === 0) return;
+
+            const childMeta = priceTickerMap?.[childTicker] ?? {};
+            const childCurrency = childMeta.tradingCurrency ?? "";
+            const childExchange = childMeta.exchange ?? "";
+
+            const parentPriceLocal = getPrice(prices, h.ticker, date);
+            const childPriceLocal = getPrice(prices, childTicker, date);
+            const fxParent = getFxRate(fxs, h.tradingCurrency, date, basis);
+            const fxChild = getFxRate(fxs, childCurrency, date, basis);
+
+            let allocParent = 1;
+            if (parentPriceLocal != null && childPriceLocal != null && fxParent != null && fxChild != null) {
+              const parentValue = parentPriceLocal * fxParent * h.totalQuantity;
+              const childValue = childPriceLocal * fxChild * childQty;
+              const totalValue = parentValue + childValue;
+              if (totalValue > 0) {
+                allocParent = parentValue / totalValue;
+              }
+            } else {
+              const totalShares = h.totalQuantity + childQty;
+              if (totalShares > 0) {
+                allocParent = h.totalQuantity / totalShares;
+              }
+            }
+
+            const childKey = `${childTicker}|${childExchange || ""}`;
+            if (!holdingsMap[childKey]) {
+              holdingsMap[childKey] = {
+                ticker: childTicker,
+                exchange: childExchange,
+                tradingCurrency: childCurrency,
+                totalQuantity: 0,
+                costBasisBasis: 0,
+                realisedPLBasis: 0
+              };
+            }
+            const childHolding = holdingsMap[childKey];
+            childHolding.totalQuantity += childQty;
+
+            const parentCostBasis = h.costBasisBasis * allocParent;
+            const childCostBasis = h.costBasisBasis - parentCostBasis;
+            h.costBasisBasis = parentCostBasis;
+            childHolding.costBasisBasis += childCostBasis;
+          });
+        });
       }
 
       for (const div of dividends) {
