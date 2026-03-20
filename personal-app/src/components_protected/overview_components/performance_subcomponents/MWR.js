@@ -32,6 +32,7 @@ export default function MWR() {
   const { tickerMap } = useTransactions();
   const { tickerMap: priceTickerMap } = usePrices();
   const {
+    cumulativeHoldingsByTickerByDate,
     cumulativeMarketValueByTickerByDate,
     cumulativeDividendByTickerByDate,
     transactionByTickerByDate,
@@ -142,6 +143,7 @@ export default function MWR() {
     ]);
 
     const rows = Array.from(tickerSet).map((ticker) => {
+      const holdingsByDate = cumulativeHoldingsByTickerByDate?.[ticker] ?? {};
       const mvByDate = cumulativeMarketValueByTickerByDate?.[ticker] ?? {};
       const divByDate = cumulativeDividendByTickerByDate?.[ticker] ?? {};
       const txByDate = transactionByTickerByDate?.[ticker] ?? {};
@@ -171,21 +173,27 @@ export default function MWR() {
         const bmv = startDate == null ? 0 : (mvByDate[startDate] ?? 0);
         const emv = mvByDate[periodEndDateStr] ?? 0;
 
-        let cf = 0;
-        let weightedCf = 0;
+        let tradeAndIncome = 0;
+        let weightedCapitalFlow = 0;
         let hasAny = bmv !== 0 || emv !== 0;
 
         monthDates.forEach((d) => {
           const div = divByDate[d] ?? 0;
           const tx = txByDate[d] ?? 0;
-          const net = (-tx) + div;
-          if (net !== 0) hasAny = true;
-          cf += net;
+          const prevFlowDates = dates.filter((date) => date < d);
+          const prevFlowDate = prevFlowDates.length ? prevFlowDates[prevFlowDates.length - 1] : null;
+          const qtyPrev = prevFlowDate == null ? 0 : (holdingsByDate[prevFlowDate] ?? 0);
+          const qtyCurr = holdingsByDate[d] ?? qtyPrev;
+          const positionDirection = Math.sign(qtyPrev || qtyCurr);
+          const tradeExposureFlow = positionDirection < 0 ? tx : -tx;
+          const capitalFlow = tradeExposureFlow - div;
+          if (tx !== 0 || div !== 0) hasAny = true;
+          tradeAndIncome += tx + div;
 
           const t = parseDateStr(d);
           const daysFromStart = Math.round((t - periodStartDate) / (24 * 60 * 60 * 1000));
           const weight = (totalDays - daysFromStart) / totalDays;
-          weightedCf += net * weight;
+          weightedCapitalFlow += capitalFlow * weight;
         });
 
         if (!hasAny) {
@@ -193,13 +201,13 @@ export default function MWR() {
           return;
         }
 
-        const denom = bmv + weightedCf;
+        const denom = Math.abs(bmv) + weightedCapitalFlow;
         if (!denom) {
           monthlyReturns[monthKey] = 0;
           return;
         }
 
-        monthlyReturns[monthKey] = (emv - bmv - cf) / denom;
+        monthlyReturns[monthKey] = (emv - bmv + tradeAndIncome) / denom;
       });
 
       const yearDates = dates.filter((d) => d.startsWith(year));
@@ -217,26 +225,32 @@ export default function MWR() {
         const bmv = startDate == null ? 0 : (mvByDate[startDate] ?? 0);
         const emv = mvByDate[periodEndDateStr] ?? 0;
 
-        let cf = 0;
-        let weightedCf = 0;
+        let tradeAndIncome = 0;
+        let weightedCapitalFlow = 0;
         let hasAny = bmv !== 0 || emv !== 0;
 
         yearDates.forEach((d) => {
           const div = divByDate[d] ?? 0;
           const tx = txByDate[d] ?? 0;
-          const net = (-tx) + div;
-          if (net !== 0) hasAny = true;
-          cf += net;
+          const prevFlowDates = dates.filter((date) => date < d);
+          const prevFlowDate = prevFlowDates.length ? prevFlowDates[prevFlowDates.length - 1] : null;
+          const qtyPrev = prevFlowDate == null ? 0 : (holdingsByDate[prevFlowDate] ?? 0);
+          const qtyCurr = holdingsByDate[d] ?? qtyPrev;
+          const positionDirection = Math.sign(qtyPrev || qtyCurr);
+          const tradeExposureFlow = positionDirection < 0 ? tx : -tx;
+          const capitalFlow = tradeExposureFlow - div;
+          if (tx !== 0 || div !== 0) hasAny = true;
+          tradeAndIncome += tx + div;
 
           const t = parseDateStr(d);
           const daysFromStart = Math.round((t - periodStartDate) / (24 * 60 * 60 * 1000));
           const weight = (totalDays - daysFromStart) / totalDays;
-          weightedCf += net * weight;
+          weightedCapitalFlow += capitalFlow * weight;
         });
 
         if (hasAny) {
-          const denom = bmv + weightedCf;
-          ytd = !denom ? 0 : (emv - bmv - cf) / denom;
+          const denom = Math.abs(bmv) + weightedCapitalFlow;
+          ytd = !denom ? 0 : (emv - bmv + tradeAndIncome) / denom;
         }
       }
 
@@ -253,6 +267,7 @@ export default function MWR() {
 
     return { monthLabels, rows };
   }, [
+    cumulativeHoldingsByTickerByDate,
     cumulativeMarketValueByTickerByDate,
     cumulativeDividendByTickerByDate,
     transactionByTickerByDate,

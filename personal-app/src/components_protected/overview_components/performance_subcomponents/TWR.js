@@ -24,6 +24,7 @@ export default function TWR() {
   const { tickerMap } = useTransactions();
   const { tickerMap: priceTickerMap } = usePrices();
   const {
+    cumulativeHoldingsByTickerByDate,
     cumulativeMarketValueByTickerByDate,
     cumulativeCostBasisByTickerByDate,
     cumulativeDividendByTickerByDate,
@@ -135,6 +136,7 @@ export default function TWR() {
     ]);
 
     const rows = Array.from(tickerSet).map((ticker) => {
+      const holdingsByDate = cumulativeHoldingsByTickerByDate?.[ticker] ?? {};
       const mvByDate = cumulativeMarketValueByTickerByDate?.[ticker] ?? {};
       const divByDate = cumulativeDividendByTickerByDate?.[ticker] ?? {};
       const txByDate = transactionByTickerByDate?.[ticker] ?? {};
@@ -163,19 +165,27 @@ export default function TWR() {
         for (let i = 1; i < allDates.length; i++) {
           const prev = allDates[i - 1];
           const curr = allDates[i];
+          const qtyPrev = prev == null ? 0 : (holdingsByDate[prev] ?? 0);
+          const qtyCurr = holdingsByDate[curr] ?? qtyPrev;
           const mvPrev = prev == null ? 0 : (mvByDate[prev] ?? 0);
           const mvCurr = mvByDate[curr] ?? 0;
 
           const div = divByDate[curr] ?? 0;
           const tx = txByDate[curr] ?? 0;
-          const cf = (-tx) + div;
-          const denom = mvPrev + cf;
+          const positionDirection = Math.sign(qtyPrev || qtyCurr);
+          const tradeExposureFlow = positionDirection < 0 ? tx : -tx;
+          // Use absolute exposure as the return base so shorts do not invert returns.
+          // Only add trade cash when it increases exposure in the current direction.
+          const denom = Math.abs(mvPrev) + Math.max(tradeExposureFlow, 0);
           let r;
           if (!denom) {
             // No base to compute return; treat as 0% for this step.
             r = 0;
           } else {
-            r = (mvCurr - mvPrev - cf) / denom;
+            r = (mvCurr - mvPrev + tx + div) / denom;
+          }
+          if (ticker === 'GSK.L') {
+            console.log(curr, r * 100, mvCurr, mvPrev, tx, div,  denom)
           }
           if (!isFinite(r)) continue;
           monthMultiplier *= 1 + r;
@@ -206,6 +216,7 @@ export default function TWR() {
 
     return { monthLabels, rows };
   }, [
+    cumulativeHoldingsByTickerByDate,
     cumulativeMarketValueByTickerByDate,
     cumulativeCostBasisByTickerByDate,
     cumulativeDividendByTickerByDate,
