@@ -3,8 +3,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Table from "@/components_protected/market_components/market_subcomponents/Table";
 import Graph from "@/components_protected/market_components/market_subcomponents/Graph";
-import { useTransactions } from "@/context/TransactionContext";
 import { usePrices } from "@/context/PriceContext";
+import { useValuationContext } from "@/context/ValuationContext";
 import { getPrices } from "@/utils_protected/priceApi";
 
 export default function Stock() {
@@ -13,15 +13,14 @@ export default function Stock() {
     setPrices,
     loadingPrices,
     setLoadingPrices,
-    setTickerMap,
-    tickerMap: priceTickerMap,
+    setPriceTickerMap,
     corporateActions,
     setCorporateActions,
     setLoadingCorporateActions,
   } = usePrices();
-  const { tickerMap } = useTransactions();
+  const { tickerMap } = useValuationContext();
 
-  const priceTickers = useMemo(() => Object.keys(priceTickerMap || {}).sort(), [priceTickerMap]);
+  const priceTickers = Object.keys(tickerMap).sort();
 
   const [selectedTicker, setSelectedTicker] = useState("");
   const [range, setRange] = useState("YTD");
@@ -79,7 +78,7 @@ export default function Stock() {
         prices,
         setPrices,
         setLoadingPrices,
-        setTickerMap,
+        setPriceTickerMap,
         corporateActions,
         setCorporateActions,
         setLoadingCorporateActions
@@ -110,7 +109,7 @@ export default function Stock() {
       <div className="grid">
         <div className="grid-item grid3">
           {selectedTicker
-            ? (priceTickerMap[selectedTicker]?.description || tickerMap[selectedTicker]?.description || "No description")
+            ? (tickerMap[selectedTicker]?.description || "No description")
             : "—"}
         </div>
 
@@ -141,7 +140,7 @@ export default function Stock() {
                 prices,
                 setPrices,
                 setLoadingPrices,
-                setTickerMap,
+                setPriceTickerMap,
                 corporateActions,
                 setCorporateActions,
                 setLoadingCorporateActions

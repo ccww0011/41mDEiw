@@ -29,14 +29,14 @@ export function ValuationProvider({ children }) {
     lastPriceDate,
     setPrices,
     setLoadingPrices,
-    setTickerMap,
-    tickerMap: priceTickerMap,
+    setPriceTickerMap,
+    priceTickerMap,
     corporateActions,
     setCorporateActions,
     setLoadingCorporateActions,
   } = usePrices();
   const { fxs, lastFxDate, setFxs, setLoadingFxs } = useFxs();
-  const { transactions, firstTransactionDate } = useTransactions();
+  const { transactions, firstTransactionDate, transactionTickerMap } = useTransactions();
   const { dividends } = useDividends();
   const { basis, userCorporateActionsMask } = useUserSettings();
 
@@ -60,51 +60,6 @@ export function ValuationProvider({ children }) {
   const appliedMap = userCorporateActionsMask?.applied ?? {};
   const excludedList = userCorporateActionsMask?.excluded ?? [];
   const addedMap = userCorporateActionsMask?.added ?? {};
-
-  // Update end date based on last available price or FX
-  useEffect(() => {
-    if (!lastPriceDate && !lastFxDate) return
-    if (!lastPriceDate) {
-      setEndDateDisplay(lastFxDate);
-    } else if (!lastFxDate) {
-      setEndDateDisplay(lastPriceDate);
-    } else {
-      setEndDateDisplay(lastPriceDate > lastFxDate ? lastPriceDate : lastFxDate);
-    }
-  }, [lastPriceDate, lastFxDate]);
-
-  // Fetch missing FXs
-  useEffect(() => {
-    if (!transactions?.length || !basis || !firstTransactionDate || !endDateDisplay) return;
-
-    const fetchFxs = async () => {
-      const requests = new Map();
-      transactions.forEach(tx => {
-        if (tx.currencyPrimary === "USD") return;
-        const year = tx.tradeDate.slice(0, 4);
-        const prev = requests.get(tx.currencyPrimary);
-        if (!prev || year < prev) requests.set(tx.currencyPrimary, year);
-      });
-      dividends.forEach(div => {
-        if (div.currencyPrimary === "USD") return;
-        const year = div.exDate.slice(0, 4);
-        const prev = requests.get(div.currencyPrimary);
-        if (!prev || year < prev) requests.set(div.currencyPrimary, year);
-      });
-
-      if (basis !== "Local") requests.set(basis, firstTransactionDate.slice(0, 4));
-
-      const items = Array.from(requests.entries())
-        .map(([currency, minYear]) => {
-          const startDate = `${minYear}0101`;
-          return startDate <= endDateDisplay ? { currency, startDate, endDate: endDateDisplay } : null;
-        })
-        .filter(Boolean);
-      if (items.length) await getFxs(items, fxs, setFxs, setLoadingFxs);
-    };
-
-    fetchFxs();
-  }, [transactions, basis, firstTransactionDate, endDateDisplay]);
 
   const appliedCorporateActions = useMemo(() => {
     const rows = [];
@@ -155,6 +110,82 @@ export function ValuationProvider({ children }) {
 
     return rows;
   }, [corporateActions, appliedMap, excludedList, addedMap]);
+
+  // Update end date based on last available price or FX
+  useEffect(() => {
+    if (!lastPriceDate && !lastFxDate) return
+    if (!lastPriceDate) {
+      setEndDateDisplay(lastFxDate);
+    } else if (!lastFxDate) {
+      setEndDateDisplay(lastPriceDate);
+    } else {
+      setEndDateDisplay(lastPriceDate > lastFxDate ? lastPriceDate : lastFxDate);
+    }
+  }, [lastPriceDate, lastFxDate]);
+
+  // Fetch missing FXs
+  useEffect(() => {
+    if (!transactions?.length || !basis || !firstTransactionDate || !endDateDisplay) return;
+
+    const fetchFxs = async () => {
+      const requests = new Map();
+      transactions.forEach(tx => {
+        if (tx.currencyPrimary === "USD") return;
+        const year = tx.tradeDate.slice(0, 4);
+        const prev = requests.get(tx.currencyPrimary);
+        if (!prev || year < prev) requests.set(tx.currencyPrimary, year);
+      });
+      dividends.forEach(div => {
+        if (div.currencyPrimary === "USD") return;
+        const year = div.exDate.slice(0, 4);
+        const prev = requests.get(div.currencyPrimary);
+        if (!prev || year < prev) requests.set(div.currencyPrimary, year);
+      });
+
+      // For spin-off child tickers, ensure FX exists from action year onward.
+      (appliedCorporateActions || [])
+        .filter(a => a.type === "SPIN_OFF" && a.child_ticker && a.actionDate)
+        .forEach(a => {
+          const currency = priceTickerMap?.[a.child_ticker]?.tradingCurrency;
+          if (!currency || currency === "USD") return;
+          const year = a.actionDate.slice(0, 4);
+          const prev = requests.get(currency);
+          if (!prev || year < prev) requests.set(currency, year);
+        });
+
+      if (basis !== "Local") requests.set(basis, firstTransactionDate.slice(0, 4));
+
+      const items = Array.from(requests.entries())
+        .map(([currency, minYear]) => {
+          const startDate = `${minYear}0101`;
+          return startDate <= endDateDisplay ? { currency, startDate, endDate: endDateDisplay } : null;
+        })
+        .filter(Boolean);
+      if (items.length) await getFxs(items, fxs, setFxs, setLoadingFxs);
+    };
+
+    fetchFxs();
+  }, [transactions, dividends, basis, firstTransactionDate, endDateDisplay, appliedCorporateActions, priceTickerMap]);
+
+  const tickerMap = useMemo(() => {
+    const merged = {};
+    const allTickers = new Set([
+      ...Object.keys(transactionTickerMap || {}),
+      ...Object.keys(priceTickerMap || {}),
+    ]);
+
+    allTickers.forEach((ticker) => {
+      const txMeta = transactionTickerMap?.[ticker] ?? {};
+      const priceMeta = priceTickerMap?.[ticker] ?? {};
+      merged[ticker] = {
+        description: txMeta.description || priceMeta.description || "",
+        exchange: txMeta.exchange || priceMeta.exchange || "",
+        tradingCurrency: txMeta.tradingCurrency || priceMeta.tradingCurrency || "",
+      };
+    });
+
+    return merged;
+  }, [transactionTickerMap, priceTickerMap]);
 
   // Fetch missing Prices (transactions + spin-offs)
   useEffect(() => {
@@ -210,7 +241,7 @@ export function ValuationProvider({ children }) {
           prices,
           setPrices,
           setLoadingPrices,
-          setTickerMap,
+          setPriceTickerMap,
           corporateActions,
           setCorporateActions,
           setLoadingCorporateActions
@@ -228,7 +259,7 @@ export function ValuationProvider({ children }) {
     cumulativeMarketValueByTickerByDate,
     cumulativeRealisedPLByTickerByDate,
     cumulativeUnrealisedPLByTickerByDate,
-    cumulativeDividendByTickerByDate,
+    dividendByTickerByDate,
     transactionByTickerByDate,
     holdings,
     aggregates,
@@ -237,7 +268,7 @@ export function ValuationProvider({ children }) {
   } = useProtectedValuation(
     transactions,
     prices,
-    priceTickerMap,
+    tickerMap,
     fxs,
     setFxs,
     setLoadingFxs,
@@ -253,7 +284,7 @@ export function ValuationProvider({ children }) {
   } = useProtectedValuation(
     transactions,
     prices,
-    priceTickerMap,
+    tickerMap,
     fxs,
     setFxs,
     setLoadingFxs,
@@ -266,7 +297,7 @@ export function ValuationProvider({ children }) {
   const { cumulativePLByDate } = useProtectedPL(
     transactions,
     prices,
-    priceTickerMap,
+    tickerMap,
     setPrices,
     setLoadingPrices,
     fxs,
@@ -284,6 +315,7 @@ export function ValuationProvider({ children }) {
         setStartDateDisplay,
         endDateDisplay,
         setEndDateDisplay,
+        tickerMap,
         appliedCorporateActions,
       holdings,
       aggregates,
@@ -298,7 +330,7 @@ export function ValuationProvider({ children }) {
         cumulativeMarketValueByTickerByDate,
         cumulativeRealisedPLByTickerByDate,
         cumulativeUnrealisedPLByTickerByDate,
-        cumulativeDividendByTickerByDate,
+        dividendByTickerByDate,
         transactionByTickerByDate,
       }}
     >

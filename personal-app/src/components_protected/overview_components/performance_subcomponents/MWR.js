@@ -1,7 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useValuationContext } from "@/context/ValuationContext";
-import { useTransactions } from "@/context/TransactionContext";
-import { usePrices } from "@/context/PriceContext";
 
 function getMonthKey(dateStr) {
   return dateStr.slice(0, 6);
@@ -29,12 +27,11 @@ function toPercent(value, decimals = 2) {
 }
 
 export default function MWR() {
-  const { tickerMap } = useTransactions();
-  const { tickerMap: priceTickerMap } = usePrices();
   const {
+    tickerMap,
     cumulativeHoldingsByTickerByDate,
     cumulativeMarketValueByTickerByDate,
-    cumulativeDividendByTickerByDate,
+    dividendByTickerByDate,
     transactionByTickerByDate,
     endDateDisplay,
   } = useValuationContext();
@@ -138,14 +135,14 @@ export default function MWR() {
     const monthLabels = buildMonthLabels(year);
     const tickerSet = new Set([
       ...Object.keys(cumulativeMarketValueByTickerByDate || {}),
-      ...Object.keys(cumulativeDividendByTickerByDate || {}),
+      ...Object.keys(dividendByTickerByDate || {}),
       ...Object.keys(transactionByTickerByDate || {}),
     ]);
 
     const rows = Array.from(tickerSet).map((ticker) => {
       const holdingsByDate = cumulativeHoldingsByTickerByDate?.[ticker] ?? {};
       const mvByDate = cumulativeMarketValueByTickerByDate?.[ticker] ?? {};
-      const divByDate = cumulativeDividendByTickerByDate?.[ticker] ?? {};
+      const divByDate = dividendByTickerByDate?.[ticker] ?? {};
       const txByDate = transactionByTickerByDate?.[ticker] ?? {};
       const dates = Object.keys(mvByDate)
         .filter((d) => d.startsWith(year) || d === `${Number(year) - 1}1231`)
@@ -254,7 +251,7 @@ export default function MWR() {
         }
       }
 
-      const info = tickerMap?.[ticker] || priceTickerMap?.[ticker] || {};
+      const info = tickerMap?.[ticker] || {};
       return {
         ticker,
         description: info.description ?? "",
@@ -269,7 +266,7 @@ export default function MWR() {
   }, [
     cumulativeHoldingsByTickerByDate,
     cumulativeMarketValueByTickerByDate,
-    cumulativeDividendByTickerByDate,
+    dividendByTickerByDate,
     transactionByTickerByDate,
     endDateDisplay,
     tickerMap

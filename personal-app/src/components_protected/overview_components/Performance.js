@@ -9,13 +9,13 @@ export default function Performance() {
   // Summary, TWR, MWR
   const [showTab, setShowTab] = useState("Summary");
   const { basis, setBasis } = useUserSettings();
-  const {currencies} = useTransactions();
+  const {transactionCurrencySet} = useTransactions();
 
   const basisOptions = useMemo(() => {
-    const opts = new Set(["Local", ...(currencies || [])]);
+    const opts = new Set(["Local", ...(transactionCurrencySet || [])]);
     if (basis) opts.add(basis);
     return Array.from(opts);
-  }, [basis, currencies]);
+  }, [basis, transactionCurrencySet]);
 
   return (
     <>

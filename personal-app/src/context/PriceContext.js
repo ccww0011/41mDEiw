@@ -15,7 +15,7 @@ export function PriceProvider({ children }) {
   const [loadingPrices, setLoadingPrices] = useState(true);
   const [corporateActions, setCorporateActions] = useState({});
   const [loadingCorporateActions, setLoadingCorporateActions] = useState(true);
-  const [tickerMap, setTickerMap] = useState({});
+  const [priceTickerMap, setPriceTickerMap] = useState({});
 
   // Compute last price date across all items
   const lastPriceDate = useMemo(() => {
@@ -45,8 +45,6 @@ export function PriceProvider({ children }) {
     return latest;
   }, [corporateActions]);
 
-  console.log(prices)
-
   const value = useMemo(
     () => ({
       prices,
@@ -54,8 +52,8 @@ export function PriceProvider({ children }) {
       loadingPrices,
       setLoadingPrices,
       lastPriceDate,
-      tickerMap,
-      setTickerMap,
+      priceTickerMap,
+      setPriceTickerMap,
       corporateActions,
       setCorporateActions,
       loadingCorporateActions,
@@ -66,7 +64,7 @@ export function PriceProvider({ children }) {
       prices,
       loadingPrices,
       lastPriceDate,
-      tickerMap,
+      priceTickerMap,
       corporateActions,
       loadingCorporateActions,
       lastCorporateActionDate,

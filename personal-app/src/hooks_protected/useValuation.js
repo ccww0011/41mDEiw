@@ -30,7 +30,7 @@ const EMPTY_RESULT = {
   cumulativeMarketValueByTickerByDate: {},
   cumulativeRealisedPLByTickerByDate: {},
   cumulativeUnrealisedPLByTickerByDate: {},
-  cumulativeDividendByTickerByDate: {},
+  dividendByTickerByDate: {},
   transactionByTickerByDate: {},
 };
 
@@ -125,7 +125,7 @@ export function useValuation(
     const cumulativeMarketValueByDate = {};
     const cumulativeRealisedPLByDate = {};
     const cumulativeUnrealisedPLByDate = {};
-    const cumulativeDividendByDate = {};
+    const dividendByDate = {};
     const transactionByDate = {};
 
     const cumulativeHoldingsByTickerByDate = {};
@@ -133,7 +133,7 @@ export function useValuation(
     const cumulativeMarketValueByTickerByDate = {};
     const cumulativeRealisedPLByTickerByDate = {};
     const cumulativeUnrealisedPLByTickerByDate = {};
-    const cumulativeDividendByTickerByDate = {};
+    const dividendByTickerByDate = {};
     const transactionByTickerByDate = {};
 
     for (const date of dates) {
@@ -335,7 +335,7 @@ export function useValuation(
       cumulativeHoldingsByDate[date] = holdingsSnapshot;
       cumulativeCostBasisByDate[date] = costBasisSnapshot;
       cumulativeRealisedPLByDate[date] = realisedSnapshot;
-      cumulativeDividendByDate[date] = dividendSnapshot;
+      dividendByDate[date] = dividendSnapshot;
       transactionByDate[date] = transactionSnapshot;
 
       Object.entries(holdingsSnapshot).forEach(([ticker, value]) => {
@@ -351,8 +351,8 @@ export function useValuation(
         cumulativeRealisedPLByTickerByDate[ticker][date] = value;
       });
       Object.entries(dividendSnapshot).forEach(([ticker, value]) => {
-        if (!cumulativeDividendByTickerByDate[ticker]) cumulativeDividendByTickerByDate[ticker] = {};
-        cumulativeDividendByTickerByDate[ticker][date] = value;
+        if (!dividendByTickerByDate[ticker]) dividendByTickerByDate[ticker] = {};
+        dividendByTickerByDate[ticker][date] = value;
       });
       Object.entries(transactionSnapshot).forEach(([ticker, value]) => {
         if (!transactionByTickerByDate[ticker]) transactionByTickerByDate[ticker] = {};
@@ -446,7 +446,7 @@ export function useValuation(
       cumulativeMarketValueByTickerByDate,
       cumulativeRealisedPLByTickerByDate,
       cumulativeUnrealisedPLByTickerByDate,
-      cumulativeDividendByTickerByDate,
+      dividendByTickerByDate,
       transactionByTickerByDate,
     };
   }, [transactions, prices, priceTickerMap, fxs, basis, endDate, dividends, appliedCorporateActions]);
@@ -639,5 +639,5 @@ export function usePL(transactions, prices, priceTickerMap, setPrices, setLoadin
     }
 
     return { cumulativePLByDate };
-  }, [transactions, prices, fxs, basis, startDate, endDate, dividends, appliedCorporateActions]);
+  }, [transactions, prices, priceTickerMap, fxs, basis, startDate, endDate, dividends, appliedCorporateActions]);
 }

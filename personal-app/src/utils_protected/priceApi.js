@@ -3,7 +3,7 @@
 import {logout} from "@/utils_protected/authApi";
 import { getCorporateActions } from "@/utils_protected/corporateActionApi";
 
-async function priceApi(method, data, setPrices, setTickerMap) {
+async function priceApi(method, data, setPrices, setPriceTickerMap) {
   try {
     let url = process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/api/price";
     let content = {
@@ -52,8 +52,8 @@ async function priceApi(method, data, setPrices, setTickerMap) {
           return merged;
         });
 
-        if (items.meta && setTickerMap) {
-          setTickerMap(prevMap => {
+        if (items.meta && setPriceTickerMap) {
+          setPriceTickerMap(prevMap => {
             const merged = { ...(prevMap || {}) };
             Object.entries(items.meta).forEach(([ticker, meta]) => {
               merged[ticker] = {
@@ -85,7 +85,7 @@ export async function getPrices(
   prices,
   setPrices,
   setLoadingPrices,
-  setTickerMap,
+  setPriceTickerMap,
   corporateActions,
   setCorporateActions,
   setLoadingCorporateActions
@@ -126,7 +126,7 @@ export async function getPrices(
   }
   setLoadingPrices(true);
   try {
-    await priceApi('POST', { items: JSON.stringify(requests) }, setPrices, setTickerMap);
+    await priceApi('POST', { items: JSON.stringify(requests) }, setPrices, setPriceTickerMap);
     if (corporateActions && setCorporateActions && setLoadingCorporateActions) {
       await getCorporateActions(requests, corporateActions, setCorporateActions, setLoadingCorporateActions);
     }

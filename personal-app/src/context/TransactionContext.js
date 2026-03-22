@@ -52,7 +52,7 @@ export function TransactionProvider({ children }) {
     return earliest;
   }, [transactions]);
 
-  const { tickers, tickerMap } = useMemo(() => {
+  const { transactionTickerMap } = useMemo(() => {
     const tickerSet = new Set();
     const tickerObj = {};
 
@@ -79,25 +79,21 @@ export function TransactionProvider({ children }) {
     }
 
     return {
-      tickers: Array.from(tickerSet).sort(),
-      tickerMap: tickerObj
+      transactionTickerMap: tickerObj
     };
   }, [transactions]);
 
-  const { currencies, currencyMap } = useMemo(() => {
+  const { transactionCurrencySet } = useMemo(() => {
     const currencySet = new Set();
-    const currencyObj = {};
 
     for (const tx of transactions) {
       if (tx.currencyPrimary != null) {
         currencySet.add(tx.currencyPrimary);
-        currencyObj[tx.currencyPrimary] = tx.currencyPrimary;
       }
     }
 
     return {
-      currencies: Array.from(currencySet).sort(),
-      currencyMap: currencyObj
+      transactionCurrencySet: Array.from(currencySet).sort(),
     };
   }, [transactions]);
 
@@ -106,16 +102,14 @@ export function TransactionProvider({ children }) {
       transactions,
       setTransactions,
       firstTransactionDate,
-      tickers,
-      tickerMap,
-      currencies,
-      currencyMap,
+      transactionTickerMap,
+      transactionCurrencySet,
       loadingTransactions,
       setLoadingTransactions,
       putTransactions: putTransactionsWrapped,
       deleteTransactions: deleteTransactionsWrapped,
     }),
-    [transactions, firstTransactionDate, tickers, tickerMap, currencies, currencyMap, loadingTransactions]
+    [transactions, firstTransactionDate, transactionTickerMap, transactionCurrencySet, loadingTransactions]
   );
 
   // console.log(transactions);

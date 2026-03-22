@@ -1,14 +1,10 @@
 'use client';
 
 import React, { useMemo, useState } from "react";
-import { useTransactions } from "@/context/TransactionContext";
-import { usePrices } from "@/context/PriceContext";
 import { useValuationContext } from "@/context/ValuationContext";
 
 export default function Summary() {
-  const { tickerMap: txTickerMap } = useTransactions();
-  const { tickerMap: priceTickerMap } = usePrices();
-  const { latestValuationDate, allTimeHoldings = [] } = useValuationContext();
+  const { latestValuationDate, allTimeHoldings = [], tickerMap } = useValuationContext();
 
   const [sortRules, setSortRules] = useState([]);
   const [filters, setFilters] = useState({});
@@ -42,7 +38,7 @@ export default function Summary() {
     let array = [...allTimeHoldings];
 
     array = array.map(h => {
-      const meta = txTickerMap?.[h.ticker] ?? priceTickerMap?.[h.ticker] ?? {};
+      const meta = tickerMap?.[h.ticker] ?? {};
       return {
         ...h,
         description: meta.description ?? h.description ?? "",
@@ -86,7 +82,7 @@ export default function Summary() {
     }
 
     return array;
-  }, [allTimeHoldings, sortRules, filters]);
+  }, [allTimeHoldings, tickerMap, sortRules, filters]);
 
   const formatNumber = (num) =>
     num === null || num === undefined

@@ -10,7 +10,7 @@ import { getFxs } from "@/utils_protected/fxApi";
 
 export default function FX() {
   const { fxs, setFxs, loadingFxs, setLoadingFxs } = useFxs();
-  const { currencies } = useTransactions();
+  const { transactionCurrencySet } = useTransactions();
   const { basis } = useUserSettings();
 
   const [c1, setC1] = useState("");
@@ -125,14 +125,14 @@ export default function FX() {
         <div className="grid-item grid1">
           <select value={c1} onChange={e => setC1(e.target.value)}>
             <option value="">Select</option>
-            {currencies.map(c => <option key={c} value={c}>{c}</option>)}
+            {transactionCurrencySet.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
 
         <div className="grid-item grid1">
           <select value={c2} onChange={e => setC2(e.target.value)}>
             <option value="">Select</option>
-            {currencies.map(c => <option key={c} value={c}>{c}</option>)}
+            {transactionCurrencySet.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
 
