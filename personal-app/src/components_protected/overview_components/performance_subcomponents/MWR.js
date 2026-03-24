@@ -480,7 +480,7 @@ export default function MWR({ viewMode = "Monthly" }) {
     description: "Description",
     exchange: "Exchange",
     tradingCurrency: "Trading\nCurrency",
-    ytd: `YTD ${latestValuationDate ? latestValuationDate.slice(2, 4) : ""}`,
+    ytd: `\nYTD ${latestValuationDate ? latestValuationDate.slice(2, 4) : ""}`,
     ttm: "TTM*"
   };
   monthLabels.forEach((m) => {
