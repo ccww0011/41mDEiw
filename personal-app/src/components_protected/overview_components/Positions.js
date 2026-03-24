@@ -41,6 +41,7 @@ export default function Positions() {
     const isSingleWord = !normalized.includes(" ");
     return isSingleWord ? `\n${label}` : label;
   };
+  const getPlainHeaderLabel = (label) => String(label || "").replace(/\n/g, " ");
 
   const onSortClick = (key, directionOrRemove) => {
     setSortRules(prev => {
@@ -193,7 +194,7 @@ export default function Positions() {
 
       <div className="grid">
         <div className="grid-item grid8">
-          Sorting priority: {sortRules.length === 0 ? "" : sortRules.map((rule, i) => `(${i + 1}) ${COLUMN_NAMES[rule.key]}`).join("; ")}
+          Sorting priority: {sortRules.length === 0 ? "" : sortRules.map((rule, i) => `(${i + 1}) ${getPlainHeaderLabel(COLUMN_NAMES[rule.key])}`).join("; ")}
         </div>
         <div className="grid-item grid2">
           <button onClick={() => setSortRules([])} style={{backgroundColor: "#fb6a4a", color: "white"}}>Clear Sort</button>

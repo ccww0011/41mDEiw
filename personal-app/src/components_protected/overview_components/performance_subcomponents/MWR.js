@@ -139,6 +139,7 @@ export default function MWR({ viewMode = "Monthly" }) {
     const isSingleWord = !normalized.includes(" ");
     return isSingleWord || isDateKey ? `\n${label}` : label;
   };
+  const getPlainHeaderLabel = (label) => String(label || "").replace(/\n/g, " ");
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 1024px)");
@@ -593,7 +594,7 @@ export default function MWR({ viewMode = "Monthly" }) {
       <>
       <div className="grid">
         <div className="grid-item grid8">
-          Sorting priority: {sortRules.length === 0 ? "" : sortRules.map((rule, i) => `(${i + 1}) ${COLUMN_NAMES[rule.key]}`).join("; ")}
+          Sorting priority: {sortRules.length === 0 ? "" : sortRules.map((rule, i) => `(${i + 1}) ${getPlainHeaderLabel(COLUMN_NAMES[rule.key])}`).join("; ")}
         </div>
         <div className="grid-item grid2">
           <button onClick={() => setSortRules([])} style={{backgroundColor: "#fb6a4a", color: "white"}}>Clear Sort</button>
@@ -680,7 +681,7 @@ export default function MWR({ viewMode = "Monthly" }) {
       <>
       <div className="grid">
         <div className="grid-item grid8">
-          Sorting priority: {dailySortRules.length === 0 ? "" : dailySortRules.map((rule, i) => `(${i + 1}) ${DAILY_COLUMN_NAMES[rule.key]}`).join("; ")}
+          Sorting priority: {dailySortRules.length === 0 ? "" : dailySortRules.map((rule, i) => `(${i + 1}) ${getPlainHeaderLabel(DAILY_COLUMN_NAMES[rule.key])}`).join("; ")}
         </div>
         <div className="grid-item grid2">
           <button onClick={() => setDailySortRules([])} style={{backgroundColor: "#fb6a4a", color: "white"}}>Clear Sort</button>

@@ -240,11 +240,17 @@ export default function Dashboard() {
       </form>
 
       <div className="grid">
-        <div className="grid-item grid12" style={{padding: "10px 0 0 0"}}></div>
+        <div className="grid-item grid12" style={{padding: "10px 0 0 0"}}>
+          <h4>Profit ({endDateDisplay}) in {basis === "Local" ? "USD" : basis} = <span
+            style={getProfitStyle(dailyProfit)}>{dailyProfit.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}</span></h4>
+        </div>
       </div>
 
       <div className="grid">
-        <div className="grid-item grid6">
+        <div className="grid-item grid6" style={{ alignSelf: "start" }}>
           {(aggregates.missingPLCurrencies?.length === 0 || (!loadingTransactions && !loadingPrices && !loadingFxs)) && (
             <>
               <div className="grid">
@@ -267,17 +273,14 @@ export default function Dashboard() {
 
               {showTab === 0 && (
                 <>
-                  <h4>Profit ({endDateDisplay}) in {basis === "Local" ? "USD" : basis} = <span style={getProfitStyle(dailyProfit)}>{dailyProfit.toLocaleString("en-US", {
+                  <h4>Profit ({startDateDisplay}-{endDateDisplay}) in {basis === "Local" ? "USD" : basis} = <span
+                    style={getProfitStyle(profit)}>{profit.toLocaleString("en-US", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}</span></h4>
                   <div style={{width: "100%", height: "200px", display: "flex", alignItems: "center", justifyContent: "center"}}>
                     <LineChart data={cumulativePLArray} labelKey="date" valueKey="cumulativePLUSD"/>
                   </div>
-                  <h4>Profit ({startDateDisplay}-{endDateDisplay}) in {basis === "Local" ? "USD" : basis} = <span style={getProfitStyle(profit)}>{profit.toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}</span></h4>
                 </>
               )}
 
@@ -308,44 +311,38 @@ export default function Dashboard() {
       </div>
 
       <div className="grid">
-        <div className="grid-item grid12" style={{padding: "10px 0 0 0"}}></div>
-      </div>
-
-      <div className="grid">
         <div className="grid-item grid10">
-          <h3>Aggregates</h3>
+          <h4>Aggregates</h4>
         </div>
         <div className="grid-item grid2" style={{ paddingTop: "10px", textAlign: "right" }}>
           Value Date: {latestValuationDate}
         </div>
       </div>
 
-      <div>
-        <table>
-          <thead>
-          <tr>
-            <th>Currency</th>
-            <th>Cost Basis</th>
-            <th>Market Value</th>
-            <th>Unrealised P/L</th>
-            <th>Realised P/L</th>
-            <th>All-time P/L</th>
+      <table>
+        <thead>
+        <tr>
+          <th>Currency</th>
+          <th>Cost Basis</th>
+          <th>Market Value</th>
+          <th>Unrealised P/L</th>
+          <th>Realised P/L</th>
+          <th>All-time P/L</th>
+        </tr>
+        </thead>
+        <tbody>
+        {Object.entries((allTimeAggregates || aggregates).aggMap || {}).map(([tradingCurrency, agg]) => (
+          <tr key={tradingCurrency}>
+            <td>{tradingCurrency}</td>
+            <td style={getStyle(agg.costBasis)}>{formatNumber(agg.costBasis)}</td>
+            <td style={getStyle(agg.marketValue)}>{formatNumber(agg.marketValue)}</td>
+            <td style={getStyle(agg.unrealisedPL)}>{formatNumber(agg.unrealisedPL)}</td>
+            <td style={getStyle(agg.realisedPL)}>{formatNumber(agg.realisedPL)}</td>
+            <td style={getStyle(agg.pL)}>{formatNumber(agg.pL)}</td>
           </tr>
-          </thead>
-          <tbody>
-          {Object.entries((allTimeAggregates || aggregates).aggMap || {}).map(([tradingCurrency, agg]) => (
-            <tr key={tradingCurrency}>
-              <td>{tradingCurrency}</td>
-              <td style={getStyle(agg.costBasis)}>{formatNumber(agg.costBasis)}</td>
-              <td style={getStyle(agg.marketValue)}>{formatNumber(agg.marketValue)}</td>
-              <td style={getStyle(agg.unrealisedPL)}>{formatNumber(agg.unrealisedPL)}</td>
-              <td style={getStyle(agg.realisedPL)}>{formatNumber(agg.realisedPL)}</td>
-              <td style={getStyle(agg.pL)}>{formatNumber(agg.pL)}</td>
-            </tr>
-          ))}
-          </tbody>
-        </table>
-      </div>
+        ))}
+        </tbody>
+      </table>
 
       <div className="grid">
         <div className="grid-item grid12" style={{padding: "10px 0 0 0"}}></div>
