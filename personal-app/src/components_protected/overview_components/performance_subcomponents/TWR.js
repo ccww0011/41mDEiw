@@ -45,6 +45,12 @@ export default function TWR({ viewMode = "Monthly" }) {
   const [dailySortRules, setDailySortRules] = useState([]);
   const [dailyFilters, setDailyFilters] = useState({});
   const [isNarrow, setIsNarrow] = useState(false);
+  const formatHeaderLabel = (key, label, isDateKey = false) => {
+    if (!label) return label;
+    const normalized = String(label).replace(/\n/g, " ").trim();
+    const isSingleWord = !normalized.includes(" ");
+    return isSingleWord || isDateKey ? `\n${label}` : label;
+  };
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 1024px)");
@@ -390,7 +396,7 @@ export default function TWR({ viewMode = "Monthly" }) {
     ticker: "Ticker",
     description: "Description",
     exchange: "Exchange",
-    tradingCurrency: "Trading Currency",
+    tradingCurrency: "Trading\nCurrency",
     ytd: `YTD ${latestValuationDate ? latestValuationDate.slice(2, 4) : ""}`,
     ttm: "TTM*"
   };
@@ -401,7 +407,7 @@ export default function TWR({ viewMode = "Monthly" }) {
     ticker: "Ticker",
     description: "Description",
     exchange: "Exchange",
-    tradingCurrency: "Trading Currency",
+    tradingCurrency: "Trading\nCurrency",
     l7d: "L7D",
     l14d: "L14D"
   };
@@ -517,8 +523,15 @@ export default function TWR({ viewMode = "Monthly" }) {
         <thead>
           <tr>
             {COLUMN_ORDER.map((key) => (
-              <th key={key} className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}>
-                {renderSortControls(key)} {COLUMN_NAMES[key]}
+              <th
+                key={key}
+                className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
+                style={{ verticalAlign: "top", textAlign: "center" }}
+              >
+                <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start" }}>
+                  {renderSortControls(key)}
+                </div>
+                <span style={{ whiteSpace: "pre-line" }}>{formatHeaderLabel(key, COLUMN_NAMES[key], monthLabels.includes(key))}</span>
               </th>
             ))}
           </tr>
@@ -598,8 +611,15 @@ export default function TWR({ viewMode = "Monthly" }) {
         <thead>
           <tr>
             {DAILY_COLUMN_ORDER.map((key) => (
-              <th key={key} className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}>
-                {renderDailySortControls(key)} {DAILY_COLUMN_NAMES[key]}
+              <th
+                key={key}
+                className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
+                style={{ verticalAlign: "top", textAlign: "center" }}
+              >
+                <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start" }}>
+                  {renderDailySortControls(key)}
+                </div>
+                <span style={{ whiteSpace: "pre-line" }}>{formatHeaderLabel(key, DAILY_COLUMN_NAMES[key], dayLabels.includes(key))}</span>
               </th>
             ))}
           </tr>
