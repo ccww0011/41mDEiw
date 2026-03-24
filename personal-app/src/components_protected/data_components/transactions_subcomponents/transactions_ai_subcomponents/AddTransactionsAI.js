@@ -54,7 +54,7 @@ export default function AddTransactionsAI() {
 
   return (
     <>
-      <h2>Add Transactions</h2>
+      <h2 style={{ fontSize: "18px" }}>Add Transactions</h2>
       <div className="grid">
         <div className="grid-item grid6">
           <div className={styles.chatWindow} ref={chatWindowRef}>

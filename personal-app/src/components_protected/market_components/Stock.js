@@ -15,6 +15,8 @@ export default function Stock() {
     setLoadingPrices,
     setPriceTickerMap,
     corporateActions,
+    corporateActionFetchMap,
+    setCorporateActionFetchMap,
     setCorporateActions,
     setLoadingCorporateActions,
   } = usePrices();
@@ -81,7 +83,9 @@ export default function Stock() {
         setPriceTickerMap,
         corporateActions,
         setCorporateActions,
-        setLoadingCorporateActions
+        setLoadingCorporateActions,
+        corporateActionFetchMap,
+        setCorporateActionFetchMap
       );
     };
 
@@ -143,7 +147,9 @@ export default function Stock() {
                 setPriceTickerMap,
                 corporateActions,
                 setCorporateActions,
-                setLoadingCorporateActions
+                setLoadingCorporateActions,
+                corporateActionFetchMap,
+                setCorporateActionFetchMap
               );
             }}
           >

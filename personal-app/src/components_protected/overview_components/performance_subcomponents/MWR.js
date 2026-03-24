@@ -5,10 +5,13 @@ function getMonthKey(dateStr) {
   return dateStr.slice(0, 6);
 }
 
-function buildMonthLabels(year) {
+function buildRollingMonthLabels(latestDateStr) {
   const labels = [];
-  for (let m = 1; m <= 12; m++) {
-    labels.push(`${year}${String(m).padStart(2, "0")}`);
+  const endYear = Number(latestDateStr.slice(0, 4));
+  const endMonth = Number(latestDateStr.slice(4, 6));
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(endYear, endMonth - 1 - i, 1);
+    labels.push(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`);
   }
   return labels;
 }
@@ -21,23 +24,114 @@ function parseDateStr(dateStr) {
   );
 }
 
+function diffDays(startDateStr, endDateStr) {
+  return Math.round((parseDateStr(endDateStr) - parseDateStr(startDateStr)) / (24 * 60 * 60 * 1000));
+}
+
+function solvePeriodIrr(cashFlows) {
+  if (!cashFlows.length) return null;
+
+  const mergedByDate = new Map();
+  cashFlows.forEach(({ date, amount }) => {
+    if (amount == null || !isFinite(amount) || Math.abs(amount) < 1e-12) return;
+    mergedByDate.set(date, (mergedByDate.get(date) ?? 0) + amount);
+  });
+
+  const flows = Array.from(mergedByDate.entries())
+    .map(([date, amount]) => ({ date, amount }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  if (flows.length < 2) return null;
+
+  const hasPositive = flows.some((f) => f.amount > 0);
+  const hasNegative = flows.some((f) => f.amount < 0);
+  if (!hasPositive || !hasNegative) return null;
+
+  const firstDate = flows[0].date;
+  const lastDate = flows[flows.length - 1].date;
+  const totalDays = Math.max(1, diffDays(firstDate, lastDate));
+
+  const npv = (rate) => {
+    if (rate <= -0.999999999) return NaN;
+    return flows.reduce((sum, flow) => {
+      const exponent = diffDays(firstDate, flow.date) / totalDays;
+      return sum + flow.amount / Math.pow(1 + rate, exponent);
+    }, 0);
+  };
+
+  const grid = [-0.9999, -0.99, -0.95, -0.9, -0.75, -0.5, -0.25, -0.1, 0, 0.1, 0.25, 0.5, 1, 2, 5, 10, 20, 50, 100];
+  let lower = null;
+  let upper = null;
+
+  for (let i = 0; i < grid.length - 1; i++) {
+    const left = grid[i];
+    const right = grid[i + 1];
+    const fLeft = npv(left);
+    const fRight = npv(right);
+    if (!isFinite(fLeft) || !isFinite(fRight)) continue;
+    if (fLeft === 0) return left;
+    if (fRight === 0) return right;
+    if (fLeft * fRight < 0) {
+      lower = left;
+      upper = right;
+      break;
+    }
+  }
+
+  if (lower == null || upper == null) return null;
+
+  for (let i = 0; i < 100; i++) {
+    const mid = (lower + upper) / 2;
+    const fLower = npv(lower);
+    const fMid = npv(mid);
+    if (!isFinite(fMid)) return null;
+    if (Math.abs(fMid) < 1e-10) return mid;
+    if (fLower * fMid <= 0) upper = mid;
+    else lower = mid;
+  }
+
+  return (lower + upper) / 2;
+}
+
+function calculatePeriodMwr({ startDateStr, endDateStr, bmv, emv, txByDate, divByDate, flowDates }) {
+  const cashFlows = [];
+
+  if (bmv != null && Math.abs(bmv) > 1e-12) {
+    cashFlows.push({ date: startDateStr, amount: -bmv });
+  }
+
+  flowDates.forEach((date) => {
+    const tx = txByDate[date] ?? 0;
+    const div = divByDate[date] ?? 0;
+    if (tx) cashFlows.push({ date, amount: tx });
+    if (div) cashFlows.push({ date, amount: div });
+  });
+
+  if (emv != null && Math.abs(emv) > 1e-12) {
+    cashFlows.push({ date: endDateStr, amount: emv });
+  }
+
+  return solvePeriodIrr(cashFlows);
+}
+
 function toPercent(value, decimals = 2) {
   if (value == null || !isFinite(value)) return "—";
   return `${(value * 100).toFixed(decimals)}%`;
 }
 
-export default function MWR() {
+export default function MWR({ viewMode = "Monthly" }) {
   const {
     tickerMap,
-    cumulativeHoldingsByTickerByDate,
     cumulativeMarketValueByTickerByDate,
     dividendByTickerByDate,
     transactionByTickerByDate,
-    endDateDisplay,
+    latestValuationDate,
   } = useValuationContext();
 
   const [sortRules, setSortRules] = useState([]);
   const [filters, setFilters] = useState({});
+  const [dailySortRules, setDailySortRules] = useState([]);
+  const [dailyFilters, setDailyFilters] = useState({});
   const [isNarrow, setIsNarrow] = useState(false);
 
   useEffect(() => {
@@ -122,6 +216,76 @@ export default function MWR() {
     );
   };
 
+  const onDailySortClick = (key, directionOrRemove) => {
+    setDailySortRules((prev) => {
+      const filtered = prev.filter((r) => r.key !== key);
+      if (directionOrRemove === "remove") return filtered;
+      return [{ key, direction: directionOrRemove }, ...filtered];
+    });
+  };
+
+  const renderDailySortControls = (key) => {
+    const rule = dailySortRules.find((r) => r.key === key);
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+        <button
+          onClick={() => onDailySortClick(key, "desc")}
+          title="Sort Descending"
+          style={{
+            width: 14,
+            height: 14,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#08519c",
+            color: rule?.direction === "desc" ? "#fb6a4a" : "#f7fbff",
+            fontSize: 10,
+            padding: 0,
+            lineHeight: 1
+          }}
+        >
+          ▼
+        </button>
+        <button
+          onClick={() => onDailySortClick(key, "asc")}
+          title="Sort Ascending"
+          style={{
+            width: 14,
+            height: 14,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#08519c",
+            color: rule?.direction === "asc" ? "#fb6a4a" : "#f7fbff",
+            fontSize: 10,
+            padding: 0,
+            lineHeight: 1
+          }}
+        >
+          ▲
+        </button>
+        <button
+          onClick={() => onDailySortClick(key, "remove")}
+          title="Remove Sort"
+          style={{
+            width: 14,
+            height: 14,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#08519c",
+            color: "#f7fbff",
+            fontSize: 10,
+            padding: 0,
+            lineHeight: 1
+          }}
+        >
+          ✕
+        </button>
+      </div>
+    );
+  };
+
   const getPercentStyle = (val) => ({
     textAlign: "right",
     backgroundColor: val == null || !isFinite(val) ? "#ffffff" : (val < 0 ? "#d73027" : "#1a9850"),
@@ -129,10 +293,18 @@ export default function MWR() {
   });
   const plainCellStyle = { backgroundColor: "#ffffff" };
 
-  const { monthLabels, rows } = useMemo(() => {
-    if (!endDateDisplay) return { monthLabels: [], rows: [] };
-    const year = endDateDisplay.slice(0, 4);
-    const monthLabels = buildMonthLabels(year);
+  const { monthLabels, dayLabels, rows } = useMemo(() => {
+    if (!latestValuationDate) return { monthLabels: [], rows: [] };
+    const year = latestValuationDate.slice(0, 4);
+    const monthLabels = buildRollingMonthLabels(latestValuationDate);
+    const globalDates = Array.from(
+      new Set(
+        Object.values(cumulativeMarketValueByTickerByDate || {})
+          .flatMap((mvByDate) => Object.keys(mvByDate || {}))
+          .filter((d) => d <= latestValuationDate)
+      )
+    ).sort();
+    const dayLabels = globalDates.slice(-14);
     const tickerSet = new Set([
       ...Object.keys(cumulativeMarketValueByTickerByDate || {}),
       ...Object.keys(dividendByTickerByDate || {}),
@@ -140,12 +312,11 @@ export default function MWR() {
     ]);
 
     const rows = Array.from(tickerSet).map((ticker) => {
-      const holdingsByDate = cumulativeHoldingsByTickerByDate?.[ticker] ?? {};
       const mvByDate = cumulativeMarketValueByTickerByDate?.[ticker] ?? {};
       const divByDate = dividendByTickerByDate?.[ticker] ?? {};
       const txByDate = transactionByTickerByDate?.[ticker] ?? {};
       const dates = Object.keys(mvByDate)
-        .filter((d) => d.startsWith(year) || d === `${Number(year) - 1}1231`)
+        .filter((d) => d <= latestValuationDate)
         .sort();
 
       const monthlyReturns = {};
@@ -160,51 +331,19 @@ export default function MWR() {
         const monthStartDate = `${monthKey}01`;
         const prevDates = dates.filter((d) => d < monthStartDate);
         const startDate = prevDates.length ? prevDates[prevDates.length - 1] : null;
-
         const periodStartDateStr = startDate ?? monthDates[0];
         const periodEndDateStr = monthDates[monthDates.length - 1];
-        const periodStartDate = parseDateStr(periodStartDateStr);
-        const periodEndDate = parseDateStr(periodEndDateStr);
-        const totalDays = Math.max(1, Math.round((periodEndDate - periodStartDate) / (24 * 60 * 60 * 1000)));
-
         const bmv = startDate == null ? 0 : (mvByDate[startDate] ?? 0);
         const emv = mvByDate[periodEndDateStr] ?? 0;
-
-        let tradeAndIncome = 0;
-        let weightedCapitalFlow = 0;
-        let hasAny = bmv !== 0 || emv !== 0;
-
-        monthDates.forEach((d) => {
-          const div = divByDate[d] ?? 0;
-          const tx = txByDate[d] ?? 0;
-          const prevFlowDates = dates.filter((date) => date < d);
-          const prevFlowDate = prevFlowDates.length ? prevFlowDates[prevFlowDates.length - 1] : null;
-          const qtyPrev = prevFlowDate == null ? 0 : (holdingsByDate[prevFlowDate] ?? 0);
-          const qtyCurr = holdingsByDate[d] ?? qtyPrev;
-          const positionDirection = Math.sign(qtyPrev || qtyCurr);
-          const tradeExposureFlow = positionDirection < 0 ? tx : -tx;
-          const capitalFlow = tradeExposureFlow - div;
-          if (tx !== 0 || div !== 0) hasAny = true;
-          tradeAndIncome += tx + div;
-
-          const t = parseDateStr(d);
-          const daysFromStart = Math.round((t - periodStartDate) / (24 * 60 * 60 * 1000));
-          const weight = (totalDays - daysFromStart) / totalDays;
-          weightedCapitalFlow += capitalFlow * weight;
+        monthlyReturns[monthKey] = calculatePeriodMwr({
+          startDateStr: periodStartDateStr,
+          endDateStr: periodEndDateStr,
+          bmv,
+          emv,
+          txByDate,
+          divByDate,
+          flowDates: monthDates
         });
-
-        if (!hasAny) {
-          monthlyReturns[monthKey] = null;
-          return;
-        }
-
-        const denom = Math.abs(bmv) + weightedCapitalFlow;
-        if (!denom) {
-          monthlyReturns[monthKey] = 0;
-          return;
-        }
-
-        monthlyReturns[monthKey] = (emv - bmv + tradeAndIncome) / denom;
       });
 
       const yearDates = dates.filter((d) => d.startsWith(year));
@@ -215,41 +354,94 @@ export default function MWR() {
         const startDate = prevDates.length ? prevDates[prevDates.length - 1] : null;
         const periodStartDateStr = startDate ?? yearDates[0];
         const periodEndDateStr = yearDates[yearDates.length - 1];
-        const periodStartDate = parseDateStr(periodStartDateStr);
-        const periodEndDate = parseDateStr(periodEndDateStr);
-        const totalDays = Math.max(1, Math.round((periodEndDate - periodStartDate) / (24 * 60 * 60 * 1000)));
-
         const bmv = startDate == null ? 0 : (mvByDate[startDate] ?? 0);
         const emv = mvByDate[periodEndDateStr] ?? 0;
-
-        let tradeAndIncome = 0;
-        let weightedCapitalFlow = 0;
-        let hasAny = bmv !== 0 || emv !== 0;
-
-        yearDates.forEach((d) => {
-          const div = divByDate[d] ?? 0;
-          const tx = txByDate[d] ?? 0;
-          const prevFlowDates = dates.filter((date) => date < d);
-          const prevFlowDate = prevFlowDates.length ? prevFlowDates[prevFlowDates.length - 1] : null;
-          const qtyPrev = prevFlowDate == null ? 0 : (holdingsByDate[prevFlowDate] ?? 0);
-          const qtyCurr = holdingsByDate[d] ?? qtyPrev;
-          const positionDirection = Math.sign(qtyPrev || qtyCurr);
-          const tradeExposureFlow = positionDirection < 0 ? tx : -tx;
-          const capitalFlow = tradeExposureFlow - div;
-          if (tx !== 0 || div !== 0) hasAny = true;
-          tradeAndIncome += tx + div;
-
-          const t = parseDateStr(d);
-          const daysFromStart = Math.round((t - periodStartDate) / (24 * 60 * 60 * 1000));
-          const weight = (totalDays - daysFromStart) / totalDays;
-          weightedCapitalFlow += capitalFlow * weight;
+        ytd = calculatePeriodMwr({
+          startDateStr: periodStartDateStr,
+          endDateStr: periodEndDateStr,
+          bmv,
+          emv,
+          txByDate,
+          divByDate,
+          flowDates: yearDates
         });
-
-        if (hasAny) {
-          const denom = Math.abs(bmv) + weightedCapitalFlow;
-          ytd = !denom ? 0 : (emv - bmv + tradeAndIncome) / denom;
-        }
       }
+
+      const ttmStartMonth = monthLabels[0];
+      const ttmStartDate = `${ttmStartMonth}01`;
+      const ttmDates = dates.filter((d) => d >= ttmStartDate);
+      const hasFull12MonthCoverage = monthLabels.every((m) => dates.some((d) => getMonthKey(d) === m));
+      let ttm = null;
+      if (ttmDates.length && hasFull12MonthCoverage) {
+        const prevDates = dates.filter((d) => d < ttmStartDate);
+        const startDate = prevDates.length ? prevDates[prevDates.length - 1] : null;
+        const periodStartDateStr = startDate ?? ttmDates[0];
+        const periodEndDateStr = ttmDates[ttmDates.length - 1];
+        const bmv = startDate == null ? 0 : (mvByDate[startDate] ?? 0);
+        const emv = mvByDate[periodEndDateStr] ?? 0;
+        ttm = calculatePeriodMwr({
+          startDateStr: periodStartDateStr,
+          endDateStr: periodEndDateStr,
+          bmv,
+          emv,
+          txByDate,
+          divByDate,
+          flowDates: ttmDates
+        });
+      }
+      if (ttm == null && dates.length) {
+        const periodStartDateStr = dates[0];
+        const periodEndDateStr = dates[dates.length - 1];
+        const bmv = 0;
+        const emv = mvByDate[periodEndDateStr] ?? 0;
+        ttm = calculatePeriodMwr({
+          startDateStr: periodStartDateStr,
+          endDateStr: periodEndDateStr,
+          bmv,
+          emv,
+          txByDate,
+          divByDate,
+          flowDates: dates
+        });
+      }
+
+      const dailyReturns = {};
+      let dailyCumMultiplier = 1;
+      let validDailyCount = 0;
+      let dailyCum7Multiplier = 1;
+      let validDaily7Count = 0;
+      const last7Labels = dayLabels.slice(-7);
+      dayLabels.forEach((curr) => {
+        const prev = dates.filter((d) => d < curr).at(-1);
+        if (!prev || mvByDate[curr] == null) {
+          dailyReturns[curr] = null;
+          return;
+        }
+        const mvPrev = mvByDate[prev] ?? 0;
+        const mvCurr = mvByDate[curr] ?? 0;
+        const r = calculatePeriodMwr({
+          startDateStr: prev,
+          endDateStr: curr,
+          bmv: mvPrev,
+          emv: mvCurr,
+          txByDate,
+          divByDate,
+          flowDates: [curr]
+        });
+        if (!isFinite(r)) {
+          dailyReturns[curr] = null;
+          return;
+        }
+        dailyReturns[curr] = r;
+        dailyCumMultiplier *= 1 + r;
+        validDailyCount += 1;
+        if (last7Labels.includes(curr)) {
+          dailyCum7Multiplier *= 1 + r;
+          validDaily7Count += 1;
+        }
+      });
+      const cumulative7d = last7Labels.length === 7 && validDaily7Count === 7 ? dailyCum7Multiplier - 1 : null;
+      const cumulative14d = dayLabels.length === 14 && validDailyCount === 14 ? dailyCumMultiplier - 1 : null;
 
       const info = tickerMap?.[ticker] || {};
       return {
@@ -258,30 +450,46 @@ export default function MWR() {
         exchange: info.exchange ?? "",
         tradingCurrency: info.tradingCurrency ?? "",
         monthlyReturns,
-        ytd
+        ytd,
+        ttm,
+        dailyReturns,
+        cumulative7d,
+        cumulative14d
       };
     });
 
-    return { monthLabels, rows };
+    return { monthLabels, dayLabels, rows };
   }, [
-    cumulativeHoldingsByTickerByDate,
     cumulativeMarketValueByTickerByDate,
     dividendByTickerByDate,
     transactionByTickerByDate,
-    endDateDisplay,
+    latestValuationDate,
     tickerMap
   ]);
 
-  const COLUMN_ORDER = ["ticker", "description", "exchange", "tradingCurrency", ...monthLabels, "ytd"];
+  const COLUMN_ORDER = ["ticker", "description", "exchange", "tradingCurrency", ...monthLabels, "ytd", "ttm"];
+  const DAILY_COLUMN_ORDER = ["ticker", "description", "exchange", "tradingCurrency", ...dayLabels, "l7d", "l14d"];
   const COLUMN_NAMES = {
     ticker: "Ticker",
     description: "Description",
     exchange: "Exchange",
     tradingCurrency: "Trading Currency",
-    ytd: `YTD ${endDateDisplay ? endDateDisplay.slice(0, 4) : ""}`
+    ytd: `YTD ${latestValuationDate ? latestValuationDate.slice(2, 4) : ""}`,
+    ttm: "TTM*"
   };
   monthLabels.forEach((m) => {
-    COLUMN_NAMES[m] = m.slice(4, 6);
+    COLUMN_NAMES[m] = `${m.slice(4, 6)}/${m.slice(2, 4)}`;
+  });
+  const DAILY_COLUMN_NAMES = {
+    ticker: "Ticker",
+    description: "Description",
+    exchange: "Exchange",
+    tradingCurrency: "Trading Currency",
+    l7d: "L7D",
+    l14d: "L14D"
+  };
+  dayLabels.forEach((d) => {
+    DAILY_COLUMN_NAMES[d] = `${d.slice(6, 8)}/${d.slice(4, 6)}`;
   });
   const hideOnMobileColumns = ["ticker", "exchange"];
 
@@ -289,6 +497,7 @@ export default function MWR() {
     let array = [...rows];
     const valueForKey = (row, key) => {
       if (key === "ytd") return row.ytd;
+      if (key === "ttm") return row.ttm;
       if (key in row) return row[key];
       return row.monthlyReturns?.[key] ?? null;
     };
@@ -325,8 +534,57 @@ export default function MWR() {
     return array;
   }, [rows, sortRules, filters]);
 
+  const dailySortedRows = useMemo(() => {
+    let array = [...rows];
+    const valueForKey = (row, key) => {
+      if (key === "l7d") return row.cumulative7d;
+      if (key === "l14d") return row.cumulative14d;
+      if (key in row) return row[key];
+      return row.dailyReturns?.[key] ?? null;
+    };
+
+    Object.entries(dailyFilters).forEach(([key, value]) => {
+      if (value && value !== "All") {
+        array = array.filter((item) => item[key] === value);
+      }
+    });
+
+    if (dailySortRules.length > 0) {
+      for (let i = dailySortRules.length - 1; i >= 0; i--) {
+        const { key, direction } = dailySortRules[i];
+        array.sort((a, b) => {
+          const valA = valueForKey(a, key);
+          const valB = valueForKey(b, key);
+          const numA = parseFloat(valA);
+          const numB = parseFloat(valB);
+          const bothNumbers = !isNaN(numA) && !isNaN(numB);
+
+          if (bothNumbers) return direction === "asc" ? numA - numB : numB - numA;
+
+          const strA = valA?.toString().toLowerCase() ?? "";
+          const strB = valB?.toString().toLowerCase() ?? "";
+
+          if (strA < strB) return direction === "asc" ? -1 : 1;
+          if (strA > strB) return direction === "asc" ? 1 : -1;
+          return 0;
+        });
+      }
+    } else {
+      array.sort((a, b) => (b.cumulative14d || 0) - (a.cumulative14d || 0));
+    }
+    return array;
+  }, [rows, dailySortRules, dailyFilters]);
+
   return (
     <>
+      <div className="grid">
+        <div className="grid-item grid12" >
+          Value Date: {latestValuationDate}
+        </div>
+      </div>
+
+      {viewMode === "Monthly" && (
+      <>
       <div className="grid">
         <div className="grid-item grid8">
           Sorting priority: {sortRules.length === 0 ? "" : sortRules.map((rule, i) => `(${i + 1}) ${COLUMN_NAMES[rule.key]}`).join("; ")}
@@ -338,7 +596,6 @@ export default function MWR() {
           <button onClick={() => setFilters({})} style={{backgroundColor: "#969696", color: "white", marginRight: 8}}>Clear Filter</button>
         </div>
       </div>
-
       <table border="1" cellPadding="8" style={{ borderCollapse: "collapse", width: "100%" }}>
         <thead>
           <tr>
@@ -388,15 +645,99 @@ export default function MWR() {
                 </td>
               ))}
               <td style={getPercentStyle(row.ytd)}>{toPercent(row.ytd, isNarrow ? 1 : 2)}</td>
+              <td style={getPercentStyle(row.ttm)}>{toPercent(row.ttm, isNarrow ? 1 : 2)}</td>
             </tr>
           ))}
           {sortedRows.length === 0 && (
             <tr>
-              <td colSpan={monthLabels.length + 5}>No data</td>
+              <td colSpan={monthLabels.length + 6}>No data</td>
             </tr>
           )}
         </tbody>
       </table>
+      <div className="grid">
+        <div className="grid-item grid12" style={{ paddingBottom: "10px", fontSize: "12px" }}>
+          * Holding Period Yield is shown when 12M history is unavailable
+        </div>
+      </div>
+      </>
+      )}
+
+      {viewMode === "Daily" && (
+      <>
+      <div className="grid">
+        <div className="grid-item grid8">
+          Sorting priority: {dailySortRules.length === 0 ? "" : dailySortRules.map((rule, i) => `(${i + 1}) ${DAILY_COLUMN_NAMES[rule.key]}`).join("; ")}
+        </div>
+        <div className="grid-item grid2">
+          <button onClick={() => setDailySortRules([])} style={{backgroundColor: "#fb6a4a", color: "white"}}>Clear Sort</button>
+        </div>
+        <div className="grid-item grid2">
+          <button onClick={() => setDailyFilters({})} style={{backgroundColor: "#969696", color: "white", marginRight: 8}}>Clear Filter</button>
+        </div>
+      </div>
+
+      <table border="1" cellPadding="8" style={{ borderCollapse: "collapse", width: "100%" }}>
+        <thead>
+          <tr>
+            {DAILY_COLUMN_ORDER.map((key) => (
+              <th key={key} className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}>
+                {renderDailySortControls(key)} {DAILY_COLUMN_NAMES[key]}
+              </th>
+            ))}
+          </tr>
+          <tr>
+            {DAILY_COLUMN_ORDER.map((key) => {
+              const filterableKeys = ["ticker", "description", "exchange", "tradingCurrency"];
+              if (!filterableKeys.includes(key)) {
+                return <th key={key} className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}></th>;
+              }
+              const options = Array.from(new Set(rows.map((r) => r[key]).filter(Boolean))).sort();
+              return (
+                <th key={key} className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}>
+                  <select
+                    value={dailyFilters[key] || "All"}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setDailyFilters((prev) => ({ ...prev, [key]: value === "All" ? undefined : value }));
+                    }}
+                    style={{ width: "100%" }}
+                  >
+                    <option value="All">All</option>
+                    {options.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </th>
+              );
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {dailySortedRows.map((row) => (
+            <tr key={`${row.ticker}-14d`}>
+              <td className={hideOnMobileColumns.includes("ticker") ? "hide-on-mobile" : ""} style={plainCellStyle}>{row.ticker}</td>
+              <td style={plainCellStyle}>{row.description}</td>
+              <td className={hideOnMobileColumns.includes("exchange") ? "hide-on-mobile" : ""} style={plainCellStyle}>{row.exchange}</td>
+              <td style={plainCellStyle}>{row.tradingCurrency}</td>
+              {dayLabels.map((d) => (
+                <td key={d} style={getPercentStyle(row.dailyReturns?.[d])}>
+                  {toPercent(row.dailyReturns?.[d], isNarrow ? 1 : 2)}
+                </td>
+              ))}
+              <td style={getPercentStyle(row.cumulative7d)}>{toPercent(row.cumulative7d, isNarrow ? 1 : 2)}</td>
+              <td style={getPercentStyle(row.cumulative14d)}>{toPercent(row.cumulative14d, isNarrow ? 1 : 2)}</td>
+            </tr>
+          ))}
+          {dailySortedRows.length === 0 && (
+            <tr>
+              <td colSpan={dayLabels.length + 6}>No data</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+      </>
+      )}
     </>
   );
 }

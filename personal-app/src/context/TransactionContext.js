@@ -72,8 +72,9 @@ export function TransactionProvider({ children }) {
         if (tx.listingExchange && !tickerObj[tx.ticker].exchange) {
           tickerObj[tx.ticker].exchange = tx.listingExchange;
         }
-        if (tx.currencyPrimary && !tickerObj[tx.ticker].tradingCurrency) {
-          tickerObj[tx.ticker].tradingCurrency = tx.currencyPrimary;
+        const normalizedCurrency = (tx.currencyPrimary || "").trim().toUpperCase();
+        if (normalizedCurrency && !tickerObj[tx.ticker].tradingCurrency) {
+          tickerObj[tx.ticker].tradingCurrency = normalizedCurrency;
         }
       }
     }
@@ -87,8 +88,9 @@ export function TransactionProvider({ children }) {
     const currencySet = new Set();
 
     for (const tx of transactions) {
-      if (tx.currencyPrimary != null) {
-        currencySet.add(tx.currencyPrimary);
+      const normalizedCurrency = (tx.currencyPrimary || "").trim().toUpperCase();
+      if (normalizedCurrency) {
+        currencySet.add(normalizedCurrency);
       }
     }
 

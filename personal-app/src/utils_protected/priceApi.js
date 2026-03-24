@@ -66,16 +66,16 @@ async function priceApi(method, data, setPrices, setPriceTickerMap) {
           });
         }
 
-        return {message: items.message, status: 'Success'};
+        return {message: items.message, status: 'Success', data: items.data ?? {}, meta: items.meta ?? {}};
       }
     } else if (response.status === 401 || response.status === 403) {
       logout();
-      return {message: "Unauthorised.", status: 'Unauthorised'};
+      return {message: "Unauthorised.", status: 'Unauthorised', data: {}, meta: {}};
     } else {
-      return {message: items.message, status: 'Error'};
+      return {message: items.message, status: 'Error', data: {}, meta: {}};
     }
   } catch (error) {
-    return {message: error.message, status: 'Error'};
+    return {message: error.message, status: 'Error', data: {}, meta: {}};
   }
 }
 
@@ -88,7 +88,10 @@ export async function getPrices(
   setPriceTickerMap,
   corporateActions,
   setCorporateActions,
-  setLoadingCorporateActions
+  setLoadingCorporateActions,
+  corporateActionFetchMap,
+  setCorporateActionFetchMap,
+  fetchCorporateActions = true
 ) {
   const d0 = new Date();
   d0.setDate(d0.getDate() - 1);
@@ -114,7 +117,7 @@ export async function getPrices(
       }
     }
   }
-  if (requestMap.size === 0) return;
+  if (requestMap.size === 0) return { data: {}, meta: {} };
   const requests = [];
 
   for (const [ticker, startYears] of requestMap) {
@@ -126,10 +129,18 @@ export async function getPrices(
   }
   setLoadingPrices(true);
   try {
-    await priceApi('POST', { items: JSON.stringify(requests) }, setPrices, setPriceTickerMap);
-    if (corporateActions && setCorporateActions && setLoadingCorporateActions) {
-      await getCorporateActions(requests, corporateActions, setCorporateActions, setLoadingCorporateActions);
+    const result = await priceApi('POST', { items: JSON.stringify(requests) }, setPrices, setPriceTickerMap);
+    if (fetchCorporateActions && corporateActions && setCorporateActions && setLoadingCorporateActions) {
+      await getCorporateActions(
+        requests,
+        corporateActions,
+        setCorporateActions,
+        setLoadingCorporateActions,
+        corporateActionFetchMap,
+        setCorporateActionFetchMap
+      );
     }
+    return result ?? { data: {}, meta: {} };
   } finally {
     setLoadingPrices(false);
   }

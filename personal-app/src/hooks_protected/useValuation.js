@@ -78,8 +78,6 @@ export function useValuation(
     );
     if (!firstTxDate) return EMPTY_RESULT;
 
-    const year = endDate.slice(0, 4);
-    const yearStartMinusOne = `${String(Number(year) - 1)}1231`;
     const dates = buildDateList(firstTxDate, endDate);
 
     const txByDate = new Map();
@@ -359,30 +357,28 @@ export function useValuation(
         transactionByTickerByDate[ticker][date] = value;
       });
 
-      if (date >= yearStartMinusOne) {
-        const marketValueSnapshot = {};
-        const unrealisedSnapshot = {};
-        Object.values(holdingsMap).forEach(h => {
-          const priceLocal = getPrice(prices, h.ticker, date);
-          const fxPrice = getFxRate(fxs, h.tradingCurrency, date, basis);
-          if (priceLocal == null || fxPrice == null) return;
-          const price = priceLocal * fxPrice;
-          const value = price * h.totalQuantity;
-          marketValueSnapshot[h.ticker] = (marketValueSnapshot[h.ticker] ?? 0) + value;
-          unrealisedSnapshot[h.ticker] = (unrealisedSnapshot[h.ticker] ?? 0) + value + h.costBasis;
-        });
-        cumulativeMarketValueByDate[date] = marketValueSnapshot;
-        cumulativeUnrealisedPLByDate[date] = unrealisedSnapshot;
+      const marketValueSnapshot = {};
+      const unrealisedSnapshot = {};
+      Object.values(holdingsMap).forEach(h => {
+        const priceLocal = getPrice(prices, h.ticker, date);
+        const fxPrice = getFxRate(fxs, h.tradingCurrency, date, basis);
+        if (priceLocal == null || fxPrice == null) return;
+        const price = priceLocal * fxPrice;
+        const value = price * h.totalQuantity;
+        marketValueSnapshot[h.ticker] = (marketValueSnapshot[h.ticker] ?? 0) + value;
+        unrealisedSnapshot[h.ticker] = (unrealisedSnapshot[h.ticker] ?? 0) + value + h.costBasis;
+      });
+      cumulativeMarketValueByDate[date] = marketValueSnapshot;
+      cumulativeUnrealisedPLByDate[date] = unrealisedSnapshot;
 
-        Object.entries(marketValueSnapshot).forEach(([ticker, value]) => {
-          if (!cumulativeMarketValueByTickerByDate[ticker]) cumulativeMarketValueByTickerByDate[ticker] = {};
-          cumulativeMarketValueByTickerByDate[ticker][date] = value;
-        });
-        Object.entries(unrealisedSnapshot).forEach(([ticker, value]) => {
-          if (!cumulativeUnrealisedPLByTickerByDate[ticker]) cumulativeUnrealisedPLByTickerByDate[ticker] = {};
-          cumulativeUnrealisedPLByTickerByDate[ticker][date] = value;
-        });
-      }
+      Object.entries(marketValueSnapshot).forEach(([ticker, value]) => {
+        if (!cumulativeMarketValueByTickerByDate[ticker]) cumulativeMarketValueByTickerByDate[ticker] = {};
+        cumulativeMarketValueByTickerByDate[ticker][date] = value;
+      });
+      Object.entries(unrealisedSnapshot).forEach(([ticker, value]) => {
+        if (!cumulativeUnrealisedPLByTickerByDate[ticker]) cumulativeUnrealisedPLByTickerByDate[ticker] = {};
+        cumulativeUnrealisedPLByTickerByDate[ticker][date] = value;
+      });
     }
 
     const holdings = Object.values(holdingsMap).map(h => {
@@ -415,14 +411,18 @@ export function useValuation(
 
     const aggMap = {};
     const missingPLCurrencies = new Set();
+    const addMissingCurrency = (currency) => {
+      const normalized = (currency || "").trim().toUpperCase();
+      if (normalized) missingPLCurrencies.add(normalized);
+    };
     holdings.forEach(h => {
       const curr = basis === "Local" ? h.tradingCurrency : basis;
       if (!aggMap[curr]) aggMap[curr] = { costBasis: 0, marketValue: 0, unrealisedPL: 0, realisedPL: 0, pL: 0 };
-      if (h.costBasis != null) aggMap[curr].costBasis += h.costBasis; else missingPLCurrencies.add(curr);
-      if (h.value != null) aggMap[curr].marketValue += h.value; else missingPLCurrencies.add(curr);
-      if (h.unrealisedPL != null) aggMap[curr].unrealisedPL += h.unrealisedPL; else missingPLCurrencies.add(curr);
-      if (h.realisedPL != null) aggMap[curr].realisedPL += h.realisedPL; else missingPLCurrencies.add(curr);
-      if (h.unrealisedPL !== null && h.realisedPL !== null) aggMap[curr].pL += h.unrealisedPL + h.realisedPL; else missingPLCurrencies.add(curr);
+      if (h.costBasis != null) aggMap[curr].costBasis += h.costBasis; else addMissingCurrency(curr);
+      if (h.value != null) aggMap[curr].marketValue += h.value; else addMissingCurrency(curr);
+      if (h.unrealisedPL != null) aggMap[curr].unrealisedPL += h.unrealisedPL; else addMissingCurrency(curr);
+      if (h.realisedPL != null) aggMap[curr].realisedPL += h.realisedPL; else addMissingCurrency(curr);
+      if (h.unrealisedPL !== null && h.realisedPL !== null) aggMap[curr].pL += h.unrealisedPL + h.realisedPL; else addMissingCurrency(curr);
     });
 
     const allTickers = holdings.filter(h => h.valueUSD != null).map(h => ({ ticker: h.ticker, marketValue: h.valueUSD }));
@@ -430,9 +430,10 @@ export function useValuation(
     const marketValueByTicker = allTickers.sort((a, b) => b.marketValue - a.marketValue).slice(0, 10).map(t => ({ ...t, percent: t.marketValue / totalMarketValue }));
     const map = {};
     holdings.forEach(h => {
-      if (h.valueUSD == null) return;
-      if (!map[h.tradingCurrency]) map[h.tradingCurrency] = 0;
-      map[h.tradingCurrency] += h.valueUSD;
+      const tradingCurrency = (h.tradingCurrency || "").trim().toUpperCase();
+      if (h.valueUSD == null || !tradingCurrency) return;
+      if (!map[tradingCurrency]) map[tradingCurrency] = 0;
+      map[tradingCurrency] += h.valueUSD;
     });
     const marketValueByTradingCurrency = Object.entries(map).map(([tradingCurrency, marketValue]) => ({ tradingCurrency, marketValue, percent: marketValue / totalMarketValue }));
 

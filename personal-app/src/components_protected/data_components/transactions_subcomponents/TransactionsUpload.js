@@ -98,8 +98,8 @@ function validateRows(rows) {
         errors.push(`Row ${idx + 1}: ${field} must be numeric`);
       }
     });
-    if (row.underlyingSymbol && !/^[A-Z]+$/.test(row.underlyingSymbol)) {
-      errors.push(`Row ${idx + 1}: underlyingSymbol must be uppercase letters only`);
+    if (row.underlyingSymbol && !/^[A-Z0-9.]+$/.test(row.underlyingSymbol)) {
+      errors.push(`Row ${idx + 1}: underlyingSymbol must use A-Z, 0-9, or '.' only`);
     }
     if (!row.tradeID) errors.push(`Row ${idx + 1}: missing tradeID`);
   });
@@ -155,17 +155,25 @@ export default function TransactionsUpload() {
         }
 
         const transformedData = normalizedData.map(item => {
-          const netCash = item['netCash']
-          if (netCash != null && netCash !== 0) {
-            const {proceeds, commission, ...rest} = item;
+          const netCashNum = Number(item.netCash);
+          const proceedsNum = Number(item.proceeds) || 0;
+          const commissionNum = Number(item.commission) || 0;
+          const {proceeds, commission, ...rest} = item;
+
+          if (item.assetClass === "CASH" && netCashNum === 0) {
+            return {
+              ...rest,
+              netCash: (proceedsNum + commissionNum).toString()
+            };
+          }
+
+          if (item.netCash != null && !Number.isNaN(netCashNum) && netCashNum !== 0) {
             return {...rest};
           }
-          const proceeds_ = parseFloat(item['proceeds']) || 0;
-          const commission_ = parseFloat(item['commission']) || 0;
-          const {proceeds, commission, ...rest} = item;
+
           return {
             ...rest,
-            netCash: (proceeds_ + commission_).toString()
+            netCash: (proceedsNum + commissionNum).toString()
           };
         });
 
@@ -193,7 +201,7 @@ export default function TransactionsUpload() {
 
   return (
     <>
-      <h2>Upload CSV</h2>
+      <h2 style={{ fontSize: "18px" }}>Upload CSV</h2>
       <p>Required headers: {REQUIRED_HEADERS.join(', ')}</p>
       <h4>Sample:</h4>
       <Image

@@ -9,23 +9,27 @@ export default function Data() {
 
 
   const [showTab, setShowTab] = useState("Transactions");
-  const tabs = ["Transactions", "Dividends", "Corporate Actions"];
+  const tabs = [
+    { key: "Transactions", label: "Transactions"},
+    { key: "Dividends", label: "Dividends"},
+    { key: "Corporate Actions", label: "Corporate Actions"},
+  ];
 
 
   return (
     <>
       <div className="grid">
         {tabs.map((tab) => (
-          <div key={tab} className="grid-item grid2">
+          <div key={tab.key} className="grid-item grid2">
             <button
               type="button"
-              onClick={() => setShowTab(tab)}
+              onClick={() => setShowTab(tab.key)}
               style={{
-                backgroundColor: showTab === tab ? "#08519c" : undefined,
-                color: showTab === tab ? "#f7fbff" : undefined
+                backgroundColor: showTab === tab.key ? "#08519c" : undefined,
+                color: showTab === tab.key ? "#f7fbff" : undefined
               }}
             >
-              {tab}
+              <div>{tab.label}</div>
             </button>
           </div>
         ))}

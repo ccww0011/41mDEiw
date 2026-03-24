@@ -1,12 +1,13 @@
 'use client';
 
 import {useState} from "react";
-import Performance from "@/components_protected/overview_components/Performance";
-import Holding from "@/components_protected/overview_components/Holding";
+import Dashboard from "@/components_protected/overview_components/Dashboard";
+import Positions from "@/components_protected/overview_components/Positions";
+import ReturnView from "@/components_protected/overview_components/Return";
 
 export default function Overview() {
-  const [showTab, setShowTab] = useState("Holding");
-  const tabs = ["Holding", "Performance"];
+  const [showTab, setShowTab] = useState("Dashboard");
+  const tabs = ["Dashboard", "Positions", "Return"];
 
   return (
     <>
@@ -27,8 +28,9 @@ export default function Overview() {
         ))}
       </div>
 
-      {showTab === "Holding" && <Holding />}
-      {showTab === "Performance" && <Performance />}
+      {showTab === "Dashboard" && <Dashboard />}
+      {showTab === "Positions" && <Positions />}
+      {showTab === "Return" && <ReturnView />}
     </>
   );
 }

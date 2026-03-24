@@ -201,8 +201,8 @@ export default function Transactions() {
         errors.push(`${field} must be numeric`);
       }
     });
-    if (row.underlyingSymbol && !/^[A-Z]+$/.test(row.underlyingSymbol)) {
-      errors.push("underlyingSymbol must be uppercase letters only");
+    if (row.underlyingSymbol && !/^[A-Z0-9.]+$/.test(row.underlyingSymbol)) {
+      errors.push("underlyingSymbol must use A-Z, 0-9, or '.' only");
     }
     if (!row.tradeID) errors.push("tradeID is required");
     return errors;

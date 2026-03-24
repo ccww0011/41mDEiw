@@ -6,6 +6,7 @@ import { useFxs } from "@/context/FxContext";
 import { usePrices } from "@/context/PriceContext";
 import { getFxs } from "@/utils_protected/fxApi";
 import { getPrices } from "@/utils_protected/priceApi";
+import { getCorporateActions } from "@/utils_protected/corporateActionApi";
 import {useDividends} from "@/context/DividendContext";
 import { useUserSettings } from "@/context/UserSettingsContext";
 import { useValuation as useProtectedValuation, usePL as useProtectedPL } from "@/hooks_protected/useValuation";
@@ -14,6 +15,71 @@ const d0 = new Date();
 d0.setDate(d0.getDate() - 1);
 const yesterdayStr = d0.getFullYear().toString() + String(d0.getMonth() + 1).padStart(2, '0') + String(d0.getDate()).padStart(2, '0');
 const yesterdayStrStart = yesterdayStr.slice(0,4) + "0101"
+
+function buildRequestItems(requests, startDateYYYYMMDD, fetchEndDate) {
+  return Array.from(requests.entries())
+    .map(([key, minYear]) => {
+      const startDate = `${minYear}0101`;
+      if (startDate < startDateYYYYMMDD) {
+        return { ticker: key, startDate: startDateYYYYMMDD, endDate: fetchEndDate };
+      }
+      if (startDate <= fetchEndDate) {
+        return { ticker: key, startDate, endDate: fetchEndDate };
+      }
+      return null;
+    })
+    .filter(Boolean);
+}
+
+function buildEffectiveCorporateActionRows(corporateActions, appliedMap, excludedList, addedMap) {
+  const rows = [];
+  const appliedSet = new Set(Object.keys(appliedMap || {}));
+  const excludedSet = new Set(excludedList || []);
+
+  Object.entries(corporateActions || {}).forEach(([ticker, actions]) => {
+    if (!actions || typeof actions !== "object") return;
+    Object.entries(actions).forEach(([actionDate, details]) => {
+      const type = details?.type ?? "UNKNOWN";
+      const actionKey = `${ticker}#${type}#${actionDate}`;
+      const ratioVal = details?.ratio ?? details?.factor ?? "";
+      const ratioNum = Number(ratioVal);
+      const hasPositiveRatio = !isNaN(ratioNum) && ratioNum > 0;
+      if (excludedSet.has(actionKey)) return;
+      const overrides = appliedMap?.[actionKey] ?? {};
+      if (appliedSet.has(actionKey) || hasPositiveRatio) {
+        rows.push({
+          ticker,
+          actionDate,
+          type,
+          summary: overrides.summary ?? details?.summary ?? "",
+          child_ticker: overrides.child_ticker ?? details?.child_ticker ?? "",
+          ratio: overrides.ratio ?? ratioVal,
+          actionKey,
+        });
+      }
+    });
+  });
+
+  Object.entries(addedMap || {}).forEach(([ticker, actions]) => {
+    if (!actions || typeof actions !== "object") return;
+    Object.entries(actions).forEach(([actionDate, details]) => {
+      const type = details?.type ?? "UNKNOWN";
+      const actionKey = `${ticker}#${type}#${actionDate}`;
+      const overrides = appliedMap?.[actionKey] ?? {};
+      rows.push({
+        ticker,
+        actionDate,
+        type,
+        summary: overrides.summary ?? details?.summary ?? "",
+        child_ticker: overrides.child_ticker ?? details?.child_ticker ?? "",
+        ratio: overrides.ratio ?? details?.ratio ?? details?.factor ?? "",
+        actionKey,
+      });
+    });
+  });
+
+  return rows;
+}
 
 const ValuationContext = createContext(null);
 
@@ -32,6 +98,8 @@ export function ValuationProvider({ children }) {
     setPriceTickerMap,
     priceTickerMap,
     corporateActions,
+    corporateActionFetchMap,
+    setCorporateActionFetchMap,
     setCorporateActions,
     setLoadingCorporateActions,
   } = usePrices();
@@ -42,14 +110,18 @@ export function ValuationProvider({ children }) {
 
   const [startDateDisplay, setStartDateDisplay] = useState(yesterdayStrStart);
   const [endDateDisplay, setEndDateDisplay] = useState(yesterdayStr);
+  const pricesRef = useRef(prices);
+  const priceTickerMapRef = useRef(priceTickerMap);
+  const corporateActionsRef = useRef(corporateActions);
+  const corporateActionFetchMapRef = useRef(corporateActionFetchMap);
+  const fxsRef = useRef(fxs);
+  const requestSignatureRef = useRef("");
   const latestValuationDate = useMemo(() => {
     if (!lastPriceDate && !lastFxDate) return null;
     if (!lastPriceDate) return lastFxDate;
     if (!lastFxDate) return lastPriceDate;
     return lastPriceDate > lastFxDate ? lastPriceDate : lastFxDate;
   }, [lastPriceDate, lastFxDate]);
-  const attemptedChildPriceRef = useRef(new Set());
-
   // Update start date based on first transaction and endDate
   useEffect(() => {
     if (!firstTransactionDate || !endDateDisplay) return;
@@ -62,54 +134,14 @@ export function ValuationProvider({ children }) {
   const addedMap = userCorporateActionsMask?.added ?? {};
 
   const appliedCorporateActions = useMemo(() => {
-    const rows = [];
-    const appliedSet = new Set(Object.keys(appliedMap));
-    const excludedSet = new Set(excludedList);
-
-    Object.entries(corporateActions || {}).forEach(([ticker, actions]) => {
-      if (!actions || typeof actions !== "object") return;
-      Object.entries(actions).forEach(([actionDate, details]) => {
-        const type = details?.type ?? "UNKNOWN";
-        const actionKey = `${ticker}#${type}#${actionDate}`;
-        const ratioVal = details?.ratio ?? details?.factor ?? "";
-        const ratioNum = Number(ratioVal);
-        const hasPositiveRatio = !isNaN(ratioNum) && ratioNum > 0;
-        if (excludedSet.has(actionKey)) return;
-        const overrides = appliedMap[actionKey] ?? {};
-        if (appliedSet.has(actionKey) || hasPositiveRatio) {
-          rows.push({
-            ticker,
-            actionDate,
-            type,
-            summary: overrides.summary ?? details?.summary ?? "",
-            child_ticker: overrides.child_ticker ?? details?.child_ticker ?? "",
-            ratio: overrides.ratio ?? ratioVal,
-            actionKey,
-          });
-        }
-      });
-    });
-
-    Object.entries(addedMap).forEach(([ticker, actions]) => {
-      if (!actions || typeof actions !== "object") return;
-      Object.entries(actions).forEach(([actionDate, details]) => {
-        const type = details?.type ?? "UNKNOWN";
-        const actionKey = `${ticker}#${type}#${actionDate}`;
-        const overrides = appliedMap[actionKey] ?? {};
-        rows.push({
-          ticker,
-          actionDate,
-          type,
-          summary: overrides.summary ?? details?.summary ?? "",
-          child_ticker: overrides.child_ticker ?? details?.child_ticker ?? "",
-          ratio: overrides.ratio ?? details?.ratio ?? details?.factor ?? "",
-          actionKey,
-        });
-      });
-    });
-
-    return rows;
+    return buildEffectiveCorporateActionRows(corporateActions, appliedMap, excludedList, addedMap);
   }, [corporateActions, appliedMap, excludedList, addedMap]);
+
+  pricesRef.current = prices;
+  priceTickerMapRef.current = priceTickerMap;
+  corporateActionsRef.current = corporateActions;
+  corporateActionFetchMapRef.current = corporateActionFetchMap;
+  fxsRef.current = fxs;
 
   // Update end date based on last available price or FX
   useEffect(() => {
@@ -122,50 +154,6 @@ export function ValuationProvider({ children }) {
       setEndDateDisplay(lastPriceDate > lastFxDate ? lastPriceDate : lastFxDate);
     }
   }, [lastPriceDate, lastFxDate]);
-
-  // Fetch missing FXs
-  useEffect(() => {
-    if (!transactions?.length || !basis || !firstTransactionDate || !endDateDisplay) return;
-
-    const fetchFxs = async () => {
-      const requests = new Map();
-      transactions.forEach(tx => {
-        if (tx.currencyPrimary === "USD") return;
-        const year = tx.tradeDate.slice(0, 4);
-        const prev = requests.get(tx.currencyPrimary);
-        if (!prev || year < prev) requests.set(tx.currencyPrimary, year);
-      });
-      dividends.forEach(div => {
-        if (div.currencyPrimary === "USD") return;
-        const year = div.exDate.slice(0, 4);
-        const prev = requests.get(div.currencyPrimary);
-        if (!prev || year < prev) requests.set(div.currencyPrimary, year);
-      });
-
-      // For spin-off child tickers, ensure FX exists from action year onward.
-      (appliedCorporateActions || [])
-        .filter(a => a.type === "SPIN_OFF" && a.child_ticker && a.actionDate)
-        .forEach(a => {
-          const currency = priceTickerMap?.[a.child_ticker]?.tradingCurrency;
-          if (!currency || currency === "USD") return;
-          const year = a.actionDate.slice(0, 4);
-          const prev = requests.get(currency);
-          if (!prev || year < prev) requests.set(currency, year);
-        });
-
-      if (basis !== "Local") requests.set(basis, firstTransactionDate.slice(0, 4));
-
-      const items = Array.from(requests.entries())
-        .map(([currency, minYear]) => {
-          const startDate = `${minYear}0101`;
-          return startDate <= endDateDisplay ? { currency, startDate, endDate: endDateDisplay } : null;
-        })
-        .filter(Boolean);
-      if (items.length) await getFxs(items, fxs, setFxs, setLoadingFxs);
-    };
-
-    fetchFxs();
-  }, [transactions, dividends, basis, firstTransactionDate, endDateDisplay, appliedCorporateActions, priceTickerMap]);
 
   const tickerMap = useMemo(() => {
     const merged = {};
@@ -187,9 +175,10 @@ export function ValuationProvider({ children }) {
     return merged;
   }, [transactionTickerMap, priceTickerMap]);
 
-  // Fetch missing Prices (transactions + spin-offs)
+  // Fetch corporate actions recursively, then prices, then FX for the completed ticker universe.
   useEffect(() => {
-    if (!startDateDisplay || !endDateDisplay) return;
+    if (!transactions?.length || !basis || !firstTransactionDate || !startDateDisplay || !endDateDisplay) return;
+    const fetchEndDate = endDateDisplay;
     let startDateRequest = new Date(
       Number(startDateDisplay.slice(0, 4)),
       Number(startDateDisplay.slice(4, 6)) - 1,
@@ -201,68 +190,155 @@ export function ValuationProvider({ children }) {
       String(startDateRequest.getMonth() + 1).padStart(2, "0") +
       String(startDateRequest.getDate()).padStart(2, "0");
 
-    const fetchPrices = async () => {
-      const requests = new Map();
-      const requestedChildTickers = [];
+    const requestSignature = JSON.stringify({
+      tx: transactions.map((tx) => `${tx.ticker}|${tx.tradeDate}|${tx.assetClass}|${tx.currencyPrimary}`),
+      div: dividends.map((div) => `${div.ticker}|${div.exDate}|${div.currencyPrimary}`),
+      basis,
+      firstTransactionDate,
+      startDateDisplay,
+      endDateDisplay,
+      applied: Object.keys(appliedMap).sort(),
+      excluded: [...excludedList].sort(),
+      added: Object.keys(addedMap).sort(),
+    });
+    if (requestSignatureRef.current === requestSignature) return;
+    requestSignatureRef.current = requestSignature;
+
+    const fetchValuationInputs = async () => {
+      const tickerRequests = new Map();
+      const mergedCorporateActions = { ...(corporateActionsRef.current || {}) };
+
+      const addTickerRequest = (ticker, year) => {
+        if (!ticker || !year) return;
+        const prev = tickerRequests.get(ticker);
+        if (!prev || year < prev) tickerRequests.set(ticker, year);
+      };
 
       transactions?.forEach(tx => {
         if (tx.assetClass !== "STK") return;
-        const year = tx.tradeDate.slice(0, 4);
-        const prev = requests.get(tx.ticker);
-        if (!prev || year < prev) requests.set(tx.ticker, year);
+        addTickerRequest(tx.ticker, tx.tradeDate.slice(0, 4));
       });
 
-      appliedCorporateActions
-        .filter(a => a.type === "SPIN_OFF" && a.child_ticker)
-        .forEach(a => {
-          const year = a.actionDate?.slice(0, 4);
-          if (!year) return;
-          if (attemptedChildPriceRef.current.has(a.child_ticker)) return;
-          const prev = requests.get(a.child_ticker);
-          if (!prev || year < prev) requests.set(a.child_ticker, year);
-          requestedChildTickers.push(a.child_ticker);
+      let expanded = true;
+      let iterations = 0;
+      while (expanded && iterations < 20) {
+        iterations += 1;
+        expanded = false;
+
+        const corporateActionItems = buildRequestItems(tickerRequests, startDateYYYYMMDD, fetchEndDate);
+        const fetchedCorporateActions = corporateActionItems.length
+          ? await getCorporateActions(
+              corporateActionItems,
+              corporateActionsRef.current,
+              setCorporateActions,
+              setLoadingCorporateActions,
+              corporateActionFetchMapRef.current,
+              setCorporateActionFetchMap
+            )
+          : {};
+
+        Object.entries(fetchedCorporateActions || {}).forEach(([ticker, actions]) => {
+          mergedCorporateActions[ticker] = {
+            ...(mergedCorporateActions[ticker] || {}),
+            ...(actions || {}),
+          };
         });
 
-      const items = Array.from(requests.entries())
-        .map(([ticker, minYear]) => {
-          const startDate = `${minYear}0101`;
-          if (startDate < startDateYYYYMMDD) {
-            return { ticker, startDate: startDateYYYYMMDD, endDate: endDateDisplay };
-          } else if (startDate <= endDateDisplay) {
-            return { ticker, startDate, endDate: endDateDisplay };
-          } else {
-            return null;
-          }
-        })
-        .filter(Boolean);
-      if (items.length) {
-        await getPrices(
-          items,
-          prices,
+        const effectiveActions = buildEffectiveCorporateActionRows(
+          mergedCorporateActions,
+          appliedMap,
+          excludedList,
+          addedMap
+        );
+        Array.from(tickerRequests.entries()).forEach(([ticker]) => {
+          effectiveActions
+            .filter((action) => action.ticker === ticker && action.type === "SPIN_OFF" && action.child_ticker)
+            .forEach((action) => {
+              const before = tickerRequests.get(action.child_ticker);
+              addTickerRequest(action.child_ticker, action.actionDate?.slice(0, 4));
+              if (tickerRequests.get(action.child_ticker) !== before) {
+                expanded = true;
+              }
+            });
+        });
+      }
+
+      const priceItems = buildRequestItems(tickerRequests, startDateYYYYMMDD, fetchEndDate);
+      let fetchedPriceMeta = {};
+      if (priceItems.length) {
+        const priceResult = await getPrices(
+          priceItems,
+          pricesRef.current,
           setPrices,
           setLoadingPrices,
           setPriceTickerMap,
-          corporateActions,
+          corporateActionsRef.current,
           setCorporateActions,
-          setLoadingCorporateActions
+          setLoadingCorporateActions,
+          corporateActionFetchMapRef.current,
+          setCorporateActionFetchMap,
+          false
         );
-        requestedChildTickers.forEach(t => attemptedChildPriceRef.current.add(t));
+        fetchedPriceMeta = priceResult?.meta ?? {};
+      }
+
+      const combinedTickerMeta = { ...(priceTickerMapRef.current || {}) };
+      Object.entries(fetchedPriceMeta).forEach(([ticker, meta]) => {
+        combinedTickerMeta[ticker] = {
+          description: (meta?.description ?? combinedTickerMeta[ticker]?.description ?? "").toUpperCase(),
+          exchange: (meta?.exchange ?? combinedTickerMeta[ticker]?.exchange ?? "").toUpperCase(),
+          tradingCurrency: (meta?.tradingCurrency ?? combinedTickerMeta[ticker]?.tradingCurrency ?? "").toUpperCase(),
+        };
+      });
+
+      const fxRequests = new Map();
+      const addFxRequest = (currency, year) => {
+        const normalizedCurrency = (currency || "").trim().toUpperCase();
+        if (!normalizedCurrency || normalizedCurrency === "USD" || !year) return;
+        const prev = fxRequests.get(normalizedCurrency);
+        if (!prev || year < prev) fxRequests.set(normalizedCurrency, year);
+      };
+
+      transactions.forEach((tx) => addFxRequest(tx.currencyPrimary, tx.tradeDate.slice(0, 4)));
+      dividends.forEach((div) => addFxRequest(div.currencyPrimary, div.exDate.slice(0, 4)));
+      Array.from(tickerRequests.entries()).forEach(([ticker, year]) => {
+        const currency =
+          transactionTickerMap?.[ticker]?.tradingCurrency ||
+          combinedTickerMeta?.[ticker]?.tradingCurrency ||
+          "";
+        addFxRequest(currency, year);
+      });
+
+      if (basis !== "Local") addFxRequest(basis, firstTransactionDate.slice(0, 4));
+
+      const fxItems = Array.from(fxRequests.entries())
+        .map(([currency, minYear]) => {
+          const startDate = `${minYear}0101`;
+          return startDate <= fetchEndDate ? { currency, startDate, endDate: fetchEndDate } : null;
+        })
+        .filter(Boolean);
+      if (fxItems.length) {
+        await getFxs(fxItems, fxsRef.current, setFxs, setLoadingFxs);
       }
     };
 
-    fetchPrices();
-  }, [transactions, appliedCorporateActions, startDateDisplay, endDateDisplay]);
+    fetchValuationInputs();
+  }, [
+    transactions,
+    dividends,
+    basis,
+    firstTransactionDate,
+    startDateDisplay,
+    endDateDisplay,
+    transactionTickerMap,
+    appliedMap,
+    excludedList,
+    addedMap
+  ]);
 
   const {
-    cumulativeHoldingsByTickerByDate,
-    cumulativeCostBasisByTickerByDate,
-    cumulativeMarketValueByTickerByDate,
-    cumulativeRealisedPLByTickerByDate,
-    cumulativeUnrealisedPLByTickerByDate,
-    dividendByTickerByDate,
-    transactionByTickerByDate,
-    holdings,
-    aggregates,
+    holdings: endDateHoldings,
+    aggregates: endDateAggregates,
     marketValueByTicker,
     marketValueByTradingCurrency,
   } = useProtectedValuation(
@@ -278,10 +354,7 @@ export function ValuationProvider({ children }) {
     appliedCorporateActions
   );
 
-  const {
-    holdings: allTimeHoldings,
-    aggregates: allTimeAggregates,
-  } = useProtectedValuation(
+  const latestValuation = useProtectedValuation(
     transactions,
     prices,
     tickerMap,
@@ -293,6 +366,15 @@ export function ValuationProvider({ children }) {
     dividends,
     appliedCorporateActions
   );
+  const latestHoldings = latestValuation.holdings;
+  const latestAggregates = latestValuation.aggregates;
+  const cumulativeHoldingsByTickerByDate = latestValuation.cumulativeHoldingsByTickerByDate;
+  const cumulativeCostBasisByTickerByDate = latestValuation.cumulativeCostBasisByTickerByDate;
+  const cumulativeMarketValueByTickerByDate = latestValuation.cumulativeMarketValueByTickerByDate;
+  const cumulativeRealisedPLByTickerByDate = latestValuation.cumulativeRealisedPLByTickerByDate;
+  const cumulativeUnrealisedPLByTickerByDate = latestValuation.cumulativeUnrealisedPLByTickerByDate;
+  const dividendByTickerByDate = latestValuation.dividendByTickerByDate;
+  const transactionByTickerByDate = latestValuation.transactionByTickerByDate;
 
   const { cumulativePLByDate } = useProtectedPL(
     transactions,
@@ -317,12 +399,12 @@ export function ValuationProvider({ children }) {
         setEndDateDisplay,
         tickerMap,
         appliedCorporateActions,
-      holdings,
-      aggregates,
-      allTimeHoldings,
-      allTimeAggregates,
-      latestValuationDate,
-      marketValueByTicker,
+      holdings: endDateHoldings,
+      aggregates: endDateAggregates,
+      allTimeHoldings: latestHoldings,
+      allTimeAggregates: latestAggregates,
+        latestValuationDate,
+        marketValueByTicker,
         marketValueByTradingCurrency,
         cumulativePLByDate,
         cumulativeHoldingsByTickerByDate,

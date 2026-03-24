@@ -14,6 +14,7 @@ export function PriceProvider({ children }) {
   const [prices, setPrices] = useState({});
   const [loadingPrices, setLoadingPrices] = useState(true);
   const [corporateActions, setCorporateActions] = useState({});
+  const [corporateActionFetchMap, setCorporateActionFetchMap] = useState({});
   const [loadingCorporateActions, setLoadingCorporateActions] = useState(true);
   const [priceTickerMap, setPriceTickerMap] = useState({});
 
@@ -55,6 +56,8 @@ export function PriceProvider({ children }) {
       priceTickerMap,
       setPriceTickerMap,
       corporateActions,
+      corporateActionFetchMap,
+      setCorporateActionFetchMap,
       setCorporateActions,
       loadingCorporateActions,
       setLoadingCorporateActions,
@@ -66,6 +69,7 @@ export function PriceProvider({ children }) {
       lastPriceDate,
       priceTickerMap,
       corporateActions,
+      corporateActionFetchMap,
       loadingCorporateActions,
       lastCorporateActionDate,
     ]

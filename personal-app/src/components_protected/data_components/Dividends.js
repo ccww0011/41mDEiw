@@ -200,8 +200,8 @@ export default function Dividends() {
         errors.push(`${field} must be numeric`);
       }
     });
-    if (row.underlyingSymbol && !/^[A-Z]+$/.test(row.underlyingSymbol)) {
-      errors.push("underlyingSymbol must be uppercase letters only");
+    if (row.underlyingSymbol && !/^[A-Z0-9.]+$/.test(row.underlyingSymbol)) {
+      errors.push("underlyingSymbol must use A-Z, 0-9, or '.' only");
     }
     if (!row.actionID) errors.push("actionID is required");
     return errors;

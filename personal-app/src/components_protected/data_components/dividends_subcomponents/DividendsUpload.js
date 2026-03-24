@@ -97,8 +97,8 @@ function validateRows(rows) {
         errors.push(`Row ${idx + 1}: ${field} must be numeric`);
       }
     });
-    if (row.underlyingSymbol && !/^[A-Z]+$/.test(row.underlyingSymbol)) {
-      errors.push(`Row ${idx + 1}: underlyingSymbol must be uppercase letters only`);
+    if (row.underlyingSymbol && !/^[A-Z0-9.]+$/.test(row.underlyingSymbol)) {
+      errors.push(`Row ${idx + 1}: underlyingSymbol must use A-Z, 0-9, or '.' only`);
     }
     if (!row.actionID) errors.push(`Row ${idx + 1}: missing actionID`);
   });
@@ -198,7 +198,7 @@ export default function DividendsUpload() {
 
   return (
     <>
-      <h2>Upload CSV</h2>
+      <h2 style={{ fontSize: "18px" }}>Upload CSV</h2>
       <p>Required headers: {REQUIRED_HEADERS.join(', ')}</p>
       <h4>Sample:</h4>
       <Image

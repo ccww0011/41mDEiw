@@ -48,21 +48,28 @@ async function corporateActionApi(method, data, setCorporateActions) {
           return merged;
         });
 
-        return { message: items.message, status: "Success" };
+        return { message: items.message, status: "Success", data: items?.data ?? {} };
       }
     } else if (response.status === 401 || response.status === 403) {
       logout();
-      return { message: "Unauthorised.", status: "Unauthorised" };
+      return { message: "Unauthorised.", status: "Unauthorised", data: {} };
     } else {
-      return { message: items.message, status: "Error" };
+      return { message: items.message, status: "Error", data: {} };
     }
   } catch (error) {
-    return { message: error.message, status: "Error" };
+    return { message: error.message, status: "Error", data: {} };
   }
 }
 
 // item = {ticker, startDate, endDate}
-export async function getCorporateActions(items, corporateActions, setCorporateActions, setLoadingCorporateActions) {
+export async function getCorporateActions(
+  items,
+  corporateActions,
+  setCorporateActions,
+  setLoadingCorporateActions,
+  corporateActionFetchMap,
+  setCorporateActionFetchMap
+) {
   const d0 = new Date();
   d0.setDate(d0.getDate() - 1);
   const yesterdayStr =
@@ -76,7 +83,7 @@ export async function getCorporateActions(items, corporateActions, setCorporateA
     const ticker = item.ticker;
     const startDateStr = item.startDate;
     const endDateStr = item.endDate < yesterdayStr ? item.endDate : yesterdayStr;
-    const existingDates = new Set(Object.keys(corporateActions[ticker] ?? {}));
+    const fetchedYears = corporateActionFetchMap?.[ticker] ?? {};
     let d = new Date(
       Number(startDateStr.slice(0, 4)),
       Number(startDateStr.slice(4, 6)) - 1,
@@ -93,20 +100,21 @@ export async function getCorporateActions(items, corporateActions, setCorporateA
         d.getFullYear().toString() +
         String(d.getMonth() + 1).padStart(2, "0") +
         String(d.getDate()).padStart(2, "0");
+      const yearStr = dateStr.slice(0, 4);
       d.setDate(d.getDate() + 1);
 
-      if (!existingDates.has(dateStr)) {
+      if (!fetchedYears[yearStr]) {
         if (requestMap.has(ticker)) {
-          requestMap.get(ticker).add(dateStr.slice(0, 4));
+          requestMap.get(ticker).add(yearStr);
         } else {
-          requestMap.set(ticker, new Set([dateStr.slice(0, 4)]));
+          requestMap.set(ticker, new Set([yearStr]));
         }
-        d = new Date(Number(dateStr.slice(0, 4)) + 1, 0, 1);
+        d = new Date(Number(yearStr) + 1, 0, 1);
       }
     }
   }
 
-  if (requestMap.size === 0) return;
+  if (requestMap.size === 0) return {};
   const requests = [];
 
   for (const [ticker, startYears] of requestMap) {
@@ -119,7 +127,20 @@ export async function getCorporateActions(items, corporateActions, setCorporateA
 
   setLoadingCorporateActions(true);
   try {
-    await corporateActionApi("POST", { items: JSON.stringify(requests) }, setCorporateActions);
+    const result = await corporateActionApi("POST", { items: JSON.stringify(requests) }, setCorporateActions);
+    if (setCorporateActionFetchMap) {
+      setCorporateActionFetchMap((prev) => {
+        const merged = { ...(prev || {}) };
+        for (const request of requests) {
+          const ticker = request.ticker;
+          const year = request.startDate.slice(0, 4);
+          if (!merged[ticker]) merged[ticker] = {};
+          merged[ticker][year] = true;
+        }
+        return merged;
+      });
+    }
+    return result?.data ?? {};
   } finally {
     setLoadingCorporateActions(false);
   }
