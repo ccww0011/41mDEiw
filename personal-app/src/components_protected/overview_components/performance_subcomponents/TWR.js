@@ -212,7 +212,7 @@ export default function TWR({ viewMode = "Monthly" }) {
   const plainCellStyle = { backgroundColor: "#ffffff" };
 
   const { monthLabels, dayLabels, rows } = useMemo(() => {
-    if (!latestValuationDate) return { monthLabels: [], rows: [] };
+    if (!latestValuationDate) return { monthLabels: [], dayLabels: [], rows: [] };
     const year = latestValuationDate.slice(0, 4);
     const monthLabels = buildRollingMonthLabels(latestValuationDate);
     const globalDates = Array.from(
