@@ -206,8 +206,8 @@ export default function TWR({ viewMode = "Monthly" }) {
   };
   const getPercentStyle = (val) => ({
     textAlign: "right",
-    backgroundColor: val == null || !isFinite(val) ? "#ffffff" : (val < 0 ? "#d73027" : "#1a9850"),
-    color: val == null || !isFinite(val) ? "inherit" : "white"
+    backgroundColor: val == null || !isFinite(val) || Math.abs(val) < 1e-12 ? "#ffffff" : (val < 0 ? "#d73027" : "#1a9850"),
+    color: val == null || !isFinite(val) ? "inherit" : (Math.abs(val) < 1e-12 ? "#d9d9d9" : "white")
   });
   const plainCellStyle = { backgroundColor: "#ffffff" };
 

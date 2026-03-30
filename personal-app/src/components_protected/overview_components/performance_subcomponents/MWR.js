@@ -114,6 +114,43 @@ function calculatePeriodMwr({ startDateStr, endDateStr, bmv, emv, txByDate, divB
   return solvePeriodIrr(cashFlows);
 }
 
+function calculatePeriodMwrWithFallback({
+  startDateStr,
+  endDateStr,
+  bmv,
+  emv,
+  txByDate,
+  divByDate,
+  flowDates,
+  fallbackStartDateStr,
+  fallbackBmv
+}) {
+  const direct = calculatePeriodMwr({
+    startDateStr,
+    endDateStr,
+    bmv,
+    emv,
+    txByDate,
+    divByDate,
+    flowDates
+  });
+  if (direct != null) return direct;
+
+  if (!fallbackStartDateStr || fallbackBmv == null || !isFinite(fallbackBmv) || Math.abs(fallbackBmv) < 1e-12) {
+    return null;
+  }
+
+  return calculatePeriodMwr({
+    startDateStr: fallbackStartDateStr,
+    endDateStr,
+    bmv: Math.abs(fallbackBmv),
+    emv,
+    txByDate,
+    divByDate,
+    flowDates: flowDates.filter((date) => date > fallbackStartDateStr)
+  });
+}
+
 function toPercent(value, decimals = 2) {
   if (value == null || !isFinite(value)) return "—";
   return `${(value * 100).toFixed(decimals)}%`;
@@ -295,8 +332,8 @@ export default function MWR({ viewMode = "Monthly" }) {
 
   const getPercentStyle = (val) => ({
     textAlign: "right",
-    backgroundColor: val == null || !isFinite(val) ? "#ffffff" : (val < 0 ? "#d73027" : "#1a9850"),
-    color: val == null || !isFinite(val) ? "inherit" : "white"
+    backgroundColor: val == null || !isFinite(val) || Math.abs(val) < 1e-12 ? "#ffffff" : (val < 0 ? "#d73027" : "#1a9850"),
+    color: val == null || !isFinite(val) ? "inherit" : (Math.abs(val) < 1e-12 ? "#d9d9d9" : "white")
   });
   const plainCellStyle = { backgroundColor: "#ffffff" };
 
@@ -342,14 +379,16 @@ export default function MWR({ viewMode = "Monthly" }) {
         const periodEndDateStr = monthDates[monthDates.length - 1];
         const bmv = startDate == null ? 0 : (mvByDate[startDate] ?? 0);
         const emv = mvByDate[periodEndDateStr] ?? 0;
-        monthlyReturns[monthKey] = calculatePeriodMwr({
+        monthlyReturns[monthKey] = calculatePeriodMwrWithFallback({
           startDateStr: periodStartDateStr,
           endDateStr: periodEndDateStr,
           bmv,
           emv,
           txByDate,
           divByDate,
-          flowDates: monthDates
+          flowDates: monthDates,
+          fallbackStartDateStr: monthDates[0],
+          fallbackBmv: mvByDate[monthDates[0]] ?? null
         });
       });
 
@@ -363,14 +402,16 @@ export default function MWR({ viewMode = "Monthly" }) {
         const periodEndDateStr = yearDates[yearDates.length - 1];
         const bmv = startDate == null ? 0 : (mvByDate[startDate] ?? 0);
         const emv = mvByDate[periodEndDateStr] ?? 0;
-        ytd = calculatePeriodMwr({
+        ytd = calculatePeriodMwrWithFallback({
           startDateStr: periodStartDateStr,
           endDateStr: periodEndDateStr,
           bmv,
           emv,
           txByDate,
           divByDate,
-          flowDates: yearDates
+          flowDates: yearDates,
+          fallbackStartDateStr: yearDates[0],
+          fallbackBmv: mvByDate[yearDates[0]] ?? null
         });
       }
 
@@ -386,14 +427,16 @@ export default function MWR({ viewMode = "Monthly" }) {
         const periodEndDateStr = ttmDates[ttmDates.length - 1];
         const bmv = startDate == null ? 0 : (mvByDate[startDate] ?? 0);
         const emv = mvByDate[periodEndDateStr] ?? 0;
-        ttm = calculatePeriodMwr({
+        ttm = calculatePeriodMwrWithFallback({
           startDateStr: periodStartDateStr,
           endDateStr: periodEndDateStr,
           bmv,
           emv,
           txByDate,
           divByDate,
-          flowDates: ttmDates
+          flowDates: ttmDates,
+          fallbackStartDateStr: ttmDates[0],
+          fallbackBmv: mvByDate[ttmDates[0]] ?? null
         });
       }
       if (ttm == null && dates.length) {
@@ -401,14 +444,16 @@ export default function MWR({ viewMode = "Monthly" }) {
         const periodEndDateStr = dates[dates.length - 1];
         const bmv = 0;
         const emv = mvByDate[periodEndDateStr] ?? 0;
-        ttm = calculatePeriodMwr({
+        ttm = calculatePeriodMwrWithFallback({
           startDateStr: periodStartDateStr,
           endDateStr: periodEndDateStr,
           bmv,
           emv,
           txByDate,
           divByDate,
-          flowDates: dates
+          flowDates: dates,
+          fallbackStartDateStr: dates[0],
+          fallbackBmv: mvByDate[dates[0]] ?? null
         });
       }
 
