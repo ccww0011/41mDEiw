@@ -81,6 +81,19 @@ function buildEffectiveCorporateActionRows(corporateActions, appliedMap, exclude
   return rows;
 }
 
+function normalizeCurrency(currency) {
+  return (currency || "").trim().toUpperCase();
+}
+
+function getDividendCurrency(div) {
+  return normalizeCurrency(
+    div?.dividendCurrency ??
+    div?.distributionCurrency ??
+    div?.currencySecondary ??
+    div?.currencyPrimary
+  );
+}
+
 const ValuationContext = createContext(null);
 
 export function useValuationContext() {
@@ -192,7 +205,7 @@ export function ValuationProvider({ children }) {
 
     const requestSignature = JSON.stringify({
       tx: transactions.map((tx) => `${tx.ticker}|${tx.tradeDate}|${tx.assetClass}|${tx.currencyPrimary}`),
-      div: dividends.map((div) => `${div.ticker}|${div.exDate}|${div.currencyPrimary}`),
+      div: dividends.map((div) => `${div.ticker}|${div.exDate}|${getDividendCurrency(div)}`),
       basis,
       firstTransactionDate,
       startDateDisplay,
@@ -300,7 +313,17 @@ export function ValuationProvider({ children }) {
       };
 
       transactions.forEach((tx) => addFxRequest(tx.currencyPrimary, tx.tradeDate.slice(0, 4)));
-      dividends.forEach((div) => addFxRequest(div.currencyPrimary, div.exDate.slice(0, 4)));
+      dividends.forEach((div) => {
+        const year = div?.exDate?.slice(0, 4);
+        if (!year) return;
+        addFxRequest(getDividendCurrency(div), year);
+        const tickerCurrency = normalizeCurrency(
+          transactionTickerMap?.[div.ticker]?.tradingCurrency ||
+          combinedTickerMeta?.[div.ticker]?.tradingCurrency ||
+          ""
+        );
+        addFxRequest(tickerCurrency, year);
+      });
       Array.from(tickerRequests.entries()).forEach(([ticker, year]) => {
         const currency =
           transactionTickerMap?.[ticker]?.tradingCurrency ||

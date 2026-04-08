@@ -20,6 +20,19 @@ function getPrice(prices, ticker, date) {
   return tickerPrices[date] ?? null;
 }
 
+function normalizeCurrency(currency) {
+  return (currency || "").trim().toUpperCase();
+}
+
+function getDividendCurrency(div) {
+  return normalizeCurrency(
+    div?.dividendCurrency ??
+    div?.distributionCurrency ??
+    div?.currencySecondary ??
+    div?.currencyPrimary
+  );
+}
+
 const EMPTY_RESULT = {
   holdings: [],
   aggregates: { aggMap: {}, missingPLCurrencies: null },
@@ -294,16 +307,18 @@ export function useValuation(
       divsToday.forEach(div => {
         let netAmount = Number(div.netAmount || 0);
         if (Math.abs(netAmount) < 1e-10 || netAmount <= 0) return;
-        const fx = getFxRate(fxs, div.currencyPrimary, div.exDate, basis);
-        const netCashBasis = fx == null ? 0 : netAmount * fx;
+        const dividendCurrency = getDividendCurrency(div);
 
         const key = `${div.ticker}|${div.listingExchange}`;
         if (!holdingsMap[key]) {
+          const tickerCurrency = normalizeCurrency(
+            priceTickerMap?.[div.ticker]?.tradingCurrency ?? div.currencyPrimary
+          );
           holdingsMap[key] = {
             ticker: div.ticker,
             description: div.description,
             exchange: div.listingExchange,
-            tradingCurrency: div.currencyPrimary,
+            tradingCurrency: tickerCurrency,
             totalQuantity: 0,
             costBasis: 0,
             realisedPL: 0,
@@ -313,10 +328,16 @@ export function useValuation(
         }
 
         const h = holdingsMap[key];
+        const holdingCurrency = normalizeCurrency(h.tradingCurrency) || dividendCurrency;
+        const fx =
+          basis === "Local"
+            ? getFxRate(fxs, dividendCurrency, div.exDate, holdingCurrency)
+            : getFxRate(fxs, dividendCurrency, div.exDate, basis);
+        const netCashBasis = fx == null ? 0 : netAmount * fx;
         h.realisedPL += netCashBasis;
         dividendSnapshot[div.ticker] = (dividendSnapshot[div.ticker] ?? 0) + netCashBasis;
 
-        const fxUSD = getFxRate(fxs, div.currencyPrimary, div.exDate, "USD");
+        const fxUSD = getFxRate(fxs, dividendCurrency, div.exDate, "USD");
         const netCashUSD = fxUSD == null ? 0 : netAmount * fxUSD;
         h.realisedPLUSD += netCashUSD;
       });
@@ -606,15 +627,19 @@ export function usePL(transactions, prices, priceTickerMap, setPrices, setLoadin
 
       for (const div of dividends) {
         if (div.exDate === date && parseFloat(div.netAmount) > 0) {
-          const fx = getFxRate(fxs, div.currencyPrimary, date, basis);
+          const dividendCurrency = getDividendCurrency(div);
+          const fx = getFxRate(fxs, dividendCurrency, date, basis);
           if (fx != null) {
             const divAmount = parseFloat(div.netAmount) * fx;
             const key = `${div.ticker}|${div.listingExchange}`;
             if (!holdingsMap[key]) {
+              const tickerCurrency = normalizeCurrency(
+                priceTickerMap?.[div.ticker]?.tradingCurrency ?? div.currencyPrimary
+              );
               holdingsMap[key] = {
                 ticker: div.ticker,
                 exchange: div.listingExchange,
-                tradingCurrency: div.currencyPrimary,
+                tradingCurrency: tickerCurrency,
                 totalQuantity: 0,
                 costBasisBasis: 0,
                 realisedPLBasis: 0
