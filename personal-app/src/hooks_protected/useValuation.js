@@ -652,7 +652,9 @@ export function usePL(transactions, prices, priceTickerMap, setPrices, setLoadin
 
       let cumulativePL = 0;
       for (const h of Object.values(holdingsMap)) {
-        if (h.totalQuantity === 0 && h.costBasisBasis === 0) continue;
+        // Keep fully closed positions in the cumulative series when they still
+        // contribute realised P/L; otherwise dashboard profit understates exits.
+        if (h.totalQuantity === 0 && h.costBasisBasis === 0 && h.realisedPLBasis === 0) continue;
         const price = getPrice(prices, h.ticker, date);
         const fx = getFxRate(fxs, h.tradingCurrency, date, basis);
         let val = 0;

@@ -413,6 +413,8 @@ export function ValuationProvider({ children }) {
     appliedCorporateActions
   );
 
+  // console.log(cumulativePLByDate);
+
   return (
     <ValuationContext.Provider
       value={{

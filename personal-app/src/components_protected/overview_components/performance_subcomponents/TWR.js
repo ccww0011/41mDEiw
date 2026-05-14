@@ -310,15 +310,16 @@ export default function TWR({ viewMode = "Monthly" }) {
         }
       }
       let hpy = null;
-      if (dates.length >= 2) {
+      if (dates.length) {
         let hpyMultiplier = 1;
         let hasHpy = false;
-        for (let i = 1; i < dates.length; i++) {
-          const prev = dates[i - 1];
-          const curr = dates[i];
-          const qtyPrev = holdingsByDate[prev] ?? 0;
+        const allDates = [null, ...dates];
+        for (let i = 1; i < allDates.length; i++) {
+          const prev = allDates[i - 1];
+          const curr = allDates[i];
+          const qtyPrev = prev == null ? 0 : (holdingsByDate[prev] ?? 0);
           const qtyCurr = holdingsByDate[curr] ?? qtyPrev;
-          const mvPrev = mvByDate[prev] ?? 0;
+          const mvPrev = prev == null ? 0 : (mvByDate[prev] ?? 0);
           const mvCurr = mvByDate[curr] ?? 0;
           const div = divByDate[curr] ?? 0;
           const tx = txByDate[curr] ?? 0;

@@ -55,7 +55,12 @@ export default function Dashboard() {
     const prevStartDate = getPrevDateStr(startDateDisplay);
     const base = prevStartDate ? (cumulativePLByDate[prevStartDate] ?? 0) : 0;
     return Object.entries(cumulativePLByDate)
-      .filter(([d]) => d >= startDateDisplay && d <= endDateDisplay)
+      .filter(([d]) => {
+        if (d > endDateDisplay) return false;
+        if (prevStartDate) return d >= prevStartDate;
+        return d >= startDateDisplay;
+      })
+      .sort(([a], [b]) => a.localeCompare(b))
       .map(([d, v]) => ({ date: d, cumulativePLUSD: (v ?? 0) - base }));
   }, [cumulativePLByDate, startDateDisplay, endDateDisplay]);
 
