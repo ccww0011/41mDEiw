@@ -9,7 +9,7 @@ const RENDERED_HEADERS = [
   "actionDate",
   "type",
   "summary",
-  "child_ticker",
+  "related_ticker",
   "ratio",
 ];
 
@@ -18,14 +18,14 @@ const COLUMN_NAMES = {
   actionDate: "Action Date",
   type: "Type",
   summary: "Summary",
-  child_ticker: "Child Ticker",
+  related_ticker: "Related Ticker",
   ratio: "Ratio",
 };
 
-const HIDE_ON_MOBILE_COLUMNS = ["summary", "child_ticker"];
+const HIDE_ON_MOBILE_COLUMNS = ["summary", "related_ticker"];
 
 const NUMERIC_KEYS = ["ratio"];
-const ALLOWED_ADD_TYPES = ["STOCK_SPLIT", "REVERSE_SPLIT", "SPIN_OFF"];
+const ALLOWED_ADD_TYPES = ["STOCK_SPLIT", "REVERSE_SPLIT", "SPIN_OFF", "STOCK_EXCHANGE"];
 
 const ACTION_LINK_STYLE = {
   color: "#08519c",
@@ -163,6 +163,11 @@ function CorporateActionsTable({
     color: Number(num) < 0 ? "red" : "black",
   });
 
+  const getDisplayedValue = (row, header, draft) => {
+    if (header !== "related_ticker") return draft?.[header] ?? row?.[header] ?? "";
+    return draft?.related_ticker ?? row?.related_ticker ?? row?.child_ticker ?? row?.new_ticker ?? "";
+  };
+
   return (
     <>
       <div className="grid">
@@ -269,7 +274,7 @@ function CorporateActionsTable({
                   ) : (
                     <input
                       type={NUMERIC_KEYS.includes(header) ? "number" : "text"}
-                      value={addingRow[header] ?? ""}
+                      value={getDisplayedValue(addingRow, header, addingRow)}
                       onChange={(e) => onAddChange(header, e.target.value)}
                       style={{ width: "100%" }}
                     />
@@ -293,14 +298,14 @@ function CorporateActionsTable({
                   {editingKey === row.actionKey && editableKeys.includes(header) ? (
                     <input
                       type={NUMERIC_KEYS.includes(header) ? "number" : "text"}
-                      value={editDraft?.[header] ?? ""}
+                      value={getDisplayedValue(row, header, editDraft)}
                       onChange={(e) => onEditChange?.(header, e.target.value)}
                       style={{ width: "100%" }}
                     />
                   ) : NUMERIC_KEYS.includes(header) ? (
                     formatNumber(row[header])
                   ) : (
-                    row[header] || "-"
+                    getDisplayedValue(row, header) || "-"
                   )}
                 </td>
               ))}
@@ -361,7 +366,9 @@ export default function CorporateActions() {
           actionDate,
           type,
           summary: details?.summary ?? "",
+          related_ticker: details?.new_ticker ?? details?.child_ticker ?? "",
           child_ticker: details?.child_ticker ?? "",
+          new_ticker: details?.new_ticker ?? "",
           ratio: details?.ratio ?? details?.factor ?? "",
           actionKey,
         });
@@ -399,7 +406,9 @@ export default function CorporateActions() {
         return {
           ...row,
           summary: overrides.summary ?? row.summary ?? "",
+          related_ticker: overrides.new_ticker ?? overrides.child_ticker ?? row.related_ticker ?? "",
           child_ticker: overrides.child_ticker ?? row.child_ticker ?? "",
+          new_ticker: overrides.new_ticker ?? row.new_ticker ?? "",
           ratio: overrides.ratio ?? row.ratio ?? "",
         };
       });
@@ -414,7 +423,9 @@ export default function CorporateActions() {
           actionDate,
           type,
           summary: details?.summary ?? "",
+          related_ticker: details?.new_ticker ?? details?.child_ticker ?? "",
           child_ticker: details?.child_ticker ?? "",
+          new_ticker: details?.new_ticker ?? "",
           ratio: details?.ratio ?? details?.factor ?? "",
           actionKey,
         };
@@ -450,6 +461,7 @@ export default function CorporateActions() {
       nextApplied[key] = {
         summary: row.summary ?? "",
         child_ticker: row.child_ticker ?? "",
+        new_ticker: row.new_ticker ?? "",
         ratio: row.ratio ?? "",
       };
     }
@@ -489,7 +501,7 @@ export default function CorporateActions() {
       actionDate: "",
       type: ALLOWED_ADD_TYPES[0],
       summary: "",
-      child_ticker: "",
+      related_ticker: "",
       ratio: "",
     });
   };
@@ -515,10 +527,12 @@ export default function CorporateActions() {
       return;
     }
     if (!nextAdded[ticker]) nextAdded[ticker] = {};
+    const relatedTicker = addingRow.related_ticker ?? "";
     nextAdded[ticker][actionDate] = {
       type,
       summary: addingRow.summary,
-      child_ticker: addingRow.child_ticker,
+      child_ticker: type === "SPIN_OFF" ? relatedTicker : "",
+      new_ticker: type === "STOCK_EXCHANGE" ? relatedTicker : "",
       ratio: addingRow.ratio,
     };
     const actionKey = `${ticker}#${type}#${actionDate}`;
@@ -526,7 +540,8 @@ export default function CorporateActions() {
     if (!nextApplied[actionKey]) {
       nextApplied[actionKey] = {
         summary: addingRow.summary ?? "",
-        child_ticker: addingRow.child_ticker ?? "",
+        child_ticker: type === "SPIN_OFF" ? relatedTicker : "",
+        new_ticker: type === "STOCK_EXCHANGE" ? relatedTicker : "",
         ratio: addingRow.ratio ?? "",
       };
     }
@@ -548,7 +563,7 @@ export default function CorporateActions() {
     setEditingKey(row.actionKey);
     setEditDraft({
       summary: row.summary ?? "",
-      child_ticker: row.child_ticker ?? "",
+      related_ticker: row.related_ticker ?? row.new_ticker ?? row.child_ticker ?? "",
       ratio: row.ratio ?? "",
     });
   };
@@ -572,10 +587,12 @@ export default function CorporateActions() {
     const type = row?.type ?? editingKey.split("#")[1] ?? "";
     if (ticker && actionDate) {
       if (!nextAdded[ticker]) nextAdded[ticker] = {};
+      const relatedTicker = editDraft?.related_ticker ?? "";
       nextAdded[ticker][actionDate] = {
         type,
         summary: editDraft?.summary ?? "",
-        child_ticker: editDraft?.child_ticker ?? "",
+        child_ticker: type === "SPIN_OFF" ? relatedTicker : "",
+        new_ticker: type === "STOCK_EXCHANGE" ? relatedTicker : "",
         ratio: editDraft?.ratio ?? "",
       };
     }
@@ -611,7 +628,7 @@ export default function CorporateActions() {
               onAddChange={handleAddChange}
               onAddSave={handleAddSave}
               onAddCancel={handleAddCancel}
-              editableKeys={["summary", "child_ticker", "ratio"]}
+              editableKeys={["summary", "related_ticker", "ratio"]}
               editingKey={editingKey}
               editDraft={editDraft}
               onEditStart={handleEditStart}

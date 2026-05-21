@@ -53,6 +53,7 @@ function buildEffectiveCorporateActionRows(corporateActions, appliedMap, exclude
           type,
           summary: overrides.summary ?? details?.summary ?? "",
           child_ticker: overrides.child_ticker ?? details?.child_ticker ?? "",
+          new_ticker: overrides.new_ticker ?? details?.new_ticker ?? "",
           ratio: overrides.ratio ?? ratioVal,
           actionKey,
         });
@@ -72,6 +73,7 @@ function buildEffectiveCorporateActionRows(corporateActions, appliedMap, exclude
         type,
         summary: overrides.summary ?? details?.summary ?? "",
         child_ticker: overrides.child_ticker ?? details?.child_ticker ?? "",
+        new_ticker: overrides.new_ticker ?? details?.new_ticker ?? "",
         ratio: overrides.ratio ?? details?.ratio ?? details?.factor ?? "",
         actionKey,
       });
@@ -265,11 +267,20 @@ export function ValuationProvider({ children }) {
         );
         Array.from(tickerRequests.entries()).forEach(([ticker]) => {
           effectiveActions
-            .filter((action) => action.ticker === ticker && action.type === "SPIN_OFF" && action.child_ticker)
+            .filter((action) =>
+              action.ticker === ticker &&
+              (
+                (action.type === "SPIN_OFF" && action.child_ticker) ||
+                (action.type === "STOCK_EXCHANGE" && action.new_ticker)
+              )
+            )
             .forEach((action) => {
-              const before = tickerRequests.get(action.child_ticker);
-              addTickerRequest(action.child_ticker, action.actionDate?.slice(0, 4));
-              if (tickerRequests.get(action.child_ticker) !== before) {
+              const relatedTicker = action.type === "STOCK_EXCHANGE"
+                ? action.new_ticker
+                : action.child_ticker;
+              const before = tickerRequests.get(relatedTicker);
+              addTickerRequest(relatedTicker, action.actionDate?.slice(0, 4));
+              if (tickerRequests.get(relatedTicker) !== before) {
                 expanded = true;
               }
             });

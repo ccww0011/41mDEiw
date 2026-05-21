@@ -24,6 +24,74 @@ function normalizeCurrency(currency) {
   return (currency || "").trim().toUpperCase();
 }
 
+function buildHoldingKey(ticker, exchange = "") {
+  return `${ticker}|${exchange || ""}`;
+}
+
+function applyStockExchangeActions({
+  actions,
+  holdingsMap,
+  priceTickerMap,
+  basisKind
+}) {
+  if (!actions?.length) return;
+
+  actions.forEach(({ ticker, newTicker, ratio }) => {
+    Object.values(holdingsMap).forEach((h) => {
+      if (h.ticker !== ticker || h.totalQuantity === 0) return;
+
+      const newQty = h.totalQuantity * ratio;
+      const newMeta = priceTickerMap?.[newTicker] ?? {};
+      const newExchange = newMeta.exchange ?? "";
+      const newKey = buildHoldingKey(newTicker, newExchange);
+
+      if (!holdingsMap[newKey]) {
+        holdingsMap[newKey] = basisKind === "full"
+          ? {
+              ticker: newTicker,
+              description: newMeta.description ?? "",
+              exchange: newExchange,
+              tradingCurrency: newMeta.tradingCurrency ?? "",
+              totalQuantity: 0,
+              costBasis: 0,
+              realisedPL: 0,
+              costBasisUSD: 0,
+              realisedPLUSD: 0
+            }
+          : {
+              ticker: newTicker,
+              exchange: newExchange,
+              tradingCurrency: newMeta.tradingCurrency ?? "",
+              totalQuantity: 0,
+              costBasisBasis: 0,
+              realisedPLBasis: 0
+            };
+      }
+
+      const newHolding = holdingsMap[newKey];
+      newHolding.totalQuantity += newQty;
+
+      if (basisKind === "full") {
+        newHolding.costBasis += h.costBasis;
+        newHolding.costBasisUSD += h.costBasisUSD;
+        newHolding.realisedPL += h.realisedPL;
+        newHolding.realisedPLUSD += h.realisedPLUSD;
+        h.costBasis = 0;
+        h.costBasisUSD = 0;
+        h.realisedPL = 0;
+        h.realisedPLUSD = 0;
+      } else {
+        newHolding.costBasisBasis += h.costBasisBasis;
+        newHolding.realisedPLBasis += h.realisedPLBasis;
+        h.costBasisBasis = 0;
+        h.realisedPLBasis = 0;
+      }
+
+      h.totalQuantity = 0;
+    });
+  });
+}
+
 function getDividendCurrency(div) {
   return normalizeCurrency(
     div?.dividendCurrency ??
@@ -110,6 +178,7 @@ export function useValuation(
 
     const splitsByDate = new Map();
     const spinOffsByDate = new Map();
+    const stockExchangesByDate = new Map();
     (appliedCorporateActions || []).forEach(action => {
       const type = action?.type;
       const ratioNum = parseFloat(action?.ratio);
@@ -126,6 +195,13 @@ export function useValuation(
         if (!childTicker) return;
         if (!spinOffsByDate.has(actionDate)) spinOffsByDate.set(actionDate, []);
         spinOffsByDate.get(actionDate).push({ ticker, childTicker, ratio: ratioNum });
+        return;
+      }
+      if (type === "STOCK_EXCHANGE") {
+        const newTicker = action?.new_ticker;
+        if (!newTicker) return;
+        if (!stockExchangesByDate.has(actionDate)) stockExchangesByDate.set(actionDate, []);
+        stockExchangesByDate.get(actionDate).push({ ticker, newTicker, ratio: ratioNum });
       }
     });
 
@@ -212,7 +288,7 @@ export function useValuation(
               }
             }
 
-            const childKey = `${childTicker}|${childExchange || ""}`;
+            const childKey = buildHoldingKey(childTicker, childExchange);
             if (!holdingsMap[childKey]) {
               holdingsMap[childKey] = {
                 ticker: childTicker,
@@ -254,6 +330,16 @@ export function useValuation(
         });
       }
 
+      const stockExchangesToday = stockExchangesByDate.get(date);
+      if (stockExchangesToday?.length) {
+        applyStockExchangeActions({
+          actions: stockExchangesToday,
+          holdingsMap,
+          priceTickerMap,
+          basisKind: "full"
+        });
+      }
+
       const txsToday = txByDate.get(date) || [];
       const transactionSnapshot = {};
       txsToday
@@ -265,7 +351,7 @@ export function useValuation(
           const netCashUSD = fxRateUSD == null ? null : parseFloat(tx.netCash) * fxRateUSD;
           const netCashBasis = netCashTranslated == null ? 0 : netCashTranslated;
 
-          const key = `${tx.ticker}|${tx.listingExchange}`;
+          const key = buildHoldingKey(tx.ticker, tx.listingExchange);
           const quantity = parseFloat(tx.quantity);
           const netCash = parseFloat(netCashTranslated);
           const netCashUSDNum = parseFloat(netCashUSD);
@@ -402,33 +488,35 @@ export function useValuation(
       });
     }
 
-    const holdings = Object.values(holdingsMap).map(h => {
-      const priceLocal = getPrice(prices, h.ticker, endDate);
-      const fxPrice = getFxRate(fxs, h.tradingCurrency, endDate, basis);
-      const price = priceLocal != null && fxPrice != null ? priceLocal * fxPrice : null;
-      const value = price != null ? price * h.totalQuantity : null;
-      const avgCost = h.totalQuantity !== 0 ? h.costBasis / h.totalQuantity : null;
-      const unrealisedPL = value != null ? value + h.costBasis : null;
+    const holdings = Object.values(holdingsMap)
+      .filter(h => !(h.totalQuantity === 0 && h.costBasis === 0 && h.costBasisUSD === 0 && h.realisedPL === 0 && h.realisedPLUSD === 0))
+      .map(h => {
+        const priceLocal = getPrice(prices, h.ticker, endDate);
+        const fxPrice = getFxRate(fxs, h.tradingCurrency, endDate, basis);
+        const price = priceLocal != null && fxPrice != null ? priceLocal * fxPrice : null;
+        const value = price != null ? price * h.totalQuantity : null;
+        const avgCost = h.totalQuantity !== 0 ? h.costBasis / h.totalQuantity : null;
+        const unrealisedPL = value != null ? value + h.costBasis : null;
 
-      const fxPriceUSD = getFxRate(fxs, h.tradingCurrency, endDate, "USD");
-      const priceUSD = priceLocal != null && fxPriceUSD != null ? priceLocal * fxPriceUSD : null;
-      const valueUSD = priceUSD != null ? priceUSD * h.totalQuantity : null;
-      const avgCostUSD = h.totalQuantity !== 0 ? h.costBasisUSD / h.totalQuantity : null;
-      const unrealisedPLUSD = valueUSD != null ? valueUSD + h.costBasisUSD : null;
+        const fxPriceUSD = getFxRate(fxs, h.tradingCurrency, endDate, "USD");
+        const priceUSD = priceLocal != null && fxPriceUSD != null ? priceLocal * fxPriceUSD : null;
+        const valueUSD = priceUSD != null ? priceUSD * h.totalQuantity : null;
+        const avgCostUSD = h.totalQuantity !== 0 ? h.costBasisUSD / h.totalQuantity : null;
+        const unrealisedPLUSD = valueUSD != null ? valueUSD + h.costBasisUSD : null;
 
-      return {
-        ...h,
-        price,
-        value,
-        avgCost,
-        unrealisedPL,
-        priceUSD,
-        valueUSD,
-        avgCostUSD,
-        unrealisedPLUSD,
-        pLUSD: unrealisedPLUSD + h.realisedPLUSD
-      };
-    });
+        return {
+          ...h,
+          price,
+          value,
+          avgCost,
+          unrealisedPL,
+          priceUSD,
+          valueUSD,
+          avgCostUSD,
+          unrealisedPLUSD,
+          pLUSD: unrealisedPLUSD + h.realisedPLUSD
+        };
+      });
 
     const aggMap = {};
     const missingPLCurrencies = new Set();
@@ -503,6 +591,7 @@ export function usePL(transactions, prices, priceTickerMap, setPrices, setLoadin
 
     const splitsByDate = new Map();
     const spinOffsByDate = new Map();
+    const stockExchangesByDate = new Map();
     (appliedCorporateActions || []).forEach(action => {
       const type = action?.type;
       const ratioNum = parseFloat(action?.ratio);
@@ -519,6 +608,13 @@ export function usePL(transactions, prices, priceTickerMap, setPrices, setLoadin
         if (!childTicker) return;
         if (!spinOffsByDate.has(actionDate)) spinOffsByDate.set(actionDate, []);
         spinOffsByDate.get(actionDate).push({ ticker, childTicker, ratio: ratioNum });
+        return;
+      }
+      if (type === "STOCK_EXCHANGE") {
+        const newTicker = action?.new_ticker;
+        if (!newTicker) return;
+        if (!stockExchangesByDate.has(actionDate)) stockExchangesByDate.set(actionDate, []);
+        stockExchangesByDate.get(actionDate).push({ ticker, newTicker, ratio: ratioNum });
       }
     });
 
@@ -538,9 +634,19 @@ export function usePL(transactions, prices, priceTickerMap, setPrices, setLoadin
         });
       }
 
+      const stockExchangesToday = stockExchangesByDate.get(date);
+      if (stockExchangesToday?.length) {
+        applyStockExchangeActions({
+          actions: stockExchangesToday,
+          holdingsMap,
+          priceTickerMap,
+          basisKind: "pl"
+        });
+      }
+
       while (txIndex < stockTx.length && stockTx[txIndex].tradeDate <= date) {
         const tx = stockTx[txIndex];
-        const key = `${tx.ticker}|${tx.listingExchange}`;
+        const key = buildHoldingKey(tx.ticker, tx.listingExchange);
         const q = parseFloat(tx.quantity);
         const net = parseFloat(tx.netCashBasis);
 
@@ -603,7 +709,7 @@ export function usePL(transactions, prices, priceTickerMap, setPrices, setLoadin
               }
             }
 
-            const childKey = `${childTicker}|${childExchange || ""}`;
+            const childKey = buildHoldingKey(childTicker, childExchange);
             if (!holdingsMap[childKey]) {
               holdingsMap[childKey] = {
                 ticker: childTicker,
@@ -631,7 +737,7 @@ export function usePL(transactions, prices, priceTickerMap, setPrices, setLoadin
           const fx = getFxRate(fxs, dividendCurrency, date, basis);
           if (fx != null) {
             const divAmount = parseFloat(div.netAmount) * fx;
-            const key = `${div.ticker}|${div.listingExchange}`;
+            const key = buildHoldingKey(div.ticker, div.listingExchange);
             if (!holdingsMap[key]) {
               const tickerCurrency = normalizeCurrency(
                 priceTickerMap?.[div.ticker]?.tradingCurrency ?? div.currencyPrimary
