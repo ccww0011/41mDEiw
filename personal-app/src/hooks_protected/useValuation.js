@@ -92,6 +92,14 @@ function applyStockExchangeActions({
   });
 }
 
+function sortStockExchangeActions(actions = []) {
+  return [...actions].sort((a, b) => {
+    const dateCmp = String(a.actionDate || "").localeCompare(String(b.actionDate || ""));
+    if (dateCmp !== 0) return dateCmp;
+    return String(a.ticker || "").localeCompare(String(b.ticker || ""));
+  });
+}
+
 function getDividendCurrency(div) {
   return normalizeCurrency(
     div?.dividendCurrency ??
@@ -178,7 +186,7 @@ export function useValuation(
 
     const splitsByDate = new Map();
     const spinOffsByDate = new Map();
-    const stockExchangesByDate = new Map();
+    const pendingStockExchanges = [];
     (appliedCorporateActions || []).forEach(action => {
       const type = action?.type;
       const ratioNum = parseFloat(action?.ratio);
@@ -200,10 +208,11 @@ export function useValuation(
       if (type === "STOCK_EXCHANGE") {
         const newTicker = action?.new_ticker;
         if (!newTicker) return;
-        if (!stockExchangesByDate.has(actionDate)) stockExchangesByDate.set(actionDate, []);
-        stockExchangesByDate.get(actionDate).push({ ticker, newTicker, ratio: ratioNum });
+        pendingStockExchanges.push({ ticker, newTicker, ratio: ratioNum, actionDate });
       }
     });
+    const sortedPendingStockExchanges = sortStockExchangeActions(pendingStockExchanges);
+    const appliedStockExchangeKeys = new Set();
 
     const holdingsMap = {};
 
@@ -330,13 +339,21 @@ export function useValuation(
         });
       }
 
-      const stockExchangesToday = stockExchangesByDate.get(date);
-      if (stockExchangesToday?.length) {
+      const stockExchangesToday = sortedPendingStockExchanges.filter(({ ticker, newTicker, actionDate }) => {
+        const key = `${ticker}#${newTicker}#${actionDate}`;
+        if (appliedStockExchangeKeys.has(key)) return false;
+        if (date < actionDate) return false;
+        return getPrice(prices, newTicker, date) != null;
+      });
+      if (stockExchangesToday.length) {
         applyStockExchangeActions({
           actions: stockExchangesToday,
           holdingsMap,
           priceTickerMap,
           basisKind: "full"
+        });
+        stockExchangesToday.forEach(({ ticker, newTicker, actionDate }) => {
+          appliedStockExchangeKeys.add(`${ticker}#${newTicker}#${actionDate}`);
         });
       }
 
@@ -591,7 +608,7 @@ export function usePL(transactions, prices, priceTickerMap, setPrices, setLoadin
 
     const splitsByDate = new Map();
     const spinOffsByDate = new Map();
-    const stockExchangesByDate = new Map();
+    const pendingStockExchanges = [];
     (appliedCorporateActions || []).forEach(action => {
       const type = action?.type;
       const ratioNum = parseFloat(action?.ratio);
@@ -613,10 +630,11 @@ export function usePL(transactions, prices, priceTickerMap, setPrices, setLoadin
       if (type === "STOCK_EXCHANGE") {
         const newTicker = action?.new_ticker;
         if (!newTicker) return;
-        if (!stockExchangesByDate.has(actionDate)) stockExchangesByDate.set(actionDate, []);
-        stockExchangesByDate.get(actionDate).push({ ticker, newTicker, ratio: ratioNum });
+        pendingStockExchanges.push({ ticker, newTicker, ratio: ratioNum, actionDate });
       }
     });
+    const sortedPendingStockExchanges = sortStockExchangeActions(pendingStockExchanges);
+    const appliedStockExchangeKeys = new Set();
 
     const holdingsMap = {};
     const cumulativePLByDate = {};
@@ -634,13 +652,21 @@ export function usePL(transactions, prices, priceTickerMap, setPrices, setLoadin
         });
       }
 
-      const stockExchangesToday = stockExchangesByDate.get(date);
-      if (stockExchangesToday?.length) {
+      const stockExchangesToday = sortedPendingStockExchanges.filter(({ ticker, newTicker, actionDate }) => {
+        const key = `${ticker}#${newTicker}#${actionDate}`;
+        if (appliedStockExchangeKeys.has(key)) return false;
+        if (date < actionDate) return false;
+        return getPrice(prices, newTicker, date) != null;
+      });
+      if (stockExchangesToday.length) {
         applyStockExchangeActions({
           actions: stockExchangesToday,
           holdingsMap,
           priceTickerMap,
           basisKind: "pl"
+        });
+        stockExchangesToday.forEach(({ ticker, newTicker, actionDate }) => {
+          appliedStockExchangeKeys.add(`${ticker}#${newTicker}#${actionDate}`);
         });
       }
 

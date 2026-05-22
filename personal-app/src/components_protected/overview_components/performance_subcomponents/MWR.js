@@ -156,9 +156,64 @@ function toPercent(value, decimals = 2) {
   return `${(value * 100).toFixed(decimals)}%`;
 }
 
+function buildStockExchangeDisplayMapper(appliedCorporateActions, cumulativeMarketValueByTickerByDate) {
+  const exchangeByTicker = {};
+  (appliedCorporateActions || [])
+    .filter((action) => action?.type === "STOCK_EXCHANGE" && action?.ticker && action?.new_ticker && action?.actionDate)
+    .sort((a, b) => String(a.actionDate || "").localeCompare(String(b.actionDate || "")))
+    .forEach((action) => {
+      const newTickerDates = Object.keys(cumulativeMarketValueByTickerByDate?.[action.new_ticker] || {})
+        .filter((date) => date >= action.actionDate)
+        .sort();
+      exchangeByTicker[action.ticker] = {
+        effectiveDate: newTickerDates[0] || null,
+        newTicker: action.new_ticker
+      };
+    });
+
+  const finalTickerMemo = {};
+  const resolveFinalTicker = (ticker) => {
+    if (!ticker) return ticker;
+    if (finalTickerMemo[ticker]) return finalTickerMemo[ticker];
+    const seen = new Set();
+    let current = ticker;
+    while (exchangeByTicker[current] && !seen.has(current)) {
+      seen.add(current);
+      current = exchangeByTicker[current].newTicker;
+    }
+    finalTickerMemo[ticker] = current;
+    return current;
+  };
+
+  const mapTickerDateToDisplay = (ticker, date) => {
+    if (!ticker) return null;
+    const exchange = exchangeByTicker[ticker];
+    if (exchange?.effectiveDate && date >= exchange.effectiveDate) {
+      return null;
+    }
+    return resolveFinalTicker(ticker);
+  };
+
+  return { resolveFinalTicker, mapTickerDateToDisplay };
+}
+
+function aggregateSeriesByDisplayTicker(seriesByTicker, mapTickerDateToDisplay) {
+  const aggregated = {};
+  Object.entries(seriesByTicker || {}).forEach(([ticker, byDate]) => {
+    Object.entries(byDate || {}).forEach(([date, value]) => {
+      const displayTicker = mapTickerDateToDisplay(ticker, date);
+      if (!displayTicker) return;
+      if (!aggregated[displayTicker]) aggregated[displayTicker] = {};
+      aggregated[displayTicker][date] = (aggregated[displayTicker][date] ?? 0) + value;
+    });
+  });
+  return aggregated;
+}
+
 export default function MWR({ viewMode = "Monthly" }) {
   const {
     tickerMap,
+    appliedCorporateActions,
     cumulativeMarketValueByTickerByDate,
     dividendByTickerByDate,
     transactionByTickerByDate,
@@ -339,26 +394,42 @@ export default function MWR({ viewMode = "Monthly" }) {
 
   const { monthLabels, dayLabels, rows } = useMemo(() => {
     if (!latestValuationDate) return { monthLabels: [], dayLabels: [], rows: [] };
+    const { mapTickerDateToDisplay } = buildStockExchangeDisplayMapper(
+      appliedCorporateActions,
+      cumulativeMarketValueByTickerByDate
+    );
+    const groupedMarketValueByTickerByDate = aggregateSeriesByDisplayTicker(
+      cumulativeMarketValueByTickerByDate,
+      mapTickerDateToDisplay
+    );
+    const groupedDividendByTickerByDate = aggregateSeriesByDisplayTicker(
+      dividendByTickerByDate,
+      mapTickerDateToDisplay
+    );
+    const groupedTransactionByTickerByDate = aggregateSeriesByDisplayTicker(
+      transactionByTickerByDate,
+      mapTickerDateToDisplay
+    );
     const year = latestValuationDate.slice(0, 4);
     const monthLabels = buildRollingMonthLabels(latestValuationDate);
     const globalDates = Array.from(
       new Set(
-        Object.values(cumulativeMarketValueByTickerByDate || {})
+        Object.values(groupedMarketValueByTickerByDate || {})
           .flatMap((mvByDate) => Object.keys(mvByDate || {}))
           .filter((d) => d <= latestValuationDate)
       )
     ).sort();
     const dayLabels = globalDates.slice(-14);
     const tickerSet = new Set([
-      ...Object.keys(cumulativeMarketValueByTickerByDate || {}),
-      ...Object.keys(dividendByTickerByDate || {}),
-      ...Object.keys(transactionByTickerByDate || {}),
+      ...Object.keys(groupedMarketValueByTickerByDate || {}),
+      ...Object.keys(groupedDividendByTickerByDate || {}),
+      ...Object.keys(groupedTransactionByTickerByDate || {}),
     ]);
 
     const rows = Array.from(tickerSet).map((ticker) => {
-      const mvByDate = cumulativeMarketValueByTickerByDate?.[ticker] ?? {};
-      const divByDate = dividendByTickerByDate?.[ticker] ?? {};
-      const txByDate = transactionByTickerByDate?.[ticker] ?? {};
+      const mvByDate = groupedMarketValueByTickerByDate?.[ticker] ?? {};
+      const divByDate = groupedDividendByTickerByDate?.[ticker] ?? {};
+      const txByDate = groupedTransactionByTickerByDate?.[ticker] ?? {};
       const dates = Object.keys(mvByDate)
         .filter((d) => d <= latestValuationDate)
         .sort();
@@ -516,7 +587,8 @@ export default function MWR({ viewMode = "Monthly" }) {
     dividendByTickerByDate,
     transactionByTickerByDate,
     latestValuationDate,
-    tickerMap
+    tickerMap,
+    appliedCorporateActions
   ]);
 
   const COLUMN_ORDER = ["ticker", "description", "exchange", "tradingCurrency", ...monthLabels, "ytd", "ttm"];
