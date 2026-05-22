@@ -9,6 +9,7 @@ import {FxProvider} from "@/context/FxContext";
 import {ValuationProvider} from "@/context/ValuationContext";
 import {DividendProvider} from "@/context/DividendContext";
 import {UserSettingsProvider} from "@/context/UserSettingsContext";
+import {NewsProvider} from "@/context/NewsContext";
 
 
 export default function ProtectedLayout({ children }) {
@@ -41,13 +42,15 @@ export default function ProtectedLayout({ children }) {
     <TransactionProvider>
       <DividendProvider>
         <UserSettingsProvider>
-          <PriceProvider>
-            <FxProvider>
-              <ValuationProvider>
-                {children}
-              </ValuationProvider>
-            </FxProvider>
-          </PriceProvider>
+          <NewsProvider>
+            <PriceProvider>
+              <FxProvider>
+                <ValuationProvider>
+                  {children}
+                </ValuationProvider>
+              </FxProvider>
+            </PriceProvider>
+          </NewsProvider>
         </UserSettingsProvider>
       </DividendProvider>
     </TransactionProvider>

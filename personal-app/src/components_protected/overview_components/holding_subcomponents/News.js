@@ -1,36 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { useNews } from "@/utils_protected/newsApi";
+import React, { useEffect } from "react";
+import { useNewsContext } from "@/context/NewsContext";
 
 export function News() {
-  const [newsData, setNewsData] = useState([]);
-  const [loadingNews, setLoadingNews] = useState(true);
-  const [error, setError] = useState(null);
-
-  const fetchNews = async () => {
-    setLoadingNews(true);
-    setError(null);
-    try {
-      const result = await useNews();
-      if (result.status === "Success") {
-        setNewsData(result.data.slice(0, 12));
-      } else if (result.status === "Unauthorised") {
-        setError("Error loading news. Please try again.");
-        setNewsData([]);
-      } else {
-        setError(result.message || "Failed to fetch news");
-        setNewsData([]);
-      }
-    } catch (err) {
-      setError(err.message);
-      setNewsData([]);
-    } finally {
-      setLoadingNews(false);
-    }
-  };
+  const { newsData, loadingNews, error, fetchNews } = useNewsContext();
 
   useEffect(() => {
     fetchNews();
-  }, []);
+  }, [fetchNews]);
 
   return (
     <>
@@ -39,7 +15,7 @@ export function News() {
           <h3>News</h3>
         </div>
         <div className="grid-item grid6">
-          <button onClick={fetchNews} disabled={loadingNews}>
+          <button onClick={() => fetchNews({ force: true })} disabled={loadingNews}>
             {loadingNews ? "Loading..." : "Refresh News"}
           </button>
         </div>
