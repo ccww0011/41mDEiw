@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useMemo, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useTransactions } from "@/context/TransactionContext";
 import { useFxs } from "@/context/FxContext";
 import { usePrices } from "@/context/PriceContext";
@@ -94,6 +94,59 @@ function getDividendCurrency(div) {
     div?.currencySecondary ??
     div?.currencyPrimary
   );
+}
+
+function buildExchangeTimeline(appliedCorporateActions, rawMarketValueByTickerByDate) {
+  const exchangeByTicker = {};
+  (appliedCorporateActions || [])
+    .filter((action) => action?.type === "STOCK_EXCHANGE" && action?.ticker && action?.new_ticker && action?.actionDate)
+    .sort((a, b) => String(a.actionDate || "").localeCompare(String(b.actionDate || "")))
+    .forEach((action) => {
+      const newTickerDates = Object.keys(rawMarketValueByTickerByDate?.[action.new_ticker] || {})
+        .filter((date) => date >= action.actionDate)
+        .sort();
+      exchangeByTicker[action.ticker] = {
+        effectiveDate: newTickerDates[0] || null,
+        newTicker: action.new_ticker
+      };
+    });
+  return exchangeByTicker;
+}
+
+function mapRawTickerDateToDisplayTicker(ticker, date, viewEndDate, exchangeByTicker) {
+  if (!ticker) return null;
+  const exchange = exchangeByTicker[ticker];
+  if (exchange?.effectiveDate && viewEndDate >= exchange.effectiveDate && date >= exchange.effectiveDate) {
+    return null;
+  }
+  let current = ticker;
+  const seen = new Set();
+  while (exchangeByTicker[current] && !seen.has(current)) {
+    seen.add(current);
+    const step = exchangeByTicker[current];
+    if (!step.effectiveDate || viewEndDate < step.effectiveDate) break;
+    current = step.newTicker;
+  }
+  if (current !== ticker) {
+    const reverseStep = Object.entries(exchangeByTicker).find(([, step]) => step.newTicker === ticker);
+    if (reverseStep && reverseStep[1]?.effectiveDate && date < reverseStep[1].effectiveDate) {
+      return null;
+    }
+  }
+  return current;
+}
+
+function normalizeSeriesByExchange(seriesByTicker, viewEndDate, exchangeByTicker) {
+  const normalized = {};
+  Object.entries(seriesByTicker || {}).forEach(([ticker, byDate]) => {
+    Object.entries(byDate || {}).forEach(([date, value]) => {
+      const displayTicker = mapRawTickerDateToDisplayTicker(ticker, date, viewEndDate, exchangeByTicker);
+      if (!displayTicker) return;
+      if (!normalized[displayTicker]) normalized[displayTicker] = {};
+      normalized[displayTicker][date] = (normalized[displayTicker][date] ?? 0) + value;
+    });
+  });
+  return normalized;
 }
 
 const ValuationContext = createContext(null);
@@ -370,24 +423,6 @@ export function ValuationProvider({ children }) {
     addedMap
   ]);
 
-  const {
-    holdings: endDateHoldings,
-    aggregates: endDateAggregates,
-    marketValueByTicker,
-    marketValueByTradingCurrency,
-  } = useProtectedValuation(
-    transactions,
-    prices,
-    tickerMap,
-    fxs,
-    setFxs,
-    setLoadingFxs,
-    basis,
-    endDateDisplay,
-    dividends,
-    appliedCorporateActions
-  );
-
   const latestValuation = useProtectedValuation(
     transactions,
     prices,
@@ -400,17 +435,19 @@ export function ValuationProvider({ children }) {
     dividends,
     appliedCorporateActions
   );
-  const latestHoldings = latestValuation.holdings;
-  const latestAggregates = latestValuation.aggregates;
-  const cumulativeHoldingsByTickerByDate = latestValuation.cumulativeHoldingsByTickerByDate;
-  const cumulativeCostBasisByTickerByDate = latestValuation.cumulativeCostBasisByTickerByDate;
-  const cumulativeMarketValueByTickerByDate = latestValuation.cumulativeMarketValueByTickerByDate;
-  const cumulativeRealisedPLByTickerByDate = latestValuation.cumulativeRealisedPLByTickerByDate;
-  const cumulativeUnrealisedPLByTickerByDate = latestValuation.cumulativeUnrealisedPLByTickerByDate;
-  const dividendByTickerByDate = latestValuation.dividendByTickerByDate;
-  const transactionByTickerByDate = latestValuation.transactionByTickerByDate;
+  const rawCumulativeHoldingsByTickerByDate = latestValuation.cumulativeHoldingsByTickerByDate;
+  const rawCumulativeCostBasisByTickerByDate = latestValuation.cumulativeCostBasisByTickerByDate;
+  const rawCumulativeMarketValueByTickerByDate = latestValuation.cumulativeMarketValueByTickerByDate;
+  const rawCumulativeRealisedPLByTickerByDate = latestValuation.cumulativeRealisedPLByTickerByDate;
+  const rawCumulativeUnrealisedPLByTickerByDate = latestValuation.cumulativeUnrealisedPLByTickerByDate;
+  const rawDividendByTickerByDate = latestValuation.dividendByTickerByDate;
+  const rawTransactionByTickerByDate = latestValuation.transactionByTickerByDate;
+  const exchangeByTicker = useMemo(
+    () => buildExchangeTimeline(appliedCorporateActions, rawCumulativeMarketValueByTickerByDate),
+    [appliedCorporateActions, rawCumulativeMarketValueByTickerByDate]
+  );
 
-  const { cumulativePLByDate } = useProtectedPL(
+  const { cumulativePLByDate, cumulativePLByTickerByDate } = useProtectedPL(
     transactions,
     prices,
     tickerMap,
@@ -424,6 +461,27 @@ export function ValuationProvider({ children }) {
     appliedCorporateActions
   );
 
+  const getNormalizedValuationSeries = useCallback((targetDate) => ({
+    dividendByTickerByDate: normalizeSeriesByExchange(rawDividendByTickerByDate, targetDate, exchangeByTicker),
+    transactionByTickerByDate: normalizeSeriesByExchange(rawTransactionByTickerByDate, targetDate, exchangeByTicker),
+    cumulativeHoldingsByTickerByDate: normalizeSeriesByExchange(rawCumulativeHoldingsByTickerByDate, targetDate, exchangeByTicker),
+    cumulativeMarketValueByTickerByDate: normalizeSeriesByExchange(rawCumulativeMarketValueByTickerByDate, targetDate, exchangeByTicker),
+    cumulativeCostBasisByTickerByDate: normalizeSeriesByExchange(rawCumulativeCostBasisByTickerByDate, targetDate, exchangeByTicker),
+    cumulativeUnrealisedPLByTickerByDate: normalizeSeriesByExchange(rawCumulativeUnrealisedPLByTickerByDate, targetDate, exchangeByTicker),
+    cumulativeRealisedPLByTickerByDate: normalizeSeriesByExchange(rawCumulativeRealisedPLByTickerByDate, targetDate, exchangeByTicker),
+    cumulativePLByTickerByDate: normalizeSeriesByExchange(cumulativePLByTickerByDate, targetDate, exchangeByTicker),
+  }), [
+    rawDividendByTickerByDate,
+    rawTransactionByTickerByDate,
+    rawCumulativeHoldingsByTickerByDate,
+    rawCumulativeMarketValueByTickerByDate,
+    rawCumulativeCostBasisByTickerByDate,
+    rawCumulativeUnrealisedPLByTickerByDate,
+    rawCumulativeRealisedPLByTickerByDate,
+    cumulativePLByTickerByDate,
+    exchangeByTicker
+  ]);
+
   // console.log(cumulativePLByDate);
 
   return (
@@ -433,23 +491,12 @@ export function ValuationProvider({ children }) {
         setStartDateDisplay,
         endDateDisplay,
         setEndDateDisplay,
+        latestValuationDate,
+        getNormalizedValuationSeries,
+
         tickerMap,
         appliedCorporateActions,
-      holdings: endDateHoldings,
-      aggregates: endDateAggregates,
-      allTimeHoldings: latestHoldings,
-      allTimeAggregates: latestAggregates,
-        latestValuationDate,
-        marketValueByTicker,
-        marketValueByTradingCurrency,
         cumulativePLByDate,
-        cumulativeHoldingsByTickerByDate,
-        cumulativeCostBasisByTickerByDate,
-        cumulativeMarketValueByTickerByDate,
-        cumulativeRealisedPLByTickerByDate,
-        cumulativeUnrealisedPLByTickerByDate,
-        dividendByTickerByDate,
-        transactionByTickerByDate,
       }}
     >
       {children}

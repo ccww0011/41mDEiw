@@ -563,6 +563,54 @@ export function useValuation(
     });
     const marketValueByTradingCurrency = Object.entries(map).map(([tradingCurrency, marketValue]) => ({ tradingCurrency, marketValue, percent: marketValue / totalMarketValue }));
 
+    if (
+      cumulativeHoldingsByTickerByDate["ROG.SW"] ||
+      cumulativeHoldingsByTickerByDate["ROP.SW"] ||
+      cumulativeCostBasisByTickerByDate["ROG.SW"] ||
+      cumulativeCostBasisByTickerByDate["ROP.SW"] ||
+      cumulativeMarketValueByTickerByDate["ROG.SW"] ||
+      cumulativeMarketValueByTickerByDate["ROP.SW"] ||
+      cumulativeRealisedPLByTickerByDate["ROG.SW"] ||
+      cumulativeRealisedPLByTickerByDate["ROP.SW"] ||
+      cumulativeUnrealisedPLByTickerByDate["ROG.SW"] ||
+      cumulativeUnrealisedPLByTickerByDate["ROP.SW"] ||
+      dividendByTickerByDate["ROG.SW"] ||
+      dividendByTickerByDate["ROP.SW"] ||
+      transactionByTickerByDate["ROG.SW"] ||
+      transactionByTickerByDate["ROP.SW"]
+    ) {
+      console.log("[valuation snapshots] ROG.SW / ROP.SW", {
+        dividendByTickerByDate: {
+          "ROG.SW": dividendByTickerByDate["ROG.SW"] ?? {},
+          "ROP.SW": dividendByTickerByDate["ROP.SW"] ?? {}
+        },
+        transactionByTickerByDate: {
+          "ROG.SW": transactionByTickerByDate["ROG.SW"] ?? {},
+          "ROP.SW": transactionByTickerByDate["ROP.SW"] ?? {}
+        },
+        cumulativeHoldingsByTickerByDate: {
+          "ROG.SW": cumulativeHoldingsByTickerByDate["ROG.SW"] ?? {},
+          "ROP.SW": cumulativeHoldingsByTickerByDate["ROP.SW"] ?? {}
+        },
+        cumulativeMarketValueByTickerByDate: {
+          "ROG.SW": cumulativeMarketValueByTickerByDate["ROG.SW"] ?? {},
+          "ROP.SW": cumulativeMarketValueByTickerByDate["ROP.SW"] ?? {}
+        },
+        cumulativeCostBasisByTickerByDate: {
+          "ROG.SW": cumulativeCostBasisByTickerByDate["ROG.SW"] ?? {},
+          "ROP.SW": cumulativeCostBasisByTickerByDate["ROP.SW"] ?? {}
+        },
+        cumulativeUnrealisedPLByTickerByDate: {
+          "ROG.SW": cumulativeUnrealisedPLByTickerByDate["ROG.SW"] ?? {},
+          "ROP.SW": cumulativeUnrealisedPLByTickerByDate["ROP.SW"] ?? {}
+        },
+        cumulativeRealisedPLByTickerByDate: {
+          "ROG.SW": cumulativeRealisedPLByTickerByDate["ROG.SW"] ?? {},
+          "ROP.SW": cumulativeRealisedPLByTickerByDate["ROP.SW"] ?? {}
+        }
+      });
+    }
+
     return {
       holdings,
       aggregates: { aggMap, missingPLCurrencies: [...missingPLCurrencies] },
@@ -582,7 +630,7 @@ export function useValuation(
 export function usePL(transactions, prices, priceTickerMap, setPrices, setLoadingPrices, fxs, basis, startDate, endDate, dividends = [], appliedCorporateActions = []) {
   return useMemo(() => {
     if (!transactions?.length || !prices || !fxs || !startDate || !endDate) {
-      return { cumulativePLByDate: {} };
+      return { cumulativePLByDate: {}, cumulativePLByTickerByDate: {} };
     }
     if (basis === "Local") basis = "USD";
     const stockTx = transactions
@@ -638,6 +686,7 @@ export function usePL(transactions, prices, priceTickerMap, setPrices, setLoadin
 
     const holdingsMap = {};
     const cumulativePLByDate = {};
+    const cumulativePLByTickerByDate = {};
     let txIndex = 0;
 
     for (const date of dates) {
@@ -783,6 +832,7 @@ export function usePL(transactions, prices, priceTickerMap, setPrices, setLoadin
       }
 
       let cumulativePL = 0;
+      const plByTickerSnapshot = {};
       for (const h of Object.values(holdingsMap)) {
         // Keep fully closed positions in the cumulative series when they still
         // contribute realised P/L; otherwise dashboard profit understates exits.
@@ -793,11 +843,17 @@ export function usePL(transactions, prices, priceTickerMap, setPrices, setLoadin
         if (h.totalQuantity !== 0 && price != null && fx != null) {
           val = price * fx * h.totalQuantity;
         }
-        cumulativePL += val + h.costBasisBasis + h.realisedPLBasis;
+        const tickerPL = val + h.costBasisBasis + h.realisedPLBasis;
+        cumulativePL += tickerPL;
+        plByTickerSnapshot[h.ticker] = (plByTickerSnapshot[h.ticker] ?? 0) + tickerPL;
       }
       cumulativePLByDate[date] = cumulativePL;
+      Object.entries(plByTickerSnapshot).forEach(([ticker, value]) => {
+        if (!cumulativePLByTickerByDate[ticker]) cumulativePLByTickerByDate[ticker] = {};
+        cumulativePLByTickerByDate[ticker][date] = value;
+      });
     }
 
-    return { cumulativePLByDate };
+    return { cumulativePLByDate, cumulativePLByTickerByDate };
   }, [transactions, prices, priceTickerMap, fxs, basis, startDate, endDate, dividends, appliedCorporateActions]);
 }

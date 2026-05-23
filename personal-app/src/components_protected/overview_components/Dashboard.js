@@ -10,6 +10,7 @@ import {usePrices} from "@/context/PriceContext";
 import LineChart from "@/components_protected/overview_components/holding_subcomponents/LineChart";
 import {News} from "@/components_protected/overview_components/holding_subcomponents/News";
 import { useUserSettings } from "@/context/UserSettingsContext";
+import { useValuationDashboard } from "@/hooks_protected/useValuationDashboard";
 
 export default function Dashboard() {
   const {transactionCurrencySet, loadingTransactions, firstTransactionDate} = useTransactions();
@@ -20,13 +21,13 @@ export default function Dashboard() {
     endDateDisplay,
     setStartDateDisplay,
     setEndDateDisplay,
-    aggregates,
-    allTimeAggregates,
-    latestValuationDate,
-    marketValueByTicker,
-    marketValueByTradingCurrency,
     cumulativePLByDate,
   } = useValuationContext();
+  const {
+    aggregates,
+    marketValueByTicker,
+    marketValueByTradingCurrency,
+  } = useValuationDashboard();
   const { basis, setBasis } = useUserSettings();
 
   const [showTab, setShowTab] = useState(0);
@@ -320,7 +321,7 @@ export default function Dashboard() {
           <h4>Aggregates</h4>
         </div>
         <div className="grid-item grid2" style={{ paddingTop: "10px", textAlign: "right" }}>
-          Value Date: {latestValuationDate}
+          Value Date: {endDateDisplay}
         </div>
       </div>
 
@@ -336,7 +337,7 @@ export default function Dashboard() {
         </tr>
         </thead>
         <tbody>
-        {Object.entries((allTimeAggregates || aggregates).aggMap || {}).map(([tradingCurrency, agg]) => (
+        {Object.entries((aggregates).aggMap || {}).map(([tradingCurrency, agg]) => (
           <tr key={tradingCurrency}>
             <td>{tradingCurrency}</td>
             <td style={getStyle(agg.costBasis)}>{formatNumber(agg.costBasis)}</td>

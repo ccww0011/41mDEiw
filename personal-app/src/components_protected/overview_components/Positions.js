@@ -4,14 +4,24 @@ import React, { useMemo, useState } from "react";
 import { useValuationContext } from "@/context/ValuationContext";
 import { useTransactions } from "@/context/TransactionContext";
 import { useUserSettings } from "@/context/UserSettingsContext";
+import { useValuationPositions } from "@/hooks_protected/useValuationPositions";
+import RealisedSchedule from "@/components_protected/overview_components/positions_subcomponents/RealisedSchedule";
+import DividendSchedule from "@/components_protected/overview_components/positions_subcomponents/DividendSchedule";
 
 export default function Positions() {
-  const { latestValuationDate, allTimeHoldings = [], tickerMap } = useValuationContext();
+  const { latestValuationDate, tickerMap } = useValuationContext();
+  const allTimeHoldings = useValuationPositions(latestValuationDate);
   const { transactionCurrencySet } = useTransactions();
   const { basis, setBasis } = useUserSettings();
 
   const [sortRules, setSortRules] = useState([]);
   const [filters, setFilters] = useState({});
+  const [showTab, setShowTab] = useState("holdings");
+  const positionTabs = [
+    { key: "holdings", label: "Holdings", width: "grid2" },
+    { key: "realised", label: "Realised Schedule", width: "grid2" },
+    { key: "dividend", label: "Dividend Schedule", width: "grid2" },
+  ];
 
   const basisOptions = useMemo(() => {
     const opts = new Set(["Local", ...(transactionCurrencySet || [])]);
@@ -100,6 +110,32 @@ export default function Positions() {
 
     return array;
   }, [allTimeHoldings, tickerMap, sortRules, filters]);
+
+  const totals = useMemo(() => {
+    return sortedHoldings.reduce((acc, h) => ({
+      costBasis: acc.costBasis + (h.costBasis ?? 0),
+      value: acc.value + (h.value ?? 0),
+      unrealisedPL: acc.unrealisedPL + (h.unrealisedPL ?? 0),
+      realisedPL: acc.realisedPL + (h.realisedPL ?? 0),
+      pL: acc.pL + (h.pL ?? 0),
+    }), {
+      costBasis: 0,
+      value: 0,
+      unrealisedPL: 0,
+      realisedPL: 0,
+      pL: 0,
+    });
+  }, [sortedHoldings]);
+
+  const showTotalsRow = useMemo(() => {
+    if (basis !== "Local") return true;
+    const currencies = new Set(
+      sortedHoldings
+        .map((h) => (h.tradingCurrency || "").trim().toUpperCase())
+        .filter(Boolean)
+    );
+    return currencies.size <= 1;
+  }, [basis, sortedHoldings]);
 
   const formatNumber = (num) =>
     num === null || num === undefined
@@ -193,71 +229,118 @@ export default function Positions() {
       </div>
 
       <div className="grid">
-        <div className="grid-item grid8">
-          Sorting priority: {sortRules.length === 0 ? "" : sortRules.map((rule, i) => `(${i + 1}) ${getPlainHeaderLabel(COLUMN_NAMES[rule.key])}`).join("; ")}
-        </div>
-        <div className="grid-item grid2">
-          <button onClick={() => setSortRules([])} style={{backgroundColor: "#fb6a4a", color: "white"}}>Clear Sort</button>
-        </div>
-        <div className="grid-item grid2">
-          <button onClick={() => setFilters({})} style={{backgroundColor: "#969696", color: "white", marginRight: 8}}>Clear Filter</button>
-        </div>
+        {positionTabs.map((tab) => (
+          <div key={tab.key} className={`grid-item ${tab.width}`}>
+            <button
+              type="button"
+              onClick={() => setShowTab(tab.key)}
+              style={{
+                backgroundColor: showTab === tab.key ? "#08519c" : undefined,
+                color: showTab === tab.key ? "#f7fbff" : undefined
+              }}
+            >
+              {tab.label}
+            </button>
+          </div>
+        ))}
       </div>
 
-      <table border="1" cellPadding="8" style={{borderCollapse: "collapse", width: "100%"}}>
-        <thead>
-        <tr>
-          {Object.keys(COLUMN_NAMES).map((key) => (
-            <th
-              key={key}
-              className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
-              style={{ verticalAlign: "top", textAlign: "center" }}
-            >
-              <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start" }}>
-                {renderSortControls(key)}
-              </div>
-              <span style={{ whiteSpace: "pre-line" }}>{formatHeaderLabel(COLUMN_NAMES[key])}</span>
-            </th>
-          ))}
-        </tr>
-        <tr>
-          {Object.keys(COLUMN_NAMES).map((key) => {
-            const numericKeys = ["totalQuantity", "avgCost", "price", "costBasis", "value", "unrealisedPL", "realisedPL", "pL"];
-            if (numericKeys.includes(key)) return <th key={key} className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}></th>;
-            const options = Array.from(new Set(allTimeHoldings.map((h) => h[key]).filter(Boolean))).sort();
-            return (
-              <th key={key} className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}>
-                <select
-                  value={filters[key] || "All"}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setFilters((prev) => ({...prev, [key]: value === "All" ? undefined : value}));
-                  }}
-                  style={{width: "100%"}}
+      {showTab === "holdings" && (
+        <>
+          <div className="grid">
+            <div className="grid-item grid8">
+              Sorting priority: {sortRules.length === 0 ? "" : sortRules.map((rule, i) => `(${i + 1}) ${getPlainHeaderLabel(COLUMN_NAMES[rule.key])}`).join("; ")}
+            </div>
+            <div className="grid-item grid2">
+              <button onClick={() => setSortRules([])} style={{backgroundColor: "#fb6a4a", color: "white"}}>Clear Sort</button>
+            </div>
+            <div className="grid-item grid2">
+              <button onClick={() => setFilters({})} style={{backgroundColor: "#969696", color: "white", marginRight: 8}}>Clear Filter</button>
+            </div>
+          </div>
+
+          <table border="1" cellPadding="8" style={{borderCollapse: "collapse", width: "100%"}}>
+            <thead>
+            <tr>
+              {Object.keys(COLUMN_NAMES).map((key) => (
+                <th
+                  key={key}
+                  className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
+                  style={{ verticalAlign: "top", textAlign: "center" }}
                 >
-                  <option value="All">All</option>
-                  {options.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-              </th>
-            );
-          })}
-        </tr>
-        </thead>
-        <tbody>
-        {sortedHoldings.map((h) => (
-          <tr key={`${h.ticker}|${h.exchange}`}>
-            {Object.keys(COLUMN_NAMES).map((key) => (
-              <td key={key} className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
-                  style={["totalQuantity", "avgCost", "price", "costBasis", "value", "unrealisedPL", "realisedPL", "pL"].includes(key) ? getStyle(h[key]) : {}}>
-                {["totalQuantity", "avgCost", "price", "costBasis", "value", "unrealisedPL", "realisedPL", "pL"].includes(key) ? formatNumber(h[key]) : h[key]}
-              </td>
+                  <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start" }}>
+                    {renderSortControls(key)}
+                  </div>
+                  <span style={{ whiteSpace: "pre-line" }}>{formatHeaderLabel(COLUMN_NAMES[key])}</span>
+                </th>
+              ))}
+            </tr>
+            <tr>
+              {Object.keys(COLUMN_NAMES).map((key) => {
+                const totalMap = {
+                  costBasis: totals.costBasis,
+                  value: totals.value,
+                  unrealisedPL: totals.unrealisedPL,
+                  realisedPL: totals.realisedPL,
+                  pL: totals.pL,
+                };
+                const totalValue = totalMap[key];
+                const numericKeys = ["totalQuantity", "avgCost", "price", "costBasis", "value", "unrealisedPL", "realisedPL", "pL"];
+                if (numericKeys.includes(key)) {
+                  return (
+                    <th
+                      key={key}
+                      className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
+                      style={{
+                        backgroundColor: "#08519c",
+                        color: "#f7fbff",
+                        textAlign: ["costBasis", "value", "unrealisedPL", "realisedPL", "pL"].includes(key) ? "right" : "center",
+                        verticalAlign: "middle"
+                      }}
+                    >
+                      {!showTotalsRow || totalValue == null ? "" : formatNumber(totalValue)}
+                    </th>
+                  );
+                }
+                const options = Array.from(new Set(allTimeHoldings.map((h) => h[key]).filter(Boolean))).sort();
+                return (
+                  <th key={key} className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}>
+                    <select
+                      value={filters[key] || "All"}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setFilters((prev) => ({...prev, [key]: value === "All" ? undefined : value}));
+                      }}
+                      style={{width: "100%"}}
+                    >
+                      <option value="All">All</option>
+                      {options.map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  </th>
+                );
+              })}
+            </tr>
+            </thead>
+            <tbody>
+            {sortedHoldings.map((h) => (
+              <tr key={`${h.ticker}|${h.exchange}`}>
+                {Object.keys(COLUMN_NAMES).map((key) => (
+                  <td key={key} className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
+                      style={["totalQuantity", "avgCost", "price", "costBasis", "value", "unrealisedPL", "realisedPL", "pL"].includes(key) ? getStyle(h[key]) : {}}>
+                    {["totalQuantity", "avgCost", "price", "costBasis", "value", "unrealisedPL", "realisedPL", "pL"].includes(key) ? formatNumber(h[key]) : h[key]}
+                  </td>
+                ))}
+              </tr>
             ))}
-          </tr>
-        ))}
-        </tbody>
-      </table>
+            </tbody>
+          </table>
+        </>
+      )}
+
+      {showTab === "realised" && <RealisedSchedule />}
+      {showTab === "dividend" && <DividendSchedule />}
     </>
   );
 }

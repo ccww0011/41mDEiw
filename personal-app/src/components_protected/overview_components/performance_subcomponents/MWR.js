@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useValuationContext } from "@/context/ValuationContext";
+import { useUserSettings } from "@/context/UserSettingsContext";
 
 function getMonthKey(dateStr) {
   return dateStr.slice(0, 6);
@@ -156,69 +157,13 @@ function toPercent(value, decimals = 2) {
   return `${(value * 100).toFixed(decimals)}%`;
 }
 
-function buildStockExchangeDisplayMapper(appliedCorporateActions, cumulativeMarketValueByTickerByDate) {
-  const exchangeByTicker = {};
-  (appliedCorporateActions || [])
-    .filter((action) => action?.type === "STOCK_EXCHANGE" && action?.ticker && action?.new_ticker && action?.actionDate)
-    .sort((a, b) => String(a.actionDate || "").localeCompare(String(b.actionDate || "")))
-    .forEach((action) => {
-      const newTickerDates = Object.keys(cumulativeMarketValueByTickerByDate?.[action.new_ticker] || {})
-        .filter((date) => date >= action.actionDate)
-        .sort();
-      exchangeByTicker[action.ticker] = {
-        effectiveDate: newTickerDates[0] || null,
-        newTicker: action.new_ticker
-      };
-    });
-
-  const finalTickerMemo = {};
-  const resolveFinalTicker = (ticker) => {
-    if (!ticker) return ticker;
-    if (finalTickerMemo[ticker]) return finalTickerMemo[ticker];
-    const seen = new Set();
-    let current = ticker;
-    while (exchangeByTicker[current] && !seen.has(current)) {
-      seen.add(current);
-      current = exchangeByTicker[current].newTicker;
-    }
-    finalTickerMemo[ticker] = current;
-    return current;
-  };
-
-  const mapTickerDateToDisplay = (ticker, date) => {
-    if (!ticker) return null;
-    const exchange = exchangeByTicker[ticker];
-    if (exchange?.effectiveDate && date >= exchange.effectiveDate) {
-      return null;
-    }
-    return resolveFinalTicker(ticker);
-  };
-
-  return { resolveFinalTicker, mapTickerDateToDisplay };
-}
-
-function aggregateSeriesByDisplayTicker(seriesByTicker, mapTickerDateToDisplay) {
-  const aggregated = {};
-  Object.entries(seriesByTicker || {}).forEach(([ticker, byDate]) => {
-    Object.entries(byDate || {}).forEach(([date, value]) => {
-      const displayTicker = mapTickerDateToDisplay(ticker, date);
-      if (!displayTicker) return;
-      if (!aggregated[displayTicker]) aggregated[displayTicker] = {};
-      aggregated[displayTicker][date] = (aggregated[displayTicker][date] ?? 0) + value;
-    });
-  });
-  return aggregated;
-}
-
 export default function MWR({ viewMode = "Monthly" }) {
   const {
     tickerMap,
-    appliedCorporateActions,
-    cumulativeMarketValueByTickerByDate,
-    dividendByTickerByDate,
-    transactionByTickerByDate,
     latestValuationDate,
+    getNormalizedValuationSeries,
   } = useValuationContext();
+  const { basis } = useUserSettings();
 
   const [sortRules, setSortRules] = useState([]);
   const [filters, setFilters] = useState({});
@@ -392,44 +337,30 @@ export default function MWR({ viewMode = "Monthly" }) {
   });
   const plainCellStyle = { backgroundColor: "#ffffff" };
 
-  const { monthLabels, dayLabels, rows } = useMemo(() => {
-    if (!latestValuationDate) return { monthLabels: [], dayLabels: [], rows: [] };
-    const { mapTickerDateToDisplay } = buildStockExchangeDisplayMapper(
-      appliedCorporateActions,
-      cumulativeMarketValueByTickerByDate
-    );
-    const groupedMarketValueByTickerByDate = aggregateSeriesByDisplayTicker(
+  const { monthLabels, dayLabels, rows, portfolioRow } = useMemo(() => {
+    if (!latestValuationDate) return { monthLabels: [], dayLabels: [], rows: [], portfolioRow: null };
+    const {
       cumulativeMarketValueByTickerByDate,
-      mapTickerDateToDisplay
-    );
-    const groupedDividendByTickerByDate = aggregateSeriesByDisplayTicker(
       dividendByTickerByDate,
-      mapTickerDateToDisplay
-    );
-    const groupedTransactionByTickerByDate = aggregateSeriesByDisplayTicker(
       transactionByTickerByDate,
-      mapTickerDateToDisplay
-    );
+    } = getNormalizedValuationSeries(latestValuationDate);
     const year = latestValuationDate.slice(0, 4);
     const monthLabels = buildRollingMonthLabels(latestValuationDate);
     const globalDates = Array.from(
       new Set(
-        Object.values(groupedMarketValueByTickerByDate || {})
+        Object.values(cumulativeMarketValueByTickerByDate || {})
           .flatMap((mvByDate) => Object.keys(mvByDate || {}))
           .filter((d) => d <= latestValuationDate)
       )
     ).sort();
     const dayLabels = globalDates.slice(-14);
     const tickerSet = new Set([
-      ...Object.keys(groupedMarketValueByTickerByDate || {}),
-      ...Object.keys(groupedDividendByTickerByDate || {}),
-      ...Object.keys(groupedTransactionByTickerByDate || {}),
+      ...Object.keys(cumulativeMarketValueByTickerByDate || {}),
+      ...Object.keys(dividendByTickerByDate || {}),
+      ...Object.keys(transactionByTickerByDate || {}),
     ]);
 
-    const rows = Array.from(tickerSet).map((ticker) => {
-      const mvByDate = groupedMarketValueByTickerByDate?.[ticker] ?? {};
-      const divByDate = groupedDividendByTickerByDate?.[ticker] ?? {};
-      const txByDate = groupedTransactionByTickerByDate?.[ticker] ?? {};
+    const buildRow = (ticker, mvByDate, divByDate, txByDate, info = {}) => {
       const dates = Object.keys(mvByDate)
         .filter((d) => d <= latestValuationDate)
         .sort();
@@ -566,7 +497,6 @@ export default function MWR({ viewMode = "Monthly" }) {
       const cumulative7d = last7Labels.length === 7 && validDaily7Count === 7 ? dailyCum7Multiplier - 1 : null;
       const cumulative14d = dayLabels.length === 14 && validDailyCount === 14 ? dailyCumMultiplier - 1 : null;
 
-      const info = tickerMap?.[ticker] || {};
       return {
         ticker,
         description: info.description ?? "",
@@ -579,16 +509,47 @@ export default function MWR({ viewMode = "Monthly" }) {
         cumulative7d,
         cumulative14d
       };
-    });
+    };
 
-    return { monthLabels, dayLabels, rows };
+    const rows = Array.from(tickerSet).map((ticker) => buildRow(
+      ticker,
+      cumulativeMarketValueByTickerByDate?.[ticker] ?? {},
+      dividendByTickerByDate?.[ticker] ?? {},
+      transactionByTickerByDate?.[ticker] ?? {},
+      tickerMap?.[ticker] || {}
+    ));
+
+    const mergeByDate = (seriesByTicker) => {
+      const merged = {};
+      Object.values(seriesByTicker || {}).forEach((byDate) => {
+        Object.entries(byDate || {}).forEach(([date, value]) => {
+          merged[date] = (merged[date] ?? 0) + (value ?? 0);
+        });
+      });
+      return merged;
+    };
+
+    const portfolioMvByDate = mergeByDate(cumulativeMarketValueByTickerByDate);
+    const portfolioDivByDate = mergeByDate(dividendByTickerByDate);
+    const portfolioTxByDate = mergeByDate(transactionByTickerByDate);
+    const portfolioRow = buildRow(
+      "Total",
+      portfolioMvByDate,
+      portfolioDivByDate,
+      portfolioTxByDate,
+      {
+        description: "Portfolio Total",
+        exchange: "",
+        tradingCurrency: ""
+      }
+    );
+
+    return { monthLabels, dayLabels, rows, portfolioRow };
   }, [
-    cumulativeMarketValueByTickerByDate,
-    dividendByTickerByDate,
-    transactionByTickerByDate,
     latestValuationDate,
+    getNormalizedValuationSeries,
     tickerMap,
-    appliedCorporateActions
+    basis
   ]);
 
   const COLUMN_ORDER = ["ticker", "description", "exchange", "tradingCurrency", ...monthLabels, "ytd", "ttm"];
@@ -699,6 +660,13 @@ export default function MWR({ viewMode = "Monthly" }) {
     return array;
   }, [rows, dailySortRules, dailyFilters]);
 
+  const showTotalRow = basis !== "Local" && portfolioRow != null;
+  const totalCellStyle = {
+    backgroundColor: "#08519c",
+    color: "#f7fbff",
+    verticalAlign: "middle"
+  };
+
   return (
     <>
       <div className="grid">
@@ -740,11 +708,30 @@ export default function MWR({ viewMode = "Monthly" }) {
             {COLUMN_ORDER.map((key) => {
               const filterableKeys = ["ticker", "description", "exchange", "tradingCurrency"];
               if (!filterableKeys.includes(key)) {
-                return <th key={key} className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}></th>;
+                if (!showTotalRow) {
+                  return <th key={key} className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}></th>;
+                }
+                if (key === "ytd") {
+                  return <th key={key} style={{ ...totalCellStyle, textAlign: "right" }}>{toPercent(portfolioRow.ytd, isNarrow ? 1 : 2)}</th>;
+                }
+                if (key === "ttm") {
+                  return <th key={key} style={{ ...totalCellStyle, textAlign: "right" }}>{toPercent(portfolioRow.ttm, isNarrow ? 1 : 2)}</th>;
+                }
+                return (
+                  <th key={key} style={{ ...totalCellStyle, textAlign: "right" }}>
+                    {toPercent(portfolioRow.monthlyReturns?.[key], isNarrow ? 1 : 2)}
+                  </th>
+                );
               }
               const options = Array.from(new Set(rows.map((r) => r[key]).filter(Boolean))).sort();
               return (
-                <th key={key} className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}>
+                <th
+                  key={key}
+                  className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
+                  style={showTotalRow && (key === "ticker" || key === "description" || key === "exchange" || key === "tradingCurrency") ? totalCellStyle : undefined}
+                >
+                  {showTotalRow && key === "ticker" ? "Total" : null}
+                  {showTotalRow && key === "tradingCurrency" ? "" : null}
                   <select
                     value={filters[key] || "All"}
                     onChange={(e) => {
@@ -828,11 +815,30 @@ export default function MWR({ viewMode = "Monthly" }) {
             {DAILY_COLUMN_ORDER.map((key) => {
               const filterableKeys = ["ticker", "description", "exchange", "tradingCurrency"];
               if (!filterableKeys.includes(key)) {
-                return <th key={key} className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}></th>;
+                if (!showTotalRow) {
+                  return <th key={key} className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}></th>;
+                }
+                if (key === "l7d") {
+                  return <th key={key} style={{ ...totalCellStyle, textAlign: "right" }}>{toPercent(portfolioRow.cumulative7d, isNarrow ? 1 : 2)}</th>;
+                }
+                if (key === "l14d") {
+                  return <th key={key} style={{ ...totalCellStyle, textAlign: "right" }}>{toPercent(portfolioRow.cumulative14d, isNarrow ? 1 : 2)}</th>;
+                }
+                return (
+                  <th key={key} style={{ ...totalCellStyle, textAlign: "right" }}>
+                    {toPercent(portfolioRow.dailyReturns?.[key], isNarrow ? 1 : 2)}
+                  </th>
+                );
               }
               const options = Array.from(new Set(rows.map((r) => r[key]).filter(Boolean))).sort();
               return (
-                <th key={key} className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}>
+                <th
+                  key={key}
+                  className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
+                  style={showTotalRow && (key === "ticker" || key === "description" || key === "exchange" || key === "tradingCurrency") ? totalCellStyle : undefined}
+                >
+                  {showTotalRow && key === "ticker" ? "Total" : null}
+                  {showTotalRow && key === "tradingCurrency" ? "" : null}
                   <select
                     value={dailyFilters[key] || "All"}
                     onChange={(e) => {

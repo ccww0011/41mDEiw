@@ -16,11 +16,13 @@ export function NewsProvider({ children }) {
   const [loadingNews, setLoadingNews] = useState(false);
   const [error, setError] = useState(null);
   const hasFetchedRef = useRef(false);
+  const loadingRef = useRef(false);
 
   const fetchNews = useCallback(async ({ force = false } = {}) => {
-    if (loadingNews) return;
+    if (loadingRef.current) return;
     if (hasFetchedRef.current && !force) return;
 
+    loadingRef.current = true;
     setLoadingNews(true);
     setError(null);
     try {
@@ -39,9 +41,10 @@ export function NewsProvider({ children }) {
       setError(err.message);
       setNewsData([]);
     } finally {
+      loadingRef.current = false;
       setLoadingNews(false);
     }
-  }, [loadingNews]);
+  }, []);
 
   const value = useMemo(() => ({
     newsData,
