@@ -730,7 +730,7 @@ export default function MWR({ viewMode = "Monthly" }) {
                   className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
                   style={showTotalRow && (key === "ticker" || key === "description" || key === "exchange" || key === "tradingCurrency") ? totalCellStyle : undefined}
                 >
-                  {showTotalRow && key === "ticker" ? "Total" : null}
+                  {showTotalRow && key === "ticker" ? "" : null}
                   {showTotalRow && key === "tradingCurrency" ? "" : null}
                   <select
                     value={filters[key] || "All"}
@@ -837,7 +837,7 @@ export default function MWR({ viewMode = "Monthly" }) {
                   className={hideOnMobileColumns.includes(key) ? "hide-on-mobile" : ""}
                   style={showTotalRow && (key === "ticker" || key === "description" || key === "exchange" || key === "tradingCurrency") ? totalCellStyle : undefined}
                 >
-                  {showTotalRow && key === "ticker" ? "Total" : null}
+                  {showTotalRow && key === "ticker" ? "" : null}
                   {showTotalRow && key === "tradingCurrency" ? "" : null}
                   <select
                     value={dailyFilters[key] || "All"}

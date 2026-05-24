@@ -18,6 +18,17 @@ function getSnapshotValue(byDate, targetDate) {
   return latestValue;
 }
 
+function getRangeSum(byDate, startExclusive, endInclusive) {
+  if (!byDate || !endInclusive) return 0;
+  let total = 0;
+  Object.entries(byDate).forEach(([date, value]) => {
+    if (date <= endInclusive && (!startExclusive || date > startExclusive)) {
+      total += Number(value) || 0;
+    }
+  });
+  return total;
+}
+
 function getMonthEnd(year, monthIndex) {
   const date = new Date(Date.UTC(year, monthIndex + 1, 0));
   return (
@@ -95,9 +106,7 @@ export default function RealisedSchedule() {
         const endValue = getSnapshotValue(realisedByTicker[ticker], month.end);
         const prevValue = getSnapshotValue(realisedByTicker[ticker], month.prevEnd);
         const realisedDelta = endValue - prevValue;
-        const dividendEnd = getSnapshotValue(dividendByTicker[ticker], month.end);
-        const dividendPrev = getSnapshotValue(dividendByTicker[ticker], month.prevEnd);
-        const dividendDelta = dividendEnd - dividendPrev;
+        const dividendDelta = getRangeSum(dividendByTicker[ticker], month.prevEnd, month.end);
         const delta = realisedDelta - dividendDelta;
         monthValues[month.key] = delta;
         total += delta;

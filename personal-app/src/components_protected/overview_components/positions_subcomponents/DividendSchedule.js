@@ -4,18 +4,15 @@ import React, { useMemo, useState } from "react";
 import { useValuationContext } from "@/context/ValuationContext";
 import { useUserSettings } from "@/context/UserSettingsContext";
 
-function getSnapshotValue(byDate, targetDate) {
-  if (!byDate || !targetDate) return 0;
-  if (Object.prototype.hasOwnProperty.call(byDate, targetDate)) return byDate[targetDate] ?? 0;
-  let latestDate = null;
-  let latestValue = 0;
+function getRangeSum(byDate, startExclusive, endInclusive) {
+  if (!byDate || !endInclusive) return 0;
+  let total = 0;
   Object.entries(byDate).forEach(([date, value]) => {
-    if (date <= targetDate && (latestDate == null || date > latestDate)) {
-      latestDate = date;
-      latestValue = value ?? 0;
+    if (date <= endInclusive && (!startExclusive || date > startExclusive)) {
+      total += Number(value) || 0;
     }
   });
-  return latestValue;
+  return total;
 }
 
 function getMonthEnd(year, monthIndex) {
@@ -86,9 +83,7 @@ export default function DividendSchedule() {
       let total = 0;
       let ytd = 0;
       monthWindows.forEach((month) => {
-        const endValue = getSnapshotValue(dividendByTicker[ticker], month.end);
-        const prevValue = getSnapshotValue(dividendByTicker[ticker], month.prevEnd);
-        const delta = endValue - prevValue;
+        const delta = getRangeSum(dividendByTicker[ticker], month.prevEnd, month.end);
         monthValues[month.key] = delta;
         total += delta;
         if (month.key.slice(0, 4) === currentYear) ytd += delta;
