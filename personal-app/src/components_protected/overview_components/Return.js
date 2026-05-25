@@ -3,12 +3,18 @@ import TWR from "@/components_protected/overview_components/performance_subcompo
 import MWR from "@/components_protected/overview_components/performance_subcomponents/MWR";
 import {useTransactions} from "@/context/TransactionContext";
 import { useUserSettings } from "@/context/UserSettingsContext";
+import { usePrices } from "@/context/PriceContext";
+import { useFxs } from "@/context/FxContext";
+import { useValuationDashboard } from "@/hooks_protected/useValuationDashboard";
 
 export default function ReturnView() {
   const [showTab, setShowTab] = useState("TWR");
   const [viewMode, setViewMode] = useState("Monthly");
   const { basis, setBasis } = useUserSettings();
-  const {transactionCurrencySet} = useTransactions();
+  const {transactionCurrencySet, loadingTransactions} = useTransactions();
+  const { loadingPrices } = usePrices();
+  const { loadingFxs } = useFxs();
+  const { aggregates } = useValuationDashboard();
   const returnTabs = [
     { key: "TWR", label: "TWR" },
     { key: "MWR", label: "MWR" },
@@ -24,6 +30,13 @@ export default function ReturnView() {
     <>
       <div className="grid">
         <div className="grid-item grid2"><h2>Return</h2></div>
+        <div className="grid-item grid10">
+          {(loadingTransactions || loadingPrices || loadingFxs) && (
+            <h3 style={{marginLeft: '20px', color: 'red'}}>
+              {"Loading P/L data for tickers "}{aggregates.missingPLCurrencies?.join(", ")}
+            </h3>
+          )}
+        </div>
       </div>
 
       <div className="grid">

@@ -4,15 +4,21 @@ import React, { useMemo, useState } from "react";
 import { useValuationContext } from "@/context/ValuationContext";
 import { useTransactions } from "@/context/TransactionContext";
 import { useUserSettings } from "@/context/UserSettingsContext";
+import { usePrices } from "@/context/PriceContext";
+import { useFxs } from "@/context/FxContext";
 import { useValuationPositions } from "@/hooks_protected/useValuationPositions";
+import { useValuationDashboard } from "@/hooks_protected/useValuationDashboard";
 import RealisedSchedule from "@/components_protected/overview_components/positions_subcomponents/RealisedSchedule";
 import DividendSchedule from "@/components_protected/overview_components/positions_subcomponents/DividendSchedule";
 
 export default function Positions() {
   const { latestValuationDate, tickerMap } = useValuationContext();
   const allTimeHoldings = useValuationPositions(latestValuationDate);
-  const { transactionCurrencySet } = useTransactions();
+  const { transactionCurrencySet, loadingTransactions } = useTransactions();
+  const { loadingPrices } = usePrices();
+  const { loadingFxs } = useFxs();
   const { basis, setBasis } = useUserSettings();
+  const { aggregates } = useValuationDashboard();
 
   const [sortRules, setSortRules] = useState([]);
   const [filters, setFilters] = useState({});
@@ -207,6 +213,13 @@ export default function Positions() {
     <>
       <div className="grid">
         <div className="grid-item grid2"><h2>Positions</h2></div>
+        <div className="grid-item grid10">
+          {(loadingTransactions || loadingPrices || loadingFxs) && (
+            <h3 style={{marginLeft: '20px', color: 'red'}}>
+              {"Loading P/L data for tickers "}{aggregates.missingPLCurrencies?.join(", ")}
+            </h3>
+          )}
+        </div>
       </div>
 
       <div className="grid">
