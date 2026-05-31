@@ -58,9 +58,9 @@ function buildMarketValueByTradingCurrency(holdings) {
 }
 
 export function useValuationDashboard() {
-  const { endDateDisplay } = useValuationContext();
+  const { latestValuationDate } = useValuationContext();
   const { basis } = useUserSettings();
-  const holdings = useValuationPositions(endDateDisplay);
+  const holdings = useValuationPositions(latestValuationDate);
 
   return useMemo(() => {
     return {

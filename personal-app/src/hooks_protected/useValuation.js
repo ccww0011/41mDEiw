@@ -112,6 +112,8 @@ function getDividendCurrency(div) {
 const EMPTY_RESULT = {
   holdings: [],
   aggregates: { aggMap: {}, missingPLCurrencies: null },
+  cumulativePLByDate: {},
+  cumulativePLByTickerByDate: {},
   marketValueByTicker: [],
   marketValueByTradingCurrency: [],
   cumulativeHoldingsByTickerByDate: {},
@@ -221,6 +223,7 @@ export function useValuation(
     const cumulativeMarketValueByDate = {};
     const cumulativeRealisedPLByDate = {};
     const cumulativeUnrealisedPLByDate = {};
+    const cumulativePLByDate = {};
     const dividendByDate = {};
     const transactionByDate = {};
 
@@ -229,6 +232,7 @@ export function useValuation(
     const cumulativeMarketValueByTickerByDate = {};
     const cumulativeRealisedPLByTickerByDate = {};
     const cumulativeUnrealisedPLByTickerByDate = {};
+    const cumulativePLByTickerByDate = {};
     const dividendByTickerByDate = {};
     const transactionByTickerByDate = {};
 
@@ -503,6 +507,25 @@ export function useValuation(
         if (!cumulativeUnrealisedPLByTickerByDate[ticker]) cumulativeUnrealisedPLByTickerByDate[ticker] = {};
         cumulativeUnrealisedPLByTickerByDate[ticker][date] = value;
       });
+
+      const tickerPLSnapshot = {};
+      let cumulativePL = 0;
+      const pLTickerSet = new Set([
+        ...Object.keys(realisedSnapshot),
+        ...Object.keys(unrealisedSnapshot),
+      ]);
+      pLTickerSet.forEach((ticker) => {
+        const unrealisedPL = unrealisedSnapshot[ticker];
+        const realisedPL = realisedSnapshot[ticker] ?? 0;
+        const totalPL = unrealisedPL != null ? unrealisedPL + realisedPL : null;
+        tickerPLSnapshot[ticker] = totalPL;
+        if (totalPL != null) cumulativePL += totalPL;
+      });
+      cumulativePLByDate[date] = cumulativePL;
+      Object.entries(tickerPLSnapshot).forEach(([ticker, value]) => {
+        if (!cumulativePLByTickerByDate[ticker]) cumulativePLByTickerByDate[ticker] = {};
+        cumulativePLByTickerByDate[ticker][date] = value;
+      });
     }
 
     const holdings = Object.values(holdingsMap)
@@ -616,6 +639,8 @@ export function useValuation(
       aggregates: { aggMap, missingPLCurrencies: [...missingPLCurrencies] },
       marketValueByTicker,
       marketValueByTradingCurrency,
+      cumulativePLByDate,
+      cumulativePLByTickerByDate,
       cumulativeHoldingsByTickerByDate,
       cumulativeCostBasisByTickerByDate,
       cumulativeMarketValueByTickerByDate,

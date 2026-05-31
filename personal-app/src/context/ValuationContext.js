@@ -9,7 +9,7 @@ import { getPrices } from "@/utils_protected/priceApi";
 import { getCorporateActions } from "@/utils_protected/corporateActionApi";
 import {useDividends} from "@/context/DividendContext";
 import { useUserSettings } from "@/context/UserSettingsContext";
-import { useValuation as useProtectedValuation, usePL as useProtectedPL } from "@/hooks_protected/useValuation";
+import { useValuation as useProtectedValuation } from "@/hooks_protected/useValuation";
 
 const d0 = new Date();
 d0.setDate(d0.getDate() - 1);
@@ -440,25 +440,13 @@ export function ValuationProvider({ children }) {
   const rawCumulativeMarketValueByTickerByDate = latestValuation.cumulativeMarketValueByTickerByDate;
   const rawCumulativeRealisedPLByTickerByDate = latestValuation.cumulativeRealisedPLByTickerByDate;
   const rawCumulativeUnrealisedPLByTickerByDate = latestValuation.cumulativeUnrealisedPLByTickerByDate;
+  const rawCumulativePLByTickerByDate = latestValuation.cumulativePLByTickerByDate;
   const rawDividendByTickerByDate = latestValuation.dividendByTickerByDate;
   const rawTransactionByTickerByDate = latestValuation.transactionByTickerByDate;
+  const cumulativePLByDate = latestValuation.cumulativePLByDate;
   const exchangeByTicker = useMemo(
     () => buildExchangeTimeline(appliedCorporateActions, rawCumulativeMarketValueByTickerByDate),
     [appliedCorporateActions, rawCumulativeMarketValueByTickerByDate]
-  );
-
-  const { cumulativePLByDate, cumulativePLByTickerByDate } = useProtectedPL(
-    transactions,
-    prices,
-    tickerMap,
-    setPrices,
-    setLoadingPrices,
-    fxs,
-    basis,
-    startDateDisplay,
-    endDateDisplay,
-    dividends,
-    appliedCorporateActions
   );
 
   const getNormalizedValuationSeries = useCallback((targetDate) => ({
@@ -469,7 +457,7 @@ export function ValuationProvider({ children }) {
     cumulativeCostBasisByTickerByDate: normalizeSeriesByExchange(rawCumulativeCostBasisByTickerByDate, targetDate, exchangeByTicker),
     cumulativeUnrealisedPLByTickerByDate: normalizeSeriesByExchange(rawCumulativeUnrealisedPLByTickerByDate, targetDate, exchangeByTicker),
     cumulativeRealisedPLByTickerByDate: normalizeSeriesByExchange(rawCumulativeRealisedPLByTickerByDate, targetDate, exchangeByTicker),
-    cumulativePLByTickerByDate: normalizeSeriesByExchange(cumulativePLByTickerByDate, targetDate, exchangeByTicker),
+    cumulativePLByTickerByDate: normalizeSeriesByExchange(rawCumulativePLByTickerByDate, targetDate, exchangeByTicker),
   }), [
     rawDividendByTickerByDate,
     rawTransactionByTickerByDate,
@@ -478,7 +466,7 @@ export function ValuationProvider({ children }) {
     rawCumulativeCostBasisByTickerByDate,
     rawCumulativeUnrealisedPLByTickerByDate,
     rawCumulativeRealisedPLByTickerByDate,
-    cumulativePLByTickerByDate,
+    rawCumulativePLByTickerByDate,
     exchangeByTicker
   ]);
 

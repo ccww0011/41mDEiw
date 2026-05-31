@@ -19,6 +19,7 @@ export default function Dashboard() {
   const {
     startDateDisplay,
     endDateDisplay,
+    latestValuationDate,
     setStartDateDisplay,
     setEndDateDisplay,
     cumulativePLByDate,
@@ -321,7 +322,7 @@ export default function Dashboard() {
           <h4>Aggregates</h4>
         </div>
         <div className="grid-item grid2" style={{ paddingTop: "10px", textAlign: "right" }}>
-          Value Date: {endDateDisplay}
+          Value Date: {latestValuationDate}
         </div>
       </div>
 
