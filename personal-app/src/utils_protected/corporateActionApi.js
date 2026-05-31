@@ -2,6 +2,10 @@
 
 import { logout } from "@/utils_protected/authApi";
 
+function getApiMessage(items, fallback = "Request failed.") {
+  return items?.message ?? items?.error ?? fallback;
+}
+
 async function corporateActionApi(method, data, setCorporateActions) {
   try {
     let url = process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/api/corporate-action";
@@ -54,7 +58,7 @@ async function corporateActionApi(method, data, setCorporateActions) {
       logout();
       return { message: "Unauthorised.", status: "Unauthorised", data: {} };
     } else {
-      return { message: items.message, status: "Error", data: {} };
+      return { message: getApiMessage(items), status: "Error", data: {} };
     }
   } catch (error) {
     return { message: error.message, status: "Error", data: {} };

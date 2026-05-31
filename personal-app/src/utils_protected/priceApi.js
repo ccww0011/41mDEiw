@@ -3,6 +3,10 @@
 import {logout} from "@/utils_protected/authApi";
 import { getCorporateActions } from "@/utils_protected/corporateActionApi";
 
+function getApiMessage(items, fallback = "Request failed.") {
+  return items?.message ?? items?.error ?? fallback;
+}
+
 async function priceApi(method, data, setPrices, setPriceTickerMap) {
   try {
     let url = process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/api/price";
@@ -72,7 +76,7 @@ async function priceApi(method, data, setPrices, setPriceTickerMap) {
       logout();
       return {message: "Unauthorised.", status: 'Unauthorised', data: {}, meta: {}};
     } else {
-      return {message: items.message, status: 'Error', data: {}, meta: {}};
+      return {message: getApiMessage(items), status: 'Error', data: {}, meta: {}};
     }
   } catch (error) {
     return {message: error.message, status: 'Error', data: {}, meta: {}};

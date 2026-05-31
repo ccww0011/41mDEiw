@@ -2,6 +2,10 @@
 
 import {logout} from "@/utils_protected/authApi";
 
+function getApiMessage(items, fallback = "Request failed.") {
+  return items?.message ?? items?.error ?? fallback;
+}
+
 async function fxApi(method, data, setFxs) {
   try {
     let url = process.env.NEXT_PUBLIC_AUTHENTICATED_URL + "/api/forex";
@@ -47,7 +51,7 @@ async function fxApi(method, data, setFxs) {
       logout();
       return {message: "Unauthorised.", status: 'Unauthorised'};
     } else {
-      return {message: items.message, status: 'Error'};
+      return {message: getApiMessage(items), status: 'Error'};
     }
   } catch (error) {
     return {message: error.message, status: 'Error'};

@@ -1,5 +1,9 @@
 import {logout} from "@/utils_protected/authApi";
 
+function getApiMessage(items, fallback = "Request failed.") {
+  return items?.message ?? items?.error ?? fallback;
+}
+
 const ENTITIES = {
   "&amp;": "&",
   "&lt;": "<",
@@ -33,7 +37,7 @@ export async function useNews() {
       logout();
       return {message: "Unauthorised.", status: 'Unauthorised'};
     } else {
-      return {message: items.message, status: 'Error'};
+      return {message: getApiMessage(items), status: 'Error'};
     }
   } catch (error) {
     return {message: error.message, status: 'Error'};
