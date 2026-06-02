@@ -1,6 +1,7 @@
 'use client';
 import React, {useState, useMemo, useEffect} from "react";
 import {useTransactions} from "@/context/TransactionContext";
+import { useDividends } from "@/context/DividendContext";
 import PieChart from "@/components_protected/overview_components/holding_subcomponents/PieChart";
 import BarChart from "@/components/BarChart";
 import {useValuationContext} from "@/context/ValuationContext";
@@ -11,11 +12,13 @@ import LineChart from "@/components_protected/overview_components/holding_subcom
 import {News} from "@/components_protected/overview_components/holding_subcomponents/News";
 import { useUserSettings } from "@/context/UserSettingsContext";
 import { useValuationDashboard } from "@/hooks_protected/useValuationDashboard";
+import { useValuation as useProtectedValuation } from "@/hooks_protected/useValuation";
 
 export default function Dashboard() {
-  const {transactionCurrencySet, loadingTransactions, firstTransactionDate} = useTransactions();
-  const { loadingPrices, lastPriceDate} = usePrices();
-  const {loadingFxs, lastFxDate} = useFxs();
+  const { transactions, transactionCurrencySet, loadingTransactions, firstTransactionDate } = useTransactions();
+  const { dividends } = useDividends();
+  const { prices, priceTickerMap, loadingPrices, lastPriceDate } = usePrices();
+  const { fxs, loadingFxs, lastFxDate } = useFxs();
   const {
     startDateDisplay,
     endDateDisplay,
@@ -23,6 +26,7 @@ export default function Dashboard() {
     setStartDateDisplay,
     setEndDateDisplay,
     cumulativePLByDate,
+    appliedCorporateActions,
   } = useValuationContext();
   const {
     aggregates,
@@ -30,6 +34,20 @@ export default function Dashboard() {
     marketValueByTradingCurrency,
   } = useValuationDashboard();
   const { basis, setBasis } = useUserSettings();
+  const valuationUSD = useProtectedValuation(
+    transactions,
+    prices,
+    priceTickerMap,
+    fxs,
+    null,
+    null,
+    "USD",
+    latestValuationDate,
+    dividends,
+    appliedCorporateActions
+  );
+  const cumulativePLByDateUSD = valuationUSD.cumulativePLByDate;
+  const displayPLByDate = basis === "Local" ? cumulativePLByDateUSD : cumulativePLByDate;
 
   const [showTab, setShowTab] = useState(0);
   const [startDateInput, setStartDateInput] = useState('')
@@ -52,11 +70,30 @@ export default function Dashboard() {
     );
   };
 
+  const getLastValueOnOrBeforeDate = (series, targetDate) => {
+    if (!series || !targetDate) return 0;
+    if (Object.prototype.hasOwnProperty.call(series, targetDate)) {
+      return series[targetDate] ?? 0;
+    }
+
+    let latestDate = null;
+    let latestValue = 0;
+    Object.entries(series).forEach(([date, value]) => {
+      if (date <= targetDate && (latestDate == null || date > latestDate)) {
+        latestDate = date;
+        latestValue = value ?? 0;
+      }
+    });
+    return latestValue;
+  };
+
   const cumulativePLArray = useMemo(() => {
-    if (!cumulativePLByDate || !startDateDisplay) return [];
+    if (!displayPLByDate || !startDateDisplay) return [];
     const prevStartDate = getPrevDateStr(startDateDisplay);
-    const base = prevStartDate ? (cumulativePLByDate[prevStartDate] ?? 0) : 0;
-    return Object.entries(cumulativePLByDate)
+    const base = prevStartDate
+      ? getLastValueOnOrBeforeDate(displayPLByDate, prevStartDate)
+      : 0;
+    return Object.entries(displayPLByDate)
       .filter(([d]) => {
         if (d > endDateDisplay) return false;
         if (prevStartDate) return d >= prevStartDate;
@@ -64,23 +101,27 @@ export default function Dashboard() {
       })
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([d, v]) => ({ date: d, cumulativePLUSD: (v ?? 0) - base }));
-  }, [cumulativePLByDate, startDateDisplay, endDateDisplay]);
+  }, [displayPLByDate, startDateDisplay, endDateDisplay]);
 
   const profit = useMemo(() => {
     if (!startDateDisplay || !endDateDisplay) return 0;
     const prevStartDate = getPrevDateStr(startDateDisplay);
-    const endValue = cumulativePLByDate[endDateDisplay] ?? 0;
-    const startValue = prevStartDate ? (cumulativePLByDate[prevStartDate] ?? 0) : 0;
+    const endValue = getLastValueOnOrBeforeDate(displayPLByDate, endDateDisplay);
+    const startValue = prevStartDate
+      ? getLastValueOnOrBeforeDate(displayPLByDate, prevStartDate)
+      : 0;
     return endValue - startValue;
-  }, [cumulativePLByDate, startDateDisplay, endDateDisplay]);
+  }, [displayPLByDate, startDateDisplay, endDateDisplay]);
 
   const dailyProfit = useMemo(() => {
     if (!endDateDisplay) return 0;
     const prevDate = getPrevDateStr(endDateDisplay);
-    const endValue = cumulativePLByDate[endDateDisplay] ?? 0;
-    const prevValue = prevDate ? (cumulativePLByDate[prevDate] ?? 0) : 0;
+    const endValue = getLastValueOnOrBeforeDate(displayPLByDate, endDateDisplay);
+    const prevValue = prevDate
+      ? getLastValueOnOrBeforeDate(displayPLByDate, prevDate)
+      : 0;
     return endValue - prevValue;
-  }, [cumulativePLByDate, endDateDisplay]);
+  }, [displayPLByDate, endDateDisplay]);
 
 
   useEffect(() => {
